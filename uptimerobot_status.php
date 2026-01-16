@@ -23,6 +23,8 @@ $tokenPaths = [
 $TOKEN = '';
 foreach ($tokenPaths as $tokenPath) {
     if (file_exists($tokenPath) && is_readable($tokenPath)) {
+        // Use @ to suppress errors and prevent information disclosure
+        // Explicit false check ensures proper error handling
         $content = @file_get_contents($tokenPath);
         if ($content !== false) {
             $TOKEN = trim($content);
