@@ -25,7 +25,9 @@
       margin: 0; padding: 1rem;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       background: var(--bg); color: var(--text);
+      transition: background 0.3s ease;
     }
+    body.has-offline { background: #2a1515; }
     header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
     h1 { margin: 0 1rem 0 0; font-size: 1.25rem; }
     .meta { color: var(--subtle); }
@@ -46,6 +48,7 @@
     .pill.ok { background: #163327; color: #8af0c9; border-color: #184836; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .card.offline { background: #331a1a; border-color: #5e2323; }
     .name { font-weight: 700; font-size: 1.05rem; margin-bottom: 6px; }
     .url { color: var(--subtle); font-size: 0.9rem; word-break: break-word; }
     .status { margin-top: 8px; font-weight: 800; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px; }
@@ -174,10 +177,19 @@
         pill.innerHTML = '<i class="fas fa-check"></i><span>All good</span>';
       }
 
+      // Update body background based on offline status
+      if (problemCount > 0) {
+        document.body.classList.add('has-offline');
+      } else {
+        document.body.classList.remove('has-offline');
+      }
+
       // Build cards
       grid.innerHTML = mons.map(m => {
         const cls = `status ${toClass(m.status)}`;
         const statusIcon = getStatusIcon(m.status);
+        const isOffline = isProblem(m);
+        const cardClass = isOffline ? 'card offline' : 'card';
         // Prefer custom ratios if present, otherwise all-time
         const ratios = m.custom_uptime_ratios
           ? `${m.custom_uptime_ratios}% (1/7/30/90d)`
@@ -185,7 +197,7 @@
         const tags = formatTags(m.tags);
 
         return `
-          <div class="card">
+          <div class="${cardClass}">
             <div class="name">${m.friendly_name || '—'}</div>
             <div class="url">${m.url || '—'}</div>
             <div class="${cls}">${statusIcon}${(m.status || 'UNKNOWN').toUpperCase()}</div>
