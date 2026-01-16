@@ -164,7 +164,7 @@
             <div class="${cls}">${(m.status || 'UNKNOWN').toUpperCase()}</div>
             <div class="kv">Last check: ${epochToLocal(m.last_check)} | Next: ${epochToLocal(m.next_check)}</div>
             <div class="kv">Uptime: ${ratios}</div>
-            ${Array.isArray(m.tags) && m.tags.length ? `<div class="small">Tags: ${m.tags.join(', ')}</div>` : ''}
+            ${Array.isArray(m.tags) && m.tags.length ? `<div class="small">Tags: ${m.tags.map(t => typeof t === 'object' ? t.name : t).join(', ')}</div>` : ''}
           </div>
         `;
       }).join('');
