@@ -93,11 +93,14 @@
   <script>
     // --- Configuration ---
     const ENDPOINT = '/status/uptimerobot_status.php'; // adjust if you host elsewhere
+    const CONFIG_VERSION_ENDPOINT = '/status/config_version.php'; // endpoint to check config changes
     const REFRESH_MS = 20000; // 20 seconds
+    const CONFIG_CHECK_MS = 5000; // Check config every 5 seconds
 
     // State
     let onlyProblems = false;
     let lastStatuses = new Map(); // id -> previous status (for change detection)
+    let currentConfigVersion = null; // Track config file version
 
     // Utilities
     function epochToLocal(epoch) {
@@ -285,6 +288,31 @@
       }
     }
 
+    // Check if config has changed
+    async function checkConfigVersion() {
+      try {
+        const res = await fetch(CONFIG_VERSION_ENDPOINT, { cache: 'no-store' });
+        if (!res.ok) return; // Silently fail, don't disrupt user experience
+        
+        const data = await res.json();
+        if (data.ok && data.version) {
+          if (currentConfigVersion === null) {
+            // First load, just store the version
+            currentConfigVersion = data.version;
+          } else if (currentConfigVersion !== data.version) {
+            // Config has changed! Refresh the wallboard
+            console.log('Config file changed, refreshing wallboard...');
+            currentConfigVersion = data.version;
+            await refresh();
+          }
+        }
+      } catch (e) {
+        // Silently fail - config checking is a convenience feature
+        // Don't disrupt the main wallboard functionality
+        console.warn('Config version check failed:', e.message);
+      }
+    }
+
     // Events
     document.getElementById('refresh-btn').addEventListener('click', refresh);
     document.getElementById('toggle-problems').addEventListener('click', () => {
@@ -296,6 +324,10 @@
     // Initial load + polling
     refresh();
     setInterval(refresh, REFRESH_MS);
+    
+    // Initialize config version and start polling for config changes
+    checkConfigVersion();
+    setInterval(checkConfigVersion, CONFIG_CHECK_MS);
   </script>
 </body>
 </html>
