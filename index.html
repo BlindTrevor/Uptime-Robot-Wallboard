@@ -363,7 +363,7 @@
     const SECONDS_PER_HOUR = 3600;
 
     // Process lastDayUptimes histogram data for 24-hour visualization
-    function process24HourData(lastDayUptimes) {
+    function process24HourData(lastDayUptimes, incidents24h) {
       if (!lastDayUptimes || !lastDayUptimes.histogram || !Array.isArray(lastDayUptimes.histogram)) {
         return null;
       }
@@ -377,18 +377,26 @@
       let totalUptime = 0;
       let incidentCount = 0;
       let totalDowntimeSeconds = 0;
-      let lastStatus = null;
+      
+      // Use actual incidents count if available, otherwise detect from histogram transitions
+      if (incidents24h && Array.isArray(incidents24h) && incidents24h.length > 0) {
+        incidentCount = incidents24h.length;
+      } else {
+        // Fallback: detect incidents from histogram transitions
+        let lastStatus = null;
+        hourlyData.forEach((hour, index) => {
+          const uptime = parseFloat(hour.uptime) || 0;
+          const currentStatus = uptime >= UPTIME_THRESHOLD_PERCENT ? 'up' : 'down';
+          if (lastStatus === 'up' && currentStatus === 'down') {
+            incidentCount++;
+          }
+          lastStatus = currentStatus;
+        });
+      }
       
       hourlyData.forEach((hour, index) => {
         const uptime = parseFloat(hour.uptime) || 0;
         totalUptime += uptime;
-        
-        // Detect incidents: transitions from up to down
-        const currentStatus = uptime >= UPTIME_THRESHOLD_PERCENT ? 'up' : 'down';
-        if (lastStatus === 'up' && currentStatus === 'down') {
-          incidentCount++;
-        }
-        lastStatus = currentStatus;
         
         // Calculate downtime in seconds (assuming 1-hour intervals)
         const downtimePercent = 100 - uptime;
@@ -430,7 +438,7 @@
     
     // Render 24-hour status visualization
     function render24HourStatus(monitor) {
-      const data = process24HourData(monitor.last_day_uptimes);
+      const data = process24HourData(monitor.last_day_uptimes, monitor.incidents_24h);
       
       if (!data) {
         return ''; // No data available
