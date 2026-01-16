@@ -167,11 +167,11 @@
       if (problemCount > 0) {
         pill.style.display = 'inline-flex';
         pill.className = 'pill warn';
-        pill.innerHTML = `<i class="fas fa-exclamation-triangle"></i>${problemCount} issue${problemCount === 1 ? '' : 's'}`;
+        pill.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>${problemCount} issue${problemCount === 1 ? '' : 's'}</span>`;
       } else {
         pill.style.display = 'inline-flex';
         pill.className = 'pill ok';
-        pill.innerHTML = '<i class="fas fa-check"></i>All good';
+        pill.innerHTML = '<i class="fas fa-check"></i><span>All good</span>';
       }
 
       // Build cards
