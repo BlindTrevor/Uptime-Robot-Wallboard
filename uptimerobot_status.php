@@ -345,39 +345,35 @@ $transformed = array_map(function ($m) use ($incidentsByMonitor) {
     $histogram = [];
     $incidents = $monitorId && isset($incidentsByMonitor[$monitorId]) ? $incidentsByMonitor[$monitorId] : [];
     
-    for ($i = 23; $i >= 0; $i--) {
-        $hourStart = $now - ($i + 1) * 3600;
-        $hourEnd = $now - $i * 3600;
+    // Helper function to parse timestamps
+    $parseTimestamp = function($value) {
+        if (empty($value)) return null;
+        if (is_numeric($value)) {
+            return (int)$value;
+        }
+        $parsed = strtotime($value);
+        return ($parsed !== false) ? $parsed : null;
+    };
+    
+    for ($hourOffset = 0; $hourOffset < 24; $hourOffset++) {
+        $hourStart = $now - (24 - $hourOffset) * 3600;
+        $hourEnd = $now - (23 - $hourOffset) * 3600;
         
         // Calculate downtime in this hour
         $downtimeSeconds = 0;
         
         foreach ($incidents as $incident) {
             // Parse incident times
-            $incidentStartTime = 0;
+            $incidentStartTime = $parseTimestamp($incident['startedAt'] ?? null);
             $incidentEndTime = null;
             
-            if (!empty($incident['startedAt'])) {
-                if (is_numeric($incident['startedAt'])) {
-                    $incidentStartTime = (int)$incident['startedAt'];
-                } else {
-                    $parsed = strtotime($incident['startedAt']);
-                    if ($parsed !== false) {
-                        $incidentStartTime = $parsed;
-                    }
-                }
+            if ($incidentStartTime === null) {
+                continue;
             }
             
             // Calculate incident end time
-            if (!empty($incident['resolvedAt'])) {
-                if (is_numeric($incident['resolvedAt'])) {
-                    $incidentEndTime = (int)$incident['resolvedAt'];
-                } else {
-                    $parsed = strtotime($incident['resolvedAt']);
-                    if ($parsed !== false) {
-                        $incidentEndTime = $parsed;
-                    }
-                }
+            if (isset($incident['resolvedAt'])) {
+                $incidentEndTime = $parseTimestamp($incident['resolvedAt']);
             } elseif (!empty($incident['duration']) && is_numeric($incident['duration'])) {
                 $incidentEndTime = $incidentStartTime + (int)$incident['duration'];
             } elseif (strtolower((string)($incident['status'] ?? '')) !== 'resolved') {
@@ -385,8 +381,8 @@ $transformed = array_map(function ($m) use ($incidentsByMonitor) {
                 $incidentEndTime = $now;
             }
             
-            // Skip if we couldn't determine incident times
-            if ($incidentStartTime === 0 || $incidentEndTime === null) {
+            // Skip if we couldn't determine incident end time
+            if ($incidentEndTime === null) {
                 continue;
             }
             
@@ -431,7 +427,7 @@ $transformed = array_map(function ($m) use ($incidentsByMonitor) {
         'last_day_uptimes' => [
             'histogram' => $histogram
         ],
-        // Include incidents for debugging
+        // Pass incident count for accurate reporting
         'incidents_24h' => $incidents,
     ];
 }, $monitors);

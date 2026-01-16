@@ -387,9 +387,19 @@
         hourlyData.forEach((hour, index) => {
           const uptime = parseFloat(hour.uptime) || 0;
           const currentStatus = uptime >= UPTIME_THRESHOLD_PERCENT ? 'up' : 'down';
-          if (lastStatus === 'up' && currentStatus === 'down') {
+          
+          // Initialize with first hour status
+          if (index === 0) {
+            lastStatus = currentStatus;
+            // If first hour is down, count it as an incident (ongoing from before window)
+            if (currentStatus === 'down') {
+              incidentCount++;
+            }
+          } else if (lastStatus === 'up' && currentStatus === 'down') {
+            // Detected a transition from up to down
             incidentCount++;
           }
+          
           lastStatus = currentStatus;
         });
       }
