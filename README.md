@@ -26,17 +26,23 @@ The application needs your UptimeRobot API token to fetch monitor data. Follow t
 
 1. Create the token file **one directory above** your webroot:
    ```bash
-   # If your webroot is /var/www/html/status, create the file at:
+   # Example: If your webroot is /var/www/html/status
+   # Create the token file at /var/www/html/api_token.tok (one level up)
    echo "your-api-token-here" > /var/www/html/api_token.tok
    
-   # Or if your webroot is /var/www/html, create the file at:
-   # echo "your-api-token-here" > /var/www/api_token.tok
-   ```
-
-2. Set restrictive file permissions so only the web server can read it:
-   ```bash
+   # Set restrictive permissions
    chmod 600 /var/www/html/api_token.tok
    chown www-data:www-data /var/www/html/api_token.tok  # Adjust user/group as needed
+   ```
+
+2. Or if your webroot is `/var/www/html` (the application is at root):
+   ```bash
+   # Create the token file at /var/www/api_token.tok (one level up)
+   echo "your-api-token-here" > /var/www/api_token.tok
+   
+   # Set restrictive permissions
+   chmod 600 /var/www/api_token.tok
+   chown www-data:www-data /var/www/api_token.tok  # Adjust user/group as needed
    ```
 
 #### Option B: Store in Webroot (Fallback)
@@ -45,17 +51,19 @@ If you cannot store files outside the webroot:
 
 1. Copy the example file and add your token:
    ```bash
+   # Navigate to the application directory first
+   cd /path/to/your/webroot/status  # Adjust to your actual path
+   
+   # Create the token file
    cp api_token.tok.example api_token.tok
    echo "your-api-token-here" > api_token.tok
-   ```
-
-2. Set restrictive file permissions:
-   ```bash
+   
+   # Set restrictive file permissions
    chmod 600 api_token.tok
    chown www-data:www-data api_token.tok  # Adjust user/group as needed
    ```
 
-3. Verify `.htaccess` is working to block HTTP access to the file:
+2. Verify `.htaccess` is working to block HTTP access to the file:
    ```bash
    curl https://your-domain.com/status/api_token.tok
    # Should return 403 Forbidden
@@ -64,7 +72,7 @@ If you cannot store files outside the webroot:
 ### 3. Deploy the Application
 
 1. Upload all files to your web server
-2. Ensure `.htaccess` file is present and Apache `mod_rewrite` is enabled
+2. Ensure `.htaccess` file is present and Apache `mod_authz_core` is enabled
 3. Access `index.html` in your browser
 
 ### 4. Verify Security
