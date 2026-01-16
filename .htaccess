@@ -3,7 +3,7 @@
     Require all denied
 </Files>
 
-# Additional protection: deny access to specific sensitive files
-<FilesMatch "^(api_token\.tok|.*\.log)$">
+# Deny access to log files
+<Files "*.log">
     Require all denied
-</FilesMatch>
+</Files>

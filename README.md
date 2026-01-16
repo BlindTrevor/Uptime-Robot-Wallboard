@@ -28,7 +28,11 @@ The application needs your UptimeRobot API token to fetch monitor data. Follow t
    ```bash
    # Example: If your webroot is /var/www/html/status
    # Create the token file at /var/www/html/api_token.tok (one level up)
-   echo "your-api-token-here" > /var/www/html/api_token.tok
+   
+   # Secure method (avoids shell history):
+   cat > /var/www/html/api_token.tok << 'EOF'
+   your-api-token-here
+   EOF
    
    # Set restrictive permissions
    chmod 600 /var/www/html/api_token.tok
@@ -38,7 +42,11 @@ The application needs your UptimeRobot API token to fetch monitor data. Follow t
 2. Or if your webroot is `/var/www/html` (the application is at root):
    ```bash
    # Create the token file at /var/www/api_token.tok (one level up)
-   echo "your-api-token-here" > /var/www/api_token.tok
+   
+   # Secure method (avoids shell history):
+   cat > /var/www/api_token.tok << 'EOF'
+   your-api-token-here
+   EOF
    
    # Set restrictive permissions
    chmod 600 /var/www/api_token.tok
@@ -54,9 +62,11 @@ If you cannot store files outside the webroot:
    # Navigate to the application directory first
    cd /path/to/your/webroot/status  # Adjust to your actual path
    
-   # Create the token file
+   # Create the token file (secure method to avoid shell history)
    cp api_token.tok.example api_token.tok
-   echo "your-api-token-here" > api_token.tok
+   cat > api_token.tok << 'EOF'
+   your-api-token-here
+   EOF
    
    # Set restrictive file permissions
    chmod 600 api_token.tok
@@ -65,8 +75,8 @@ If you cannot store files outside the webroot:
 
 2. Verify `.htaccess` is working to block HTTP access to the file:
    ```bash
-   curl https://your-domain.com/status/api_token.tok
-   # Should return 403 Forbidden
+   curl http://your-domain.com/status/api_token.tok
+   # Should return 403 Forbidden (works for both HTTP and HTTPS)
    ```
 
 ### 3. Deploy the Application

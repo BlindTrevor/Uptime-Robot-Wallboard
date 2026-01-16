@@ -23,9 +23,12 @@ $tokenPaths = [
 $TOKEN = '';
 foreach ($tokenPaths as $tokenPath) {
     if (file_exists($tokenPath) && is_readable($tokenPath)) {
-        $TOKEN = trim(file_get_contents($tokenPath));
-        if ($TOKEN) {
-            break;
+        $content = @file_get_contents($tokenPath);
+        if ($content !== false) {
+            $TOKEN = trim($content);
+            if ($TOKEN) {
+                break;
+            }
         }
     }
 }
