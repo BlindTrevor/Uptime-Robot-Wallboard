@@ -94,6 +94,14 @@
     }
     const toClass = s => (s || 'unknown').toLowerCase().replace(/\s+/g, '_');
 
+    function formatTags(tags) {
+      if (!Array.isArray(tags) || !tags.length) return '';
+      return tags
+        .map(t => typeof t === 'object' && t !== null ? (t.name || '') : t)
+        .filter(Boolean)
+        .join(', ');
+    }
+
     function isProblem(m) {
       const s = (m.status || '').toLowerCase();
       return s !== 'up';
@@ -156,6 +164,7 @@
         const ratios = m.custom_uptime_ratios
           ? `${m.custom_uptime_ratios}% (1/7/30/90d)`
           : (m.all_time_uptime_ratio ? `${m.all_time_uptime_ratio}% (all-time)` : '—');
+        const tags = formatTags(m.tags);
 
         return `
           <div class="card">
@@ -164,7 +173,7 @@
             <div class="${cls}">${(m.status || 'UNKNOWN').toUpperCase()}</div>
             <div class="kv">Last check: ${epochToLocal(m.last_check)} | Next: ${epochToLocal(m.next_check)}</div>
             <div class="kv">Uptime: ${ratios}</div>
-            ${Array.isArray(m.tags) && m.tags.length ? `<div class="small">Tags: ${m.tags.join(', ')}</div>` : ''}
+            ${tags ? `<div class="small">Tags: ${tags}</div>` : ''}
           </div>
         `;
       }).join('');

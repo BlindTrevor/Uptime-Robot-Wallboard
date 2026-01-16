@@ -24,7 +24,7 @@ if (!$TOKEN) {
 }
 
 $API_BASE = 'https://api.uptimerobot.com/v3';
-$url = $API_BASE . '/monitors?page_size=100';// adjust page_size as needed
+$url = $API_BASE . '/monitors?page_size=100';
 
 $ch = curl_init();
 curl_setopt_array($ch, [
@@ -71,30 +71,94 @@ $nowUtc = (new DateTime('now', new DateTimeZone('UTC')))->format(DateTime::ATOM)
 $transformed = array_map(function ($m) {
     $status = strtolower((string)($m['status'] ?? 'unknown'));
 
+    // API v3 doesn't provide explicit last_check/next_check timestamps
+    // Best approximation: use currentStateDuration to calculate when state changed
     $lastCheck = null;
-    foreach (['last_check_at','last_check','checked_at','last_status_change_at'] as $k) {
-        if (isset($m[$k]) && (int)$m[$k] > 0) { $lastCheck = (int)$m[$k]; break; }
+    if (isset($m['currentStateDuration']) && is_numeric($m['currentStateDuration'])) {
+        $lastCheck = time() - (int)$m['currentStateDuration'];
     }
+    // Note: We don't fallback to createDateTime as it's misleading for "last check"
+    
+    // Calculate next check based on interval
+    // Since API v3 doesn't provide actual check times, estimate next check
     $nextCheck = null;
-    foreach (['next_check_at','next_check'] as $k) {
-        if (isset($m[$k]) && (int)$m[$k] > 0) { $nextCheck = (int)$m[$k]; break; }
+    if (!empty($m['interval']) && is_numeric($m['interval'])) {
+        // Simple estimate: current time + interval
+        $nextCheck = time() + (int)$m['interval'];
+    }
+    
+    // Calculate uptime from available data
+    // Strategy: Use multiple data sources for best approximation
+    $lastDayUptimeRatio = null;
+    
+    // Method 1: If monitor is UP and last incident was resolved, calculate uptime from incident resolution
+    if ($status === 'up' && !empty($m['lastIncident'])) {
+        $incident = $m['lastIncident'];
+        $incidentStatus = strtolower((string)($incident['status'] ?? ''));
+        
+        if ($incidentStatus === 'resolved' && !empty($incident['startedAt']) && !empty($incident['duration'])) {
+            // Parse startedAt timestamp
+            $incidentStart = 0;
+            if (is_numeric($incident['startedAt'])) {
+                $incidentStart = (int)$incident['startedAt'];
+            } else {
+                $parsed = strtotime($incident['startedAt']);
+                if ($parsed !== false) {
+                    $incidentStart = $parsed;
+                }
+            }
+            
+            if ($incidentStart > 0 && is_numeric($incident['duration'])) {
+                // Calculate when incident was resolved
+                $incidentResolved = $incidentStart + (int)$incident['duration'];
+                
+                // Calculate time since incident was resolved (uptime period)
+                $uptimeDuration = time() - $incidentResolved;
+                
+                // Calculate total time period (from incident start to now)
+                $totalDuration = time() - $incidentStart;
+                
+                // Validate: both durations must be positive (prevent clock skew issues)
+                if ($totalDuration > 0 && $uptimeDuration >= 0) {
+                    // Uptime ratio = time since resolved / total time
+                    $lastDayUptimeRatio = ($uptimeDuration / $totalDuration) * 100;
+                    // Ensure ratio is within valid range [0, 100]
+                    $lastDayUptimeRatio = max(0, min(round($lastDayUptimeRatio, 2), 100));
+                }
+            }
+        }
+    }
+    
+    // Method 2: Fallback to lastDayUptimes histogram if incident method didn't work
+    if ($lastDayUptimeRatio === null && !empty($m['lastDayUptimes']['histogram']) && is_array($m['lastDayUptimes']['histogram'])) {
+        $uptimes = array_column($m['lastDayUptimes']['histogram'], 'uptime');
+        // Validate that we have numeric uptime values
+        $uptimes = array_filter($uptimes, 'is_numeric');
+        if (!empty($uptimes)) {
+            // Average the uptime samples to get approximate daily uptime
+            $lastDayUptimeRatio = round(array_sum($uptimes) / count($uptimes), 2);
+            // Ensure ratio is within valid range [0, 100]
+            $lastDayUptimeRatio = max(0, min($lastDayUptimeRatio, 100));
+        }
     }
 
     return [
         'id' => $m['id'] ?? null,
-        'friendly_name' => $m['friendly_name'] ?? ($m['name'] ?? ''),
-        'url' => $m['url'] ?? ($m['hostname'] ?? ''),
+        'friendly_name' => $m['friendlyName'] ?? '',
+        'url' => $m['url'] ?? '',
         'type' => $m['type'] ?? null,
         'interval' => isset($m['interval']) ? (int)$m['interval'] : null,
         'status_code' => null,
         'status' => $status,
-        'all_time_uptime_ratio' => $m['all_time_uptime_ratio'] ?? null,
-        'custom_uptime_ratios' => $m['custom_uptime_ratios'] ?? null,
+        // Note: API v3 doesn't provide all-time uptime, using last day uptime instead
+        'all_time_uptime_ratio' => $lastDayUptimeRatio,
+        'custom_uptime_ratios' => null,
         'last_check' => $lastCheck,
         'next_check' => $nextCheck,
-        'recent_incident' => null,
+        'recent_incident' => $m['lastIncident'] ?? null,
         'logs' => null,
-        'alert_contacts' => $m['alert_contacts'] ?? null,
+        'alert_contacts' => $m['assignedAlertContacts'] ?? null,
+        // Tags are passed as-is; formatTags() in index.html handles object-to-name conversion
         'tags' => $m['tags'] ?? [],
     ];
 }, $monitors);
