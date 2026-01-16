@@ -13,11 +13,11 @@ ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/uptime_errors.log');
 
 // --- CONFIG ---
-// Try loading environment variables from .env file
+// Try loading environment variables from api_token.env file
 // Checks outside webroot first (most secure), then fallback to current directory
 $envPaths = [
-    __DIR__ . '/../.env',  // Outside webroot (recommended)
-    __DIR__ . '/.env',     // Current directory (fallback)
+    __DIR__ . '/../api_token.env',  // Outside webroot (recommended)
+    __DIR__ . '/api_token.env',     // Current directory (fallback)
 ];
 
 $TOKEN = '';
@@ -27,7 +27,7 @@ foreach ($envPaths as $envPath) {
         // Explicit false check ensures proper error handling
         $content = @file_get_contents($envPath);
         if ($content !== false) {
-            // Parse .env file for UPTIMEROBOT_API_TOKEN
+            // Parse api_token.env file for UPTIMEROBOT_API_TOKEN
             $lines = explode("\n", $content);
             foreach ($lines as $line) {
                 $line = trim($line);
@@ -57,7 +57,7 @@ $onlyProblems = isset($_GET['only_problems']) && $_GET['only_problems'] === '1';
 
 if (!$TOKEN) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'Missing UPTIMEROBOT_API_TOKEN. Please create .env file with UPTIMEROBOT_API_TOKEN=your-key']);
+    echo json_encode(['ok' => false, 'error' => 'Missing UPTIMEROBOT_API_TOKEN. Please create api_token.env file with UPTIMEROBOT_API_TOKEN=your-key']);
     exit;
 }
 

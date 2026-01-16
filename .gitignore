@@ -1,5 +1,5 @@
 # Environment file - contains sensitive API key
-.env
+api_token.env
 
 # Error logs
 uptime_errors.log
