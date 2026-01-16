@@ -7,6 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous">
   <style>
+    /* Dark theme (default) */
     :root {
       --bg: #0b1220;
       --card: #121c33;
@@ -21,6 +22,23 @@
       --bg-offline: #2a1515;
       --card-offline: #331a1a;
       --border-offline: #5e2323;
+    }
+
+    /* Light theme */
+    [data-theme="light"] {
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --border: #d1d9e6;
+      --accent: #4a6fa5;
+      --text: #1a2332;
+      --subtle: #5a6c85;
+      --muted: #6b7b95;
+      --ok: #28a745;
+      --warn: #fd7e14;
+      --bad: #dc3545;
+      --bg-offline: #fff5f5;
+      --card-offline: #ffe5e5;
+      --border-offline: #ffcccc;
     }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
@@ -84,6 +102,7 @@
   <div class="controls">
     <button id="toggle-problems">Show Only Problems</button>
     <button id="refresh-btn">Refresh Now</button>
+    <button id="theme-toggle"><i class="fas fa-sun"></i> Light Mode</button>
   </div>
 
   <div id="error" class="err"></div>
@@ -101,7 +120,87 @@
       configCheckRate: 5,
       showProblemsOnly: false,
       allowQueryOverride: true,
+      theme: 'dark', // 'dark', 'light', or 'auto'
     };
+
+    // --- Theme Management ---
+    // Cookie utilities
+    const COOKIE_EXPIRY_DAYS = 365;
+    const MS_PER_DAY = 864e5; // Milliseconds in a day
+    
+    function setCookie(name, value, days = COOKIE_EXPIRY_DAYS) {
+      const expires = new Date(Date.now() + days * MS_PER_DAY).toUTCString();
+      document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/; SameSite=Lax';
+    }
+
+    function getCookie(name) {
+      return document.cookie.split('; ').reduce((r, v) => {
+        const parts = v.split('=');
+        return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+      }, '');
+    }
+
+    // Get system preference
+    function getSystemTheme() {
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    // Apply theme to document
+    function applyTheme(theme) {
+      const resolvedTheme = theme === 'auto' ? getSystemTheme() : theme;
+      document.documentElement.setAttribute('data-theme', resolvedTheme);
+      
+      // Update button text and icon
+      const themeBtn = document.getElementById('theme-toggle');
+      if (themeBtn) {
+        if (resolvedTheme === 'light') {
+          themeBtn.innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
+        } else {
+          themeBtn.innerHTML = '<i class="fas fa-sun"></i> Light Mode';
+        }
+      }
+      
+      return resolvedTheme;
+    }
+
+    // Initialize theme from cookie, config, or system preference
+    function initializeTheme() {
+      // Priority: cookie > query string > config > auto (system preference)
+      const cookieTheme = getCookie('theme');
+      const queryTheme = new URLSearchParams(window.location.search).get('theme');
+      
+      let selectedTheme = config.theme || 'auto';
+      
+      // Apply query string if allowed and present
+      if (config.allowQueryOverride && queryTheme && ['dark', 'light', 'auto'].includes(queryTheme)) {
+        selectedTheme = queryTheme;
+      }
+      
+      // Cookie overrides everything (user's explicit choice)
+      if (cookieTheme && ['dark', 'light', 'auto'].includes(cookieTheme)) {
+        selectedTheme = cookieTheme;
+      }
+      
+      applyTheme(selectedTheme);
+    }
+
+    // Toggle theme
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(newTheme);
+      setCookie('theme', newTheme);
+    }
+
+    // Listen for system theme changes when in auto mode
+    if (window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        const cookieTheme = getCookie('theme');
+        if (!cookieTheme || cookieTheme === 'auto') {
+          applyTheme('auto');
+        }
+      });
+    }
     
     // Parse query string parameters
     function parseQueryString() {
@@ -111,6 +210,14 @@
       // Parse showProblemsOnly
       if (params.has('showProblemsOnly')) {
         queryConfig.showProblemsOnly = params.get('showProblemsOnly') === 'true';
+      }
+      
+      // Parse theme
+      if (params.has('theme')) {
+        const theme = params.get('theme');
+        if (['dark', 'light', 'auto'].includes(theme)) {
+          queryConfig.theme = theme;
+        }
       }
       
       // Parse refreshRate (in seconds, minimum 10)
@@ -148,6 +255,9 @@
         if (typeof serverConfig.allowQueryOverride === 'boolean') {
           config.allowQueryOverride = serverConfig.allowQueryOverride;
         }
+        if (typeof serverConfig.theme === 'string' && ['dark', 'light', 'auto'].includes(serverConfig.theme)) {
+          config.theme = serverConfig.theme;
+        }
       }
       
       // Apply query string overrides if allowed
@@ -155,6 +265,10 @@
         const queryConfig = parseQueryString();
         Object.assign(config, queryConfig);
       }
+      
+      // Re-initialize theme after server configuration is applied
+      // This respects the priority: cookie > query string > server config
+      initializeTheme();
     }
 
     // State
@@ -409,6 +523,7 @@
       document.getElementById('toggle-problems').textContent = onlyProblems ? 'Show All' : 'Show Only Problems';
       refresh();
     });
+    document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 
     // Initial load + polling
     refresh().finally(() => {
@@ -418,6 +533,9 @@
     
     // Initialize config version checking
     checkConfigVersion();
+
+    // Initialize theme early (before first data load) with default config
+    initializeTheme();
   </script>
 </body>
 </html>

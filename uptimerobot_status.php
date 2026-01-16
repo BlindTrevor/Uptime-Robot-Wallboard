@@ -68,6 +68,7 @@ $CONFIG = [
     'refreshRate' => 20,
     'configCheckRate' => 5,
     'allowQueryOverride' => true,
+    'theme' => 'dark',
 ];
 
 foreach ($configPaths as $configPath) {
@@ -78,7 +79,8 @@ foreach ($configPaths as $configPath) {
         'SHOW_PROBLEMS_ONLY',
         'REFRESH_RATE',
         'CONFIG_CHECK_RATE',
-        'ALLOW_QUERY_OVERRIDE'
+        'ALLOW_QUERY_OVERRIDE',
+        'THEME'
     ]);
     if (!empty($parsed)) {
         // Load API token
@@ -127,6 +129,14 @@ foreach ($configPaths as $configPath) {
         // Load query override setting
         if (isset($parsed['ALLOW_QUERY_OVERRIDE'])) {
             $CONFIG['allowQueryOverride'] = filter_var($parsed['ALLOW_QUERY_OVERRIDE'], FILTER_VALIDATE_BOOLEAN);
+        }
+        
+        // Load theme setting
+        if (isset($parsed['THEME'])) {
+            $theme = strtolower($parsed['THEME']);
+            if (in_array($theme, ['dark', 'light', 'auto'], true)) {
+                $CONFIG['theme'] = $theme;
+            }
         }
         
         break;
@@ -298,5 +308,6 @@ echo json_encode([
         'refreshRate' => $CONFIG['refreshRate'],
         'configCheckRate' => $CONFIG['configCheckRate'],
         'allowQueryOverride' => $CONFIG['allowQueryOverride'],
+        'theme' => $CONFIG['theme'],
     ],
 ], JSON_UNESCAPED_SLASHES);
