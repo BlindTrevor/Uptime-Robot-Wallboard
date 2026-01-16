@@ -112,11 +112,12 @@ $transformed = array_map(function ($m) {
                 // Calculate total time period (from incident start to now)
                 $totalDuration = time() - $incidentStart;
                 
-                if ($totalDuration > 0) {
+                // Validate: both durations must be positive (prevent clock skew issues)
+                if ($totalDuration > 0 && $uptimeDuration >= 0) {
                     // Uptime ratio = time since resolved / total time
-                    $lastDayUptimeRatio = round(($uptimeDuration / $totalDuration) * 100, 2);
-                    // Cap at 100%
-                    $lastDayUptimeRatio = min($lastDayUptimeRatio, 100);
+                    $lastDayUptimeRatio = ($uptimeDuration / $totalDuration) * 100;
+                    // Ensure ratio is within valid range [0, 100]
+                    $lastDayUptimeRatio = max(0, min(round($lastDayUptimeRatio, 2), 100));
                 }
             }
         }
@@ -130,6 +131,8 @@ $transformed = array_map(function ($m) {
         if (!empty($uptimes)) {
             // Average the uptime samples to get approximate daily uptime
             $lastDayUptimeRatio = round(array_sum($uptimes) / count($uptimes), 2);
+            // Ensure ratio is within valid range [0, 100]
+            $lastDayUptimeRatio = max(0, min($lastDayUptimeRatio, 100));
         }
     }
 
