@@ -24,22 +24,7 @@ if (!$TOKEN) {
 }
 
 $API_BASE = 'https://api.uptimerobot.com/v3';
-// Request specific fields from API v3 - by default only basic fields are returned
-$fields = [
-    'id',
-    'friendly_name',
-    'url',
-    'type',
-    'interval',
-    'status',
-    'all_time_uptime_ratio',
-    'custom_uptime_ratios',
-    'last_check_at',
-    'next_check_at',
-    'tags',
-    'alert_contacts'
-];
-$url = $API_BASE . '/monitors?page_size=100&fields=' . implode(',', $fields);
+$url = $API_BASE . '/monitors?page_size=100';
 
 $ch = curl_init();
 curl_setopt_array($ch, [
@@ -86,25 +71,49 @@ $nowUtc = (new DateTime('now', new DateTimeZone('UTC')))->format(DateTime::ATOM)
 $transformed = array_map(function ($m) {
     $status = strtolower((string)($m['status'] ?? 'unknown'));
 
-    // API v3 uses last_check_at and next_check_at (not last_check/next_check)
-    $lastCheck = isset($m['last_check_at']) && (int)$m['last_check_at'] > 0 ? (int)$m['last_check_at'] : null;
-    $nextCheck = isset($m['next_check_at']) && (int)$m['next_check_at'] > 0 ? (int)$m['next_check_at'] : null;
+    // API v3 doesn't have last_check_at/next_check_at
+    // Use lastIncident.startedAt if available, otherwise use createDateTime
+    $lastCheck = null;
+    if (!empty($m['lastIncident']['startedAt'])) {
+        $lastCheck = is_numeric($m['lastIncident']['startedAt']) 
+            ? (int)$m['lastIncident']['startedAt'] 
+            : strtotime($m['lastIncident']['startedAt']);
+    } elseif (!empty($m['createDateTime'])) {
+        $lastCheck = is_numeric($m['createDateTime']) 
+            ? (int)$m['createDateTime'] 
+            : strtotime($m['createDateTime']);
+    }
+    
+    // Calculate next check from interval if available
+    $nextCheck = null;
+    if ($lastCheck && !empty($m['interval'])) {
+        $nextCheck = $lastCheck + (int)$m['interval'];
+    }
+    
+    // Calculate uptime from lastDayUptimes if available
+    $uptimeRatio = null;
+    if (!empty($m['lastDayUptimes']['histogram']) && is_array($m['lastDayUptimes']['histogram'])) {
+        $uptimes = array_column($m['lastDayUptimes']['histogram'], 'uptime');
+        if (!empty($uptimes)) {
+            $uptimeRatio = round(array_sum($uptimes) / count($uptimes), 2);
+        }
+    }
 
     return [
         'id' => $m['id'] ?? null,
-        'friendly_name' => $m['friendly_name'] ?? ($m['name'] ?? ''),
-        'url' => $m['url'] ?? ($m['hostname'] ?? ''),
+        'friendly_name' => $m['friendlyName'] ?? '',
+        'url' => $m['url'] ?? '',
         'type' => $m['type'] ?? null,
         'interval' => isset($m['interval']) ? (int)$m['interval'] : null,
         'status_code' => null,
         'status' => $status,
-        'all_time_uptime_ratio' => $m['all_time_uptime_ratio'] ?? null,
-        'custom_uptime_ratios' => $m['custom_uptime_ratios'] ?? null,
+        'all_time_uptime_ratio' => $uptimeRatio,
+        'custom_uptime_ratios' => null,
         'last_check' => $lastCheck,
         'next_check' => $nextCheck,
-        'recent_incident' => null,
+        'recent_incident' => $m['lastIncident'] ?? null,
         'logs' => null,
-        'alert_contacts' => $m['alert_contacts'] ?? null,
+        'alert_contacts' => $m['assignedAlertContacts'] ?? null,
         'tags' => $m['tags'] ?? [],
     ];
 }, $monitors);
