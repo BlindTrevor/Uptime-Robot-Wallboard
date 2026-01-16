@@ -76,18 +76,16 @@ $transformed = array_map(function ($m) {
     $lastCheck = null;
     if (isset($m['currentStateDuration']) && is_numeric($m['currentStateDuration'])) {
         $lastCheck = time() - (int)$m['currentStateDuration'];
-    } elseif (!empty($m['createDateTime'])) {
-        // Fallback to creation time if state duration unavailable
-        $lastCheck = is_numeric($m['createDateTime']) 
-            ? (int)$m['createDateTime'] 
-            : strtotime($m['createDateTime']);
     }
+    // Note: We don't fallback to createDateTime as it's misleading for "last check"
     
-    // Calculate next check from interval
+    // Calculate next check based on interval
+    // Since we don't have actual last check time, estimate next check from current time
     $nextCheck = null;
-    if ($lastCheck && !empty($m['interval'])) {
-        // Add interval to estimated last check time
-        $nextCheck = $lastCheck + (int)$m['interval'];
+    if (!empty($m['interval']) && is_numeric($m['interval'])) {
+        $interval = (int)$m['interval'];
+        // Estimate: current time + remaining time in current interval cycle
+        $nextCheck = time() + ($interval - (time() % $interval));
     }
     
     // Calculate uptime from lastDayUptimes histogram
@@ -95,6 +93,8 @@ $transformed = array_map(function ($m) {
     $uptimeRatio = null;
     if (!empty($m['lastDayUptimes']['histogram']) && is_array($m['lastDayUptimes']['histogram'])) {
         $uptimes = array_column($m['lastDayUptimes']['histogram'], 'uptime');
+        // Validate that we have numeric uptime values
+        $uptimes = array_filter($uptimes, 'is_numeric');
         if (!empty($uptimes)) {
             // Average the uptime samples to get approximate daily uptime
             $uptimeRatio = round(array_sum($uptimes) / count($uptimes), 2);
