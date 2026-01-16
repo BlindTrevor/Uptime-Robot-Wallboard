@@ -409,8 +409,8 @@
     function formatDowntime(seconds) {
       if (seconds === 0) return '0s';
       
-      const hours = Math.floor(seconds / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
+      const hours = Math.floor(seconds / SECONDS_PER_HOUR);
+      const minutes = Math.floor((seconds % SECONDS_PER_HOUR) / 60);
       const secs = seconds % 60;
       
       const parts = [];
@@ -419,6 +419,13 @@
       if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
       
       return parts.join(', ');
+    }
+    
+    // Get status class for a given uptime percentage
+    function getHourStatusClass(uptime) {
+      if (uptime >= UPTIME_THRESHOLD_PERCENT) return 'up';
+      if (uptime > 0) return 'down';
+      return 'unknown';
     }
     
     // Render 24-hour status visualization
@@ -432,7 +439,7 @@
       // Generate 24 bars with relative time labels
       const bars = data.hourlyData.map((hour, index) => {
         const uptime = parseFloat(hour.uptime) || 0;
-        const statusClass = uptime >= UPTIME_THRESHOLD_PERCENT ? 'up' : (uptime > 0 ? 'down' : 'unknown');
+        const statusClass = getHourStatusClass(uptime);
         const hoursAgo = data.hourlyData.length - index - 1;
         const timeLabel = hoursAgo === 0 ? 'Current hour' : `${hoursAgo} hour${hoursAgo === 1 ? '' : 's'} ago`;
         const title = `${timeLabel}: ${uptime.toFixed(1)}% uptime`;
