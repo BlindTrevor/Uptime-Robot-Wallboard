@@ -10,7 +10,7 @@ ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/uptime_errors.log');
 
 // --- CONFIG ---
-$TOKEN = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+$TOKEN = trim(file_get_contents(__DIR__ . '/api_token.tok'));
 
 $onlyProblems = isset($_GET['only_problems']) && $_GET['only_problems'] === '1';
 
