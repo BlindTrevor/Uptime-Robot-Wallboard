@@ -8,7 +8,7 @@ uptime_errors.log
 .vscode/
 .idea/
 *.swp
-.swo
+*.swo
 *~
 
 # OS files

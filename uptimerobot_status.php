@@ -37,12 +37,15 @@ foreach ($envPaths as $envPath) {
                 }
                 // Parse KEY=VALUE format
                 if (strpos($line, '=') !== false) {
-                    list($key, $value) = array_map('trim', explode('=', $line, 2));
-                    if ($key === 'UPTIMEROBOT_API_TOKEN') {
-                        // Remove surrounding quotes if present
-                        $value = trim($value, '"\'');
-                        $TOKEN = $value;
-                        break 2; // Break both loops
+                    $parts = array_map('trim', explode('=', $line, 2));
+                    if (count($parts) === 2) {
+                        list($key, $value) = $parts;
+                        if ($key === 'UPTIMEROBOT_API_TOKEN') {
+                            // Remove surrounding quotes if present
+                            $value = trim($value, '"\'');
+                            $TOKEN = $value;
+                            break 2; // Break both loops
+                        }
                     }
                 }
             }
