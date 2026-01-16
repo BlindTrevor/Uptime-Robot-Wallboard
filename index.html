@@ -233,8 +233,8 @@
       if (data.config) {
         applyConfiguration(data.config);
         
-        // Apply showProblemsOnly from config if it's the first load
-        if (currentConfigVersion === null && config.showProblemsOnly) {
+        // Apply showProblemsOnly from config on first load
+        if (currentConfigVersion === null) {
           onlyProblems = config.showProblemsOnly;
           document.getElementById('toggle-problems').textContent = onlyProblems ? 'Show All' : 'Show Only Problems';
         }
@@ -409,6 +409,10 @@
     // Initial load + polling
     refresh().then(() => {
       // After first refresh, update intervals based on loaded config
+      updateIntervals();
+    }).catch((err) => {
+      console.error('Initial refresh failed:', err);
+      // Still set up intervals with default config
       updateIntervals();
     });
     

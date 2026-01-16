@@ -133,6 +133,10 @@ foreach ($configPaths as $configPath) {
     }
 }
 
+// Backend filter: only_problems query parameter
+// This is sent by the frontend when user toggles "Show Only Problems" button
+// It filters data at the backend to reduce data transfer
+// This is different from the showProblemsOnly config which sets the initial state
 $onlyProblems = isset($_GET['only_problems']) && $_GET['only_problems'] === '1';
 
 if (!$TOKEN) {
