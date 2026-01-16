@@ -4,6 +4,33 @@
 
 declare(strict_types=1);
 
+// Block direct browsing - only allow access from application
+// Check if request has a valid Referer header (indicates it's from our application)
+$referer = $_SERVER['HTTP_REFERER'] ?? '';
+
+// Use SERVER_NAME (not HTTP_HOST) to prevent header injection attacks
+// SERVER_NAME comes from server config and cannot be manipulated by client
+// Note: SERVER_NAME should match the hostname users access the site with
+// For sites with both example.com and www.example.com, configure SERVER_NAME appropriately
+$serverName = $_SERVER['SERVER_NAME'] ?? '';
+
+// Parse referer URL and validate hostname matches server name
+$refererValid = false;
+if (!empty($referer) && !empty($serverName)) {
+    $refererParts = parse_url($referer);
+    // parse_url can return false, null, or array - only proceed if we got an array
+    if (is_array($refererParts) && isset($refererParts['host'])) {
+        // Compare hostnames exactly (case-insensitive) to prevent subdomain bypasses
+        $refererValid = strcasecmp($refererParts['host'], $serverName) === 0;
+    }
+}
+
+// If referer validation fails, return 403 Forbidden with no output
+if (!$refererValid) {
+    http_response_code(403);
+    exit;
+}
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
