@@ -62,8 +62,24 @@ $WALLBOARD_CONFIG = [
     'logo' => '',
 ];
 
+// Default configuration values
+$CONFIG = [
+    'showProblemsOnly' => false,
+    'refreshRate' => 20,
+    'configCheckRate' => 5,
+    'allowQueryOverride' => true,
+];
+
 foreach ($configPaths as $configPath) {
-    $parsed = parseEnvFile($configPath, ['UPTIMEROBOT_API_TOKEN', 'WALLBOARD_TITLE', 'WALLBOARD_LOGO']);
+    $parsed = parseEnvFile($configPath, [
+        'UPTIMEROBOT_API_TOKEN', 
+        'WALLBOARD_TITLE', 
+        'WALLBOARD_LOGO',
+        'SHOW_PROBLEMS_ONLY',
+        'REFRESH_RATE',
+        'CONFIG_CHECK_RATE',
+        'ALLOW_QUERY_OVERRIDE'
+    ]);
     if (!empty($parsed)) {
         // Load API token
         if (isset($parsed['UPTIMEROBOT_API_TOKEN'])) {
@@ -92,10 +108,35 @@ foreach ($configPaths as $configPath) {
             }
             // If validation fails, logo remains empty (safe default)
         }
+        
+        // Load display options
+        if (isset($parsed['SHOW_PROBLEMS_ONLY'])) {
+            $CONFIG['showProblemsOnly'] = filter_var($parsed['SHOW_PROBLEMS_ONLY'], FILTER_VALIDATE_BOOLEAN);
+        }
+        
+        // Load refresh rate (minimum 10 seconds to prevent API abuse)
+        if (isset($parsed['REFRESH_RATE']) && is_numeric($parsed['REFRESH_RATE'])) {
+            $CONFIG['refreshRate'] = max(10, (int)$parsed['REFRESH_RATE']);
+        }
+        
+        // Load config check rate (minimum 1 second)
+        if (isset($parsed['CONFIG_CHECK_RATE']) && is_numeric($parsed['CONFIG_CHECK_RATE'])) {
+            $CONFIG['configCheckRate'] = max(1, (int)$parsed['CONFIG_CHECK_RATE']);
+        }
+        
+        // Load query override setting
+        if (isset($parsed['ALLOW_QUERY_OVERRIDE'])) {
+            $CONFIG['allowQueryOverride'] = filter_var($parsed['ALLOW_QUERY_OVERRIDE'], FILTER_VALIDATE_BOOLEAN);
+        }
+        
         break;
     }
 }
 
+// Backend filter: only_problems query parameter
+// This is sent by the frontend when user toggles "Show Only Problems" button
+// It filters data at the backend to reduce data transfer
+// This is different from the showProblemsOnly config which sets the initial state
 $onlyProblems = isset($_GET['only_problems']) && $_GET['only_problems'] === '1';
 
 if (!$TOKEN) {
@@ -253,5 +294,9 @@ echo json_encode([
     'config' => [
         'title' => $WALLBOARD_CONFIG['title'],
         'logo' => $WALLBOARD_CONFIG['logo'],
+        'showProblemsOnly' => $CONFIG['showProblemsOnly'],
+        'refreshRate' => $CONFIG['refreshRate'],
+        'configCheckRate' => $CONFIG['configCheckRate'],
+        'allowQueryOverride' => $CONFIG['allowQueryOverride'],
     ],
 ], JSON_UNESCAPED_SLASHES);

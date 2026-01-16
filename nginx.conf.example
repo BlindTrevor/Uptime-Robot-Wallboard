@@ -1,0 +1,41 @@
+# NGINX Configuration Example for Uptime-Robot-Wallboard
+# 
+# This file provides NGINX configuration directives to secure your wallboard
+# installation by blocking access to sensitive files.
+#
+# Usage:
+#   1. If you're using NGINX instead of Apache, add these directives to your
+#      server block configuration
+#   2. Adjust the location paths if your wallboard is not in the root directory
+#   3. Reload NGINX: sudo nginx -t && sudo systemctl reload nginx
+
+# Deny access to .env configuration files
+location ~ \.env$ {
+    deny all;
+    return 403;
+}
+
+# Deny access to log files
+location ~ \.log$ {
+    deny all;
+    return 403;
+}
+
+# Example: If your wallboard is in a subdirectory (e.g., /status/)
+# Adjust the location paths accordingly:
+#
+# location ~ ^/status/.*\.env$ {
+#     deny all;
+#     return 403;
+# }
+#
+# location ~ ^/status/.*\.log$ {
+#     deny all;
+#     return 403;
+# }
+
+# Additional security headers (recommended)
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header X-XSS-Protection "1; mode=block" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;

@@ -94,13 +94,76 @@
     // --- Configuration ---
     const ENDPOINT = '/status/uptimerobot_status.php'; // adjust if you host elsewhere
     const CONFIG_VERSION_ENDPOINT = '/status/config_version.php'; // endpoint to check config changes
-    const REFRESH_MS = 20000; // 20 seconds
-    const CONFIG_CHECK_MS = 5000; // Check config every 5 seconds
+    
+    // Default configuration (will be overridden by server config and/or query string)
+    let config = {
+      refreshRate: 20,
+      configCheckRate: 5,
+      showProblemsOnly: false,
+      allowQueryOverride: true,
+    };
+    
+    // Parse query string parameters
+    function parseQueryString() {
+      const params = new URLSearchParams(window.location.search);
+      const queryConfig = {};
+      
+      // Parse showProblemsOnly
+      if (params.has('showProblemsOnly')) {
+        queryConfig.showProblemsOnly = params.get('showProblemsOnly') === 'true';
+      }
+      
+      // Parse refreshRate (in seconds, minimum 10)
+      if (params.has('refreshRate')) {
+        const rate = parseInt(params.get('refreshRate'), 10);
+        if (!isNaN(rate) && rate >= 10) {
+          queryConfig.refreshRate = rate;
+        }
+      }
+      
+      // Parse configCheckRate (in seconds, minimum 1)
+      if (params.has('configCheckRate')) {
+        const rate = parseInt(params.get('configCheckRate'), 10);
+        if (!isNaN(rate) && rate >= 1) {
+          queryConfig.configCheckRate = rate;
+        }
+      }
+      
+      return queryConfig;
+    }
+    
+    // Apply configuration from server and query string
+    function applyConfiguration(serverConfig) {
+      // Start with server config
+      if (serverConfig) {
+        if (typeof serverConfig.showProblemsOnly === 'boolean') {
+          config.showProblemsOnly = serverConfig.showProblemsOnly;
+        }
+        if (typeof serverConfig.refreshRate === 'number') {
+          config.refreshRate = serverConfig.refreshRate;
+        }
+        if (typeof serverConfig.configCheckRate === 'number') {
+          config.configCheckRate = serverConfig.configCheckRate;
+        }
+        if (typeof serverConfig.allowQueryOverride === 'boolean') {
+          config.allowQueryOverride = serverConfig.allowQueryOverride;
+        }
+      }
+      
+      // Apply query string overrides if allowed
+      if (config.allowQueryOverride) {
+        const queryConfig = parseQueryString();
+        Object.assign(config, queryConfig);
+      }
+    }
 
     // State
     let onlyProblems = false;
     let lastStatuses = new Map(); // id -> previous status (for change detection)
     let currentConfigVersion = null; // Track config file version
+    let refreshInterval = null;
+    let configCheckInterval = null;
+    let initialConfigApplied = false; // Flag to prevent race conditions on initial load
 
     // Utilities
     function epochToLocal(epoch) {
@@ -167,8 +230,17 @@
       const title = document.getElementById('title');
       const logo = document.getElementById('logo');
 
-      // Apply configuration if provided
+      // Apply configuration from server
       if (data.config) {
+        applyConfiguration(data.config);
+        
+        // Apply showProblemsOnly from config on first load only
+        if (!initialConfigApplied) {
+          initialConfigApplied = true;
+          onlyProblems = config.showProblemsOnly;
+          document.getElementById('toggle-problems').textContent = onlyProblems ? 'Show All' : 'Show Only Problems';
+        }
+        
         if (data.config.title) {
           // Use textContent (not innerHTML) to prevent XSS
           title.textContent = data.config.title;
@@ -313,6 +385,23 @@
       }
     }
 
+    // Update intervals based on configuration
+    function updateIntervals() {
+      // Clear existing intervals
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+      }
+      if (configCheckInterval) {
+        clearInterval(configCheckInterval);
+        configCheckInterval = null;
+      }
+      
+      // Set new intervals based on config
+      refreshInterval = setInterval(refresh, config.refreshRate * 1000);
+      configCheckInterval = setInterval(checkConfigVersion, config.configCheckRate * 1000);
+    }
+
     // Events
     document.getElementById('refresh-btn').addEventListener('click', refresh);
     document.getElementById('toggle-problems').addEventListener('click', () => {
@@ -322,12 +411,13 @@
     });
 
     // Initial load + polling
-    refresh();
-    setInterval(refresh, REFRESH_MS);
+    refresh().finally(() => {
+      // After first refresh (success or failure), update intervals based on loaded config
+      updateIntervals();
+    });
     
-    // Initialize config version and start polling for config changes
+    // Initialize config version checking
     checkConfigVersion();
-    setInterval(checkConfigVersion, CONFIG_CHECK_MS);
   </script>
 </body>
 </html>

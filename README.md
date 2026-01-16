@@ -12,6 +12,54 @@ A real-time status wallboard for monitoring UptimeRobot services using their API
 - Clean, modern UI with dark theme
 - **Customizable wallboard title** - Set your own title for branding
 - **Optional logo display** - Upload and display your company logo
+- **Query String Configuration** - Override settings via URL parameters (e.g., `?showProblemsOnly=true&refreshRate=30`)
+- **Flexible Configuration** - Control whether users can modify settings via query string
+
+## Query String Configuration
+
+The wallboard supports runtime configuration through URL query parameters, allowing you to customize behavior without editing files.
+
+### Available Query Parameters
+
+- `showProblemsOnly` - Show only monitors with problems (values: `true` or `false`)
+- `refreshRate` - Set page refresh interval in seconds (minimum: 10)
+- `configCheckRate` - Set config file check interval in seconds (minimum: 1)
+
+### Examples
+
+```
+# Show only monitors with problems, refresh every 30 seconds
+https://your-domain.com/status/?showProblemsOnly=true&refreshRate=30
+
+# Show all monitors, refresh every 60 seconds
+https://your-domain.com/status/?showProblemsOnly=false&refreshRate=60
+
+# Check config changes every 10 seconds instead of default 5
+https://your-domain.com/status/?configCheckRate=10
+```
+
+### Security: Controlling Query String Overrides
+
+By default, query string parameters are **enabled** to provide flexibility. However, you can disable them for security:
+
+1. Edit your `config.env` file:
+   ```bash
+   ALLOW_QUERY_OVERRIDE=false
+   ```
+
+2. Save the file - the wallboard will automatically reload within 5 seconds
+
+When `ALLOW_QUERY_OVERRIDE=false`, all query string parameters are ignored and only the `config.env` settings apply. This is useful for:
+- Public displays where you don't want users modifying settings
+- Controlled environments where consistency is important
+- Security-sensitive deployments
+
+### Configuration Priority
+
+Settings are applied in this order (later overrides earlier):
+1. **Default values** (built into the application)
+2. **config.env file** (your persistent configuration)
+3. **Query string parameters** (if `ALLOW_QUERY_OVERRIDE=true`)
 
 ## Setup
 
@@ -37,6 +85,10 @@ The application uses a single `config.env` file for all configuration, including
    UPTIMEROBOT_API_TOKEN=your-api-token-here
    WALLBOARD_TITLE=UptimeRobot – Current Status
    WALLBOARD_LOGO=
+   SHOW_PROBLEMS_ONLY=false
+   REFRESH_RATE=20
+   CONFIG_CHECK_RATE=5
+   ALLOW_QUERY_OVERRIDE=true
    EOF
    
    # Set restrictive permissions
@@ -53,6 +105,10 @@ The application uses a single `config.env` file for all configuration, including
    UPTIMEROBOT_API_TOKEN=your-api-token-here
    WALLBOARD_TITLE=UptimeRobot – Current Status
    WALLBOARD_LOGO=
+   SHOW_PROBLEMS_ONLY=false
+   REFRESH_RATE=20
+   CONFIG_CHECK_RATE=5
+   ALLOW_QUERY_OVERRIDE=true
    EOF
    
    # Set restrictive permissions
@@ -75,6 +131,10 @@ If you cannot store files outside the webroot:
    UPTIMEROBOT_API_TOKEN=your-api-token-here
    WALLBOARD_TITLE=My Company Status Dashboard
    WALLBOARD_LOGO=logo.png
+   SHOW_PROBLEMS_ONLY=false
+   REFRESH_RATE=20
+   CONFIG_CHECK_RATE=5
+   ALLOW_QUERY_OVERRIDE=true
    EOF
    
    # Set restrictive file permissions
@@ -88,6 +148,20 @@ If you cannot store files outside the webroot:
    # Should return 403 Forbidden (works for both HTTP and HTTPS)
    ```
 
+3. **For NGINX Users**: If you're using NGINX instead of Apache, the `.htaccess` file won't work. Use the provided `nginx.conf.example` file:
+   ```bash
+   # Copy the NGINX configuration directives from nginx.conf.example
+   # and add them to your NGINX server block configuration
+   
+   # Then test and reload NGINX
+   sudo nginx -t
+   sudo systemctl reload nginx
+   
+   # Verify protection is working
+   curl http://your-domain.com/status/config.env
+   # Should return 403 Forbidden
+   ```
+
 ### 3. Deploy the Application
 
 1. Upload all files to your web server
@@ -98,7 +172,7 @@ If you cannot store files outside the webroot:
 
 ### 4. Customize Your Wallboard (Optional)
 
-You can personalize the wallboard with a custom title and logo by editing the `config.env` file you created earlier:
+You can personalize the wallboard with various settings by editing the `config.env` file you created earlier:
 
 1. Edit `config.env` to set your preferences:
    ```bash
@@ -114,6 +188,16 @@ You can personalize the wallboard with a custom title and logo by editing the `c
    # Examples:
    #   WALLBOARD_LOGO=images/company-logo.svg
    #   WALLBOARD_LOGO=https://example.com/logo.png
+   
+   # Display options
+   SHOW_PROBLEMS_ONLY=false      # Show only monitors with problems by default
+   
+   # Refresh intervals (in seconds)
+   REFRESH_RATE=20               # How often to refresh data from API (min: 10)
+   CONFIG_CHECK_RATE=5           # How often to check for config changes (min: 1)
+   
+   # Security
+   ALLOW_QUERY_OVERRIDE=true     # Allow URL parameters to override settings
    ```
 
 2. If using a logo, upload your logo file to the application directory (or use an external URL)
@@ -121,7 +205,7 @@ You can personalize the wallboard with a custom title and logo by editing the `c
 3. Save the file - the wallboard will automatically refresh within 5 seconds to show your changes!
 
 **Notes:**
-- Both title and logo are optional
+- All configuration options are optional except `UPTIMEROBOT_API_TOKEN`
 - If no `config.env` file exists, default values will be used
 - Logo should be reasonably sized (recommended max: 200x50 pixels)
 - Supported logo formats: PNG, SVG, JPG, GIF
