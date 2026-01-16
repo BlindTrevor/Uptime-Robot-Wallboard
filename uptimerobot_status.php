@@ -345,6 +345,32 @@ $transformed = array_map(function ($m) use ($incidentsByMonitor) {
     $histogram = [];
     $incidents = $monitorId && isset($incidentsByMonitor[$monitorId]) ? $incidentsByMonitor[$monitorId] : [];
     
+    // If monitor is currently down and we have currentStateDuration, create a synthetic incident
+    // to represent ongoing downtime that may have started before the 24-hour window
+    if ($status === 'down' && isset($m['currentStateDuration']) && is_numeric($m['currentStateDuration'])) {
+        $stateDuration = (int)$m['currentStateDuration'];
+        $downSince = $now - $stateDuration;
+        
+        // Check if we already have an unresolved incident covering this period
+        $hasOngoingIncident = false;
+        foreach ($incidents as $incident) {
+            if (strtolower((string)($incident['status'] ?? '')) !== 'resolved') {
+                $hasOngoingIncident = true;
+                break;
+            }
+        }
+        
+        // If no ongoing incident found, create a synthetic one for the current downtime
+        if (!$hasOngoingIncident) {
+            $incidents[] = [
+                'startedAt' => $downSince,
+                'status' => 'ongoing',
+                'duration' => null,
+                'resolvedAt' => null
+            ];
+        }
+    }
+    
     // Helper function to parse timestamps
     $parseTimestamp = function($value) {
         if (empty($value)) return null;
