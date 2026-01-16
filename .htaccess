@@ -1,0 +1,9 @@
+# Deny access to .env files (environment configuration)
+<Files "*.env">
+    Require all denied
+</Files>
+
+# Deny access to log files
+<Files "*.log">
+    Require all denied
+</Files>

@@ -1,0 +1,16 @@
+# Environment file - contains sensitive API key
+api_token.env
+
+# Error logs
+uptime_errors.log
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
