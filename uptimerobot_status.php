@@ -98,9 +98,15 @@ $transformed = array_map(function ($m) {
         
         if ($incidentStatus === 'resolved' && !empty($incident['startedAt']) && !empty($incident['duration'])) {
             // Parse startedAt timestamp
-            $incidentStart = is_numeric($incident['startedAt']) 
-                ? (int)$incident['startedAt'] 
-                : strtotime($incident['startedAt']);
+            $incidentStart = 0;
+            if (is_numeric($incident['startedAt'])) {
+                $incidentStart = (int)$incident['startedAt'];
+            } else {
+                $parsed = strtotime($incident['startedAt']);
+                if ($parsed !== false) {
+                    $incidentStart = $parsed;
+                }
+            }
             
             if ($incidentStart > 0 && is_numeric($incident['duration'])) {
                 // Calculate when incident was resolved
