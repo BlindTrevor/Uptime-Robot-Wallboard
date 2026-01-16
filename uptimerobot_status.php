@@ -225,10 +225,48 @@ if ($onlyProblems) {
     }));
 }
 
+// Fetch incidents for 24-hour visualization
+// Get incidents from the last 24 hours
+$twentyFourHoursAgo = (new DateTime('-24 hours', new DateTimeZone('UTC')))->format(DateTime::ATOM);
+$incidentsUrl = $API_BASE . '/incidents?started_after=' . urlencode($twentyFourHoursAgo) . '&page_size=100';
+
+$ch = curl_init();
+curl_setopt_array($ch, [
+    CURLOPT_URL => $incidentsUrl,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => [
+        'Accept: application/json',
+        'Authorization: Bearer ' . $TOKEN,
+    ],
+    CURLOPT_TIMEOUT => 15,
+]);
+$incidentsResponse = curl_exec($ch);
+$incidentsCurlErr = curl_error($ch);
+$incidentsHttpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+$incidentsByMonitor = [];
+if (!$incidentsCurlErr && $incidentsHttpCode >= 200 && $incidentsHttpCode < 300) {
+    $incidentsData = json_decode($incidentsResponse, true);
+    if (is_array($incidentsData) && isset($incidentsData['data'])) {
+        // Group incidents by monitor ID
+        foreach ($incidentsData['data'] as $incident) {
+            $monitorId = $incident['monitor']['id'] ?? null;
+            if ($monitorId !== null) {
+                if (!isset($incidentsByMonitor[$monitorId])) {
+                    $incidentsByMonitor[$monitorId] = [];
+                }
+                $incidentsByMonitor[$monitorId][] = $incident;
+            }
+        }
+    }
+}
+
 // Normalize fields for your wallboard
 $nowUtc = (new DateTime('now', new DateTimeZone('UTC')))->format(DateTime::ATOM);
-$transformed = array_map(function ($m) {
+$transformed = array_map(function ($m) use ($incidentsByMonitor) {
     $status = strtolower((string)($m['status'] ?? 'unknown'));
+    $monitorId = $m['id'] ?? null;
 
     // API v3 doesn't provide explicit last_check/next_check timestamps
     // Best approximation: use currentStateDuration to calculate when state changed
@@ -300,6 +338,76 @@ $transformed = array_map(function ($m) {
             $lastDayUptimeRatio = max(0, min($lastDayUptimeRatio, 100));
         }
     }
+    
+    // Build 24-hour histogram from incidents
+    // Create 24 hourly buckets (last 24 hours)
+    $now = time();
+    $histogram = [];
+    $incidents = $monitorId && isset($incidentsByMonitor[$monitorId]) ? $incidentsByMonitor[$monitorId] : [];
+    
+    for ($i = 23; $i >= 0; $i--) {
+        $hourStart = $now - ($i + 1) * 3600;
+        $hourEnd = $now - $i * 3600;
+        
+        // Calculate downtime in this hour
+        $downtimeSeconds = 0;
+        
+        foreach ($incidents as $incident) {
+            // Parse incident times
+            $incidentStartTime = 0;
+            $incidentEndTime = null;
+            
+            if (!empty($incident['startedAt'])) {
+                if (is_numeric($incident['startedAt'])) {
+                    $incidentStartTime = (int)$incident['startedAt'];
+                } else {
+                    $parsed = strtotime($incident['startedAt']);
+                    if ($parsed !== false) {
+                        $incidentStartTime = $parsed;
+                    }
+                }
+            }
+            
+            // Calculate incident end time
+            if (!empty($incident['resolvedAt'])) {
+                if (is_numeric($incident['resolvedAt'])) {
+                    $incidentEndTime = (int)$incident['resolvedAt'];
+                } else {
+                    $parsed = strtotime($incident['resolvedAt']);
+                    if ($parsed !== false) {
+                        $incidentEndTime = $parsed;
+                    }
+                }
+            } elseif (!empty($incident['duration']) && is_numeric($incident['duration'])) {
+                $incidentEndTime = $incidentStartTime + (int)$incident['duration'];
+            } elseif (strtolower((string)($incident['status'] ?? '')) !== 'resolved') {
+                // Ongoing incident - use current time as end
+                $incidentEndTime = $now;
+            }
+            
+            // Skip if we couldn't determine incident times
+            if ($incidentStartTime === 0 || $incidentEndTime === null) {
+                continue;
+            }
+            
+            // Check if incident overlaps with this hour
+            $overlapStart = max($hourStart, $incidentStartTime);
+            $overlapEnd = min($hourEnd, $incidentEndTime);
+            
+            if ($overlapStart < $overlapEnd) {
+                $downtimeSeconds += ($overlapEnd - $overlapStart);
+            }
+        }
+        
+        // Calculate uptime percentage for this hour
+        $uptimePercent = 100 - (($downtimeSeconds / 3600) * 100);
+        $uptimePercent = max(0, min(100, $uptimePercent)); // Clamp to [0, 100]
+        
+        $histogram[] = [
+            'uptime' => round($uptimePercent, 2),
+            'timestamp' => date('c', $hourEnd)
+        ];
+    }
 
     return [
         'id' => $m['id'] ?? null,
@@ -319,8 +427,12 @@ $transformed = array_map(function ($m) {
         'alert_contacts' => $m['assignedAlertContacts'] ?? null,
         // Tags are passed as-is; formatTags() in index.html handles object-to-name conversion
         'tags' => $m['tags'] ?? [],
-        // Pass through lastDayUptimes histogram for 24-hour status visualization
-        'last_day_uptimes' => $m['lastDayUptimes'] ?? null,
+        // Construct histogram from incidents for 24-hour status visualization
+        'last_day_uptimes' => [
+            'histogram' => $histogram
+        ],
+        // Include incidents for debugging
+        'incidents_24h' => $incidents,
     ];
 }, $monitors);
 
