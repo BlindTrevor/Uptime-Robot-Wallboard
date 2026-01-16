@@ -9,11 +9,56 @@ A real-time status wallboard for monitoring UptimeRobot services using their API
 - Filter view to show only problematic services
 - Automatic refresh every 20 seconds
 - **Auto-refresh on config changes** - Front-end automatically reloads when configuration is updated
-- Clean, modern UI with dark theme
+- **Dark/Light Theme Toggle** - Switch between dark and light themes with user preference persistence
 - **Customizable wallboard title** - Set your own title for branding
 - **Optional logo display** - Upload and display your company logo
 - **Query String Configuration** - Override settings via URL parameters (e.g., `?showProblemsOnly=true&refreshRate=30`)
 - **Flexible Configuration** - Control whether users can modify settings via query string
+
+## Dark/Light Theme
+
+The wallboard supports both dark and light themes with multiple ways to control the appearance:
+
+### Theme Toggle Button
+
+Click the theme toggle button in the controls section to instantly switch between dark and light modes. Your selection is automatically saved in a cookie and will persist across browser sessions.
+
+### Theme Configuration Options
+
+1. **User Toggle** (Highest Priority): Click the theme button to manually switch themes. The selection is stored in a browser cookie.
+
+2. **Query String Parameter**: Set the theme via URL parameter
+   ```
+   ?theme=dark   # Force dark theme
+   ?theme=light  # Force light theme
+   ?theme=auto   # Follow system preference
+   ```
+
+3. **Config File**: Set the default theme in `config.env`
+   ```bash
+   THEME=dark   # Default: dark theme
+   THEME=light  # Default: light theme
+   THEME=auto   # Default: follow system preference
+   ```
+
+4. **System Preference** (Lowest Priority): When set to `auto` or no preference is stored, the wallboard automatically detects your system's dark/light mode preference using the `prefers-color-scheme` media query.
+
+### Theme Screenshots
+
+**Dark Theme (Default)**
+
+![Dark Theme](https://github.com/user-attachments/assets/df95564d-da7b-46c5-b008-2f990d67ea62)
+
+**Light Theme**
+
+![Light Theme](https://github.com/user-attachments/assets/cb4b3114-5a31-4e83-96f5-ab27f446fc75)
+
+### Accessibility
+
+Both themes have been designed with accessibility in mind:
+- High contrast ratios for text readability
+- Clear visual distinction between status indicators
+- Smooth transitions between themes
 
 ## Query String Configuration
 
@@ -24,6 +69,7 @@ The wallboard supports runtime configuration through URL query parameters, allow
 - `showProblemsOnly` - Show only monitors with problems (values: `true` or `false`)
 - `refreshRate` - Set page refresh interval in seconds (minimum: 10)
 - `configCheckRate` - Set config file check interval in seconds (minimum: 1)
+- `theme` - Set the theme (values: `dark`, `light`, or `auto`)
 
 ### Examples
 
@@ -36,6 +82,12 @@ https://your-domain.com/status/?showProblemsOnly=false&refreshRate=60
 
 # Check config changes every 10 seconds instead of default 5
 https://your-domain.com/status/?configCheckRate=10
+
+# Use light theme
+https://your-domain.com/status/?theme=light
+
+# Use auto theme (follows system preference)
+https://your-domain.com/status/?theme=auto
 ```
 
 ### Security: Controlling Query String Overrides
@@ -89,6 +141,7 @@ The application uses a single `config.env` file for all configuration, including
    REFRESH_RATE=20
    CONFIG_CHECK_RATE=5
    ALLOW_QUERY_OVERRIDE=true
+   THEME=dark
    EOF
    
    # Set restrictive permissions
@@ -109,6 +162,7 @@ The application uses a single `config.env` file for all configuration, including
    REFRESH_RATE=20
    CONFIG_CHECK_RATE=5
    ALLOW_QUERY_OVERRIDE=true
+   THEME=dark
    EOF
    
    # Set restrictive permissions
@@ -135,6 +189,7 @@ If you cannot store files outside the webroot:
    REFRESH_RATE=20
    CONFIG_CHECK_RATE=5
    ALLOW_QUERY_OVERRIDE=true
+   THEME=dark
    EOF
    
    # Set restrictive file permissions
@@ -191,6 +246,9 @@ You can personalize the wallboard with various settings by editing the `config.e
    
    # Display options
    SHOW_PROBLEMS_ONLY=false      # Show only monitors with problems by default
+   
+   # Theme options
+   THEME=dark                    # Theme: dark, light, or auto (follows system preference)
    
    # Refresh intervals (in seconds)
    REFRESH_RATE=20               # How often to refresh data from API (min: 10)
