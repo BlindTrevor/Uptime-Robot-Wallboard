@@ -85,6 +85,48 @@
     .small { font-size: 0.78rem; color: var(--subtle); margin-top: 6px; }
     .err { color: var(--bad); margin: 0.4rem 0; white-space: pre-wrap; }
     .footer { color: var(--subtle); margin-top: 0.5rem; font-size: 0.85rem; }
+    
+    /* 24-hour status visualization */
+    .status-24h { margin-top: 10px; }
+    .status-24h-title { 
+      font-size: 0.8rem; 
+      color: var(--subtle); 
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .status-24h-uptime { 
+      font-weight: 700;
+      color: var(--text);
+    }
+    .status-24h-bars {
+      display: flex;
+      gap: 2px;
+      height: 32px;
+      margin-bottom: 6px;
+    }
+    .status-24h-bar {
+      flex: 1;
+      border-radius: 3px;
+      transition: opacity 0.2s;
+    }
+    .status-24h-bar.up {
+      background: var(--ok);
+    }
+    .status-24h-bar.down {
+      background: var(--bad);
+    }
+    .status-24h-bar.unknown {
+      background: var(--border);
+    }
+    .status-24h-bar:hover {
+      opacity: 0.8;
+    }
+    .status-24h-summary {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
   </style>
 </head>
 <body>
@@ -316,6 +358,97 @@
       return s !== 'up';
     }
 
+    // Process lastDayUptimes histogram data for 24-hour visualization
+    function process24HourData(lastDayUptimes) {
+      if (!lastDayUptimes || !lastDayUptimes.histogram || !Array.isArray(lastDayUptimes.histogram)) {
+        return null;
+      }
+      
+      const histogram = lastDayUptimes.histogram;
+      
+      // Get the most recent 24 hours of data
+      const hourlyData = histogram.slice(-24);
+      
+      // Calculate statistics
+      let totalUptime = 0;
+      let incidentCount = 0;
+      let totalDowntimeSeconds = 0;
+      let lastStatus = null;
+      
+      hourlyData.forEach((hour, index) => {
+        const uptime = parseFloat(hour.uptime) || 0;
+        totalUptime += uptime;
+        
+        // Detect incidents: transitions from up to down
+        const currentStatus = uptime >= 50 ? 'up' : 'down'; // Consider >50% uptime as "up"
+        if (lastStatus === 'up' && currentStatus === 'down') {
+          incidentCount++;
+        }
+        lastStatus = currentStatus;
+        
+        // Calculate downtime in seconds (assuming 1-hour intervals = 3600 seconds)
+        const downtimePercent = 100 - uptime;
+        totalDowntimeSeconds += (downtimePercent / 100) * 3600;
+      });
+      
+      const avgUptime = hourlyData.length > 0 ? totalUptime / hourlyData.length : 0;
+      
+      return {
+        hourlyData: hourlyData,
+        uptimePercent: avgUptime.toFixed(3),
+        incidentCount: incidentCount,
+        totalDowntimeSeconds: Math.round(totalDowntimeSeconds)
+      };
+    }
+    
+    // Format downtime duration
+    function formatDowntime(seconds) {
+      if (seconds === 0) return '0s';
+      
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      
+      const parts = [];
+      if (hours > 0) parts.push(`${hours}h`);
+      if (minutes > 0) parts.push(`${minutes}m`);
+      if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
+      
+      return parts.join(', ');
+    }
+    
+    // Render 24-hour status visualization
+    function render24HourStatus(monitor) {
+      const data = process24HourData(monitor.last_day_uptimes);
+      
+      if (!data) {
+        return ''; // No data available
+      }
+      
+      // Generate 24 bars
+      const bars = data.hourlyData.map((hour, index) => {
+        const uptime = parseFloat(hour.uptime) || 0;
+        const statusClass = uptime >= 50 ? 'up' : (uptime > 0 ? 'down' : 'unknown');
+        const title = `Hour ${index + 1}: ${uptime.toFixed(1)}% uptime`;
+        return `<div class="status-24h-bar ${statusClass}" title="${title}"></div>`;
+      }).join('');
+      
+      const summaryText = `${data.incidentCount} incident${data.incidentCount === 1 ? '' : 's'}, ${formatDowntime(data.totalDowntimeSeconds)} down`;
+      
+      return `
+        <div class="status-24h">
+          <div class="status-24h-title">
+            <span>Last 24 hours</span>
+            <span class="status-24h-uptime">${data.uptimePercent}%</span>
+          </div>
+          <div class="status-24h-bars">
+            ${bars}
+          </div>
+          <div class="status-24h-summary">${summaryText}</div>
+        </div>
+      `;
+    }
+
     // Fetch
     async function loadData() {
       const params = new URLSearchParams();
@@ -428,12 +561,14 @@
           ? `${m.custom_uptime_ratios}% (1/7/30/90d)`
           : (m.all_time_uptime_ratio ? `${m.all_time_uptime_ratio}% (all-time)` : '—');
         const tags = formatTags(m.tags);
+        const status24h = render24HourStatus(m);
 
         return `
           <div class="${cardClass}">
             <div class="name">${m.friendly_name || '—'}</div>
             <div class="url">${m.url || '—'}</div>
             <div class="${cls}">${statusIcon}${(m.status || 'UNKNOWN').toUpperCase()}</div>
+            ${status24h}
             <div class="kv">Last check: ${epochToLocal(m.last_check)} | Next: ${epochToLocal(m.next_check)}</div>
             <div class="kv">Uptime: ${ratios}</div>
             ${tags ? `<div class="small">Tags: ${tags}</div>` : ''}

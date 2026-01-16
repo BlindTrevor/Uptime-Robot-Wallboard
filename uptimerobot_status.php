@@ -319,6 +319,8 @@ $transformed = array_map(function ($m) {
         'alert_contacts' => $m['assignedAlertContacts'] ?? null,
         // Tags are passed as-is; formatTags() in index.html handles object-to-name conversion
         'tags' => $m['tags'] ?? [],
+        // Pass through lastDayUptimes histogram for 24-hour status visualization
+        'last_day_uptimes' => $m['lastDayUptimes'] ?? null,
     ];
 }, $monitors);
 
