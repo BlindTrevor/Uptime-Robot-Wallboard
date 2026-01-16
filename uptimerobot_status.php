@@ -24,7 +24,22 @@ if (!$TOKEN) {
 }
 
 $API_BASE = 'https://api.uptimerobot.com/v3';
-$url = $API_BASE . '/monitors?page_size=100';// adjust page_size as needed
+// Request specific fields from API v3 - by default only basic fields are returned
+$fields = [
+    'id',
+    'friendly_name',
+    'url',
+    'type',
+    'interval',
+    'status',
+    'all_time_uptime_ratio',
+    'custom_uptime_ratios',
+    'last_check_at',
+    'next_check_at',
+    'tags',
+    'alert_contacts'
+];
+$url = $API_BASE . '/monitors?page_size=100&fields=' . implode(',', $fields);
 
 $ch = curl_init();
 curl_setopt_array($ch, [
@@ -71,14 +86,9 @@ $nowUtc = (new DateTime('now', new DateTimeZone('UTC')))->format(DateTime::ATOM)
 $transformed = array_map(function ($m) {
     $status = strtolower((string)($m['status'] ?? 'unknown'));
 
-    $lastCheck = null;
-    foreach (['last_check_at','last_check','checked_at','last_status_change_at'] as $k) {
-        if (isset($m[$k]) && (int)$m[$k] > 0) { $lastCheck = (int)$m[$k]; break; }
-    }
-    $nextCheck = null;
-    foreach (['next_check_at','next_check'] as $k) {
-        if (isset($m[$k]) && (int)$m[$k] > 0) { $nextCheck = (int)$m[$k]; break; }
-    }
+    // API v3 uses last_check_at and next_check_at (not last_check/next_check)
+    $lastCheck = isset($m['last_check_at']) && (int)$m['last_check_at'] > 0 ? (int)$m['last_check_at'] : null;
+    $nextCheck = isset($m['next_check_at']) && (int)$m['next_check_at'] > 0 ? (int)$m['next_check_at'] : null;
 
     return [
         'id' => $m['id'] ?? null,
