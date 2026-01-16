@@ -1,5 +1,5 @@
-# Deny access to .tok files (API token storage)
-<Files "*.tok">
+# Deny access to .env files (environment configuration)
+<Files ".env">
     Require all denied
 </Files>
 

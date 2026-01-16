@@ -20,37 +20,37 @@ A real-time status wallboard for monitoring UptimeRobot services using their API
 
 ### 2. Configure the API Token (IMPORTANT - Security Best Practices)
 
-The application needs your UptimeRobot API token to fetch monitor data. Follow these steps for secure storage:
+The application needs your UptimeRobot API token to fetch monitor data. Follow these steps for secure storage using a `.env` file:
 
 #### Option A: Store Outside Webroot (MOST SECURE - Recommended)
 
-1. Create the token file **one directory above** your webroot:
+1. Create the `.env` file **one directory above** your webroot:
    ```bash
    # Example: If your webroot is /var/www/html/status
-   # Create the token file at /var/www/html/api_token.tok (one level up)
+   # Create the .env file at /var/www/html/.env (one level up)
    
    # Secure method (avoids shell history):
-   cat > /var/www/html/api_token.tok << 'EOF'
-   your-api-token-here
+   cat > /var/www/html/.env << 'EOF'
+   UPTIMEROBOT_API_TOKEN=your-api-token-here
    EOF
    
    # Set restrictive permissions
-   chmod 600 /var/www/html/api_token.tok
-   chown www-data:www-data /var/www/html/api_token.tok  # Adjust user/group as needed
+   chmod 600 /var/www/html/.env
+   chown www-data:www-data /var/www/html/.env  # Adjust user/group as needed
    ```
 
 2. Or if your webroot is `/var/www/html` (the application is at root):
    ```bash
-   # Create the token file at /var/www/api_token.tok (one level up)
+   # Create the .env file at /var/www/.env (one level up)
    
    # Secure method (avoids shell history):
-   cat > /var/www/api_token.tok << 'EOF'
-   your-api-token-here
+   cat > /var/www/.env << 'EOF'
+   UPTIMEROBOT_API_TOKEN=your-api-token-here
    EOF
    
    # Set restrictive permissions
-   chmod 600 /var/www/api_token.tok
-   chown www-data:www-data /var/www/api_token.tok  # Adjust user/group as needed
+   chmod 600 /var/www/.env
+   chown www-data:www-data /var/www/.env  # Adjust user/group as needed
    ```
 
 #### Option B: Store in Webroot (Fallback)
@@ -62,20 +62,20 @@ If you cannot store files outside the webroot:
    # Navigate to the application directory first
    cd /path/to/your/webroot/status  # Adjust to your actual path
    
-   # Create the token file (secure method to avoid shell history)
-   cp api_token.tok.example api_token.tok
-   cat > api_token.tok << 'EOF'
-   your-api-token-here
+   # Create the .env file (secure method to avoid shell history)
+   cp .env.example .env
+   cat > .env << 'EOF'
+   UPTIMEROBOT_API_TOKEN=your-api-token-here
    EOF
    
    # Set restrictive file permissions
-   chmod 600 api_token.tok
-   chown www-data:www-data api_token.tok  # Adjust user/group as needed
+   chmod 600 .env
+   chown www-data:www-data .env  # Adjust user/group as needed
    ```
 
 2. Verify `.htaccess` is working to block HTTP access to the file:
    ```bash
-   curl http://your-domain.com/status/api_token.tok
+   curl http://your-domain.com/status/.env
    # Should return 403 Forbidden (works for both HTTP and HTTPS)
    ```
 
@@ -89,10 +89,10 @@ If you cannot store files outside the webroot:
 
 **Critical Security Checks:**
 
-- [ ] `api_token.tok` is **NOT** accessible via HTTP (should return 403 Forbidden)
+- [ ] `.env` is **NOT** accessible via HTTP (should return 403 Forbidden)
 - [ ] File permissions are set to `600` (readable only by owner)
-- [ ] `api_token.tok` is listed in `.gitignore`
-- [ ] Never commit `api_token.tok` to version control
+- [ ] `.env` is listed in `.gitignore`
+- [ ] Never commit `.env` to version control
 
 ## Security Notes
 
@@ -107,11 +107,11 @@ Storing API keys in plain text files presents several risks:
 
 ### Security Layers Implemented
 
-1. **`.htaccess` protection**: Blocks HTTP access to `.tok` files (Apache only)
+1. **`.htaccess` protection**: Blocks HTTP access to `.env` files (Apache only)
 2. **File permissions**: Restricts filesystem access to web server user only
 3. **`.gitignore`**: Prevents accidental commits to version control
-4. **External storage**: Supports storing token outside webroot
-5. **Example template**: Provides `api_token.tok.example` as safe reference
+4. **External storage**: Supports storing `.env` file outside webroot
+5. **Example template**: Provides `.env.example` as safe reference
 
 ### For Production Environments
 
@@ -130,13 +130,13 @@ If you have access to more advanced secret management:
 
 ### "Missing UPTIMEROBOT_API_TOKEN" Error
 
-- Check that `api_token.tok` exists in the correct location
-- Verify the file contains your API token (no extra whitespace)
+- Check that `.env` file exists in the correct location
+- Verify the file contains `UPTIMEROBOT_API_TOKEN=your-token` format
 - Check file permissions allow the web server to read it
 
 ### 403 Forbidden on PHP Script
 
-- Verify `.htaccess` is not blocking PHP files (only `.tok` files should be blocked)
+- Verify `.htaccess` is not blocking PHP files (only `.env` files should be blocked)
 - Check Apache configuration allows `.htaccess` overrides
 
 ### No Data Showing

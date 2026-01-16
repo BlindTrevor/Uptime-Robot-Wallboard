@@ -13,23 +13,38 @@ ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/uptime_errors.log');
 
 // --- CONFIG ---
-// Try loading token from outside webroot first (most secure)
-// Then fallback to current directory for backward compatibility
-$tokenPaths = [
-    __DIR__ . '/../api_token.tok',  // Outside webroot (recommended)
-    __DIR__ . '/api_token.tok',     // Current directory (fallback)
+// Try loading environment variables from .env file
+// Checks outside webroot first (most secure), then fallback to current directory
+$envPaths = [
+    __DIR__ . '/../.env',  // Outside webroot (recommended)
+    __DIR__ . '/.env',     // Current directory (fallback)
 ];
 
 $TOKEN = '';
-foreach ($tokenPaths as $tokenPath) {
-    if (file_exists($tokenPath) && is_readable($tokenPath)) {
+foreach ($envPaths as $envPath) {
+    if (file_exists($envPath) && is_readable($envPath)) {
         // Use @ to suppress errors and prevent information disclosure
         // Explicit false check ensures proper error handling
-        $content = @file_get_contents($tokenPath);
+        $content = @file_get_contents($envPath);
         if ($content !== false) {
-            $TOKEN = trim($content);
-            if ($TOKEN) {
-                break;
+            // Parse .env file for UPTIMEROBOT_API_TOKEN
+            $lines = explode("\n", $content);
+            foreach ($lines as $line) {
+                $line = trim($line);
+                // Skip comments and empty lines
+                if (empty($line) || strpos($line, '#') === 0) {
+                    continue;
+                }
+                // Parse KEY=VALUE format
+                if (strpos($line, '=') !== false) {
+                    list($key, $value) = array_map('trim', explode('=', $line, 2));
+                    if ($key === 'UPTIMEROBOT_API_TOKEN') {
+                        // Remove surrounding quotes if present
+                        $value = trim($value, '"\'');
+                        $TOKEN = $value;
+                        break 2; // Break both loops
+                    }
+                }
             }
         }
     }
@@ -39,7 +54,7 @@ $onlyProblems = isset($_GET['only_problems']) && $_GET['only_problems'] === '1';
 
 if (!$TOKEN) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'Missing UPTIMEROBOT_API_TOKEN. Please create api_token.tok file with your API key.']);
+    echo json_encode(['ok' => false, 'error' => 'Missing UPTIMEROBOT_API_TOKEN. Please create .env file with UPTIMEROBOT_API_TOKEN=your-key']);
     exit;
 }
 

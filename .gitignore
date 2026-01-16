@@ -1,5 +1,5 @@
-# API Token - contains sensitive API key
-api_token.tok
+# Environment file - contains sensitive API key
+.env
 
 # Error logs
 uptime_errors.log
@@ -8,7 +8,7 @@ uptime_errors.log
 .vscode/
 .idea/
 *.swp
-*.swo
+.swo
 *~
 
 # OS files
