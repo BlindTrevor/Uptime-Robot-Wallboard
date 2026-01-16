@@ -87,11 +87,43 @@ $transformed = array_map(function ($m) {
         $nextCheck = time() + (int)$m['interval'];
     }
     
-    // Calculate uptime from lastDayUptimes histogram
-    // The histogram contains uptime percentage samples over the last day
-    // Note: This is DAILY uptime, not all-time uptime (API v3 limitation)
+    // Calculate uptime from available data
+    // Strategy: Use multiple data sources for best approximation
     $lastDayUptimeRatio = null;
-    if (!empty($m['lastDayUptimes']['histogram']) && is_array($m['lastDayUptimes']['histogram'])) {
+    
+    // Method 1: If monitor is UP and last incident was resolved, calculate uptime from incident resolution
+    if ($status === 'up' && !empty($m['lastIncident'])) {
+        $incident = $m['lastIncident'];
+        $incidentStatus = strtolower((string)($incident['status'] ?? ''));
+        
+        if ($incidentStatus === 'resolved' && !empty($incident['startedAt']) && !empty($incident['duration'])) {
+            // Parse startedAt timestamp
+            $incidentStart = is_numeric($incident['startedAt']) 
+                ? (int)$incident['startedAt'] 
+                : strtotime($incident['startedAt']);
+            
+            if ($incidentStart > 0 && is_numeric($incident['duration'])) {
+                // Calculate when incident was resolved
+                $incidentResolved = $incidentStart + (int)$incident['duration'];
+                
+                // Calculate time since incident was resolved (uptime period)
+                $uptimeDuration = time() - $incidentResolved;
+                
+                // Calculate total time period (from incident start to now)
+                $totalDuration = time() - $incidentStart;
+                
+                if ($totalDuration > 0) {
+                    // Uptime ratio = time since resolved / total time
+                    $lastDayUptimeRatio = round(($uptimeDuration / $totalDuration) * 100, 2);
+                    // Cap at 100%
+                    $lastDayUptimeRatio = min($lastDayUptimeRatio, 100);
+                }
+            }
+        }
+    }
+    
+    // Method 2: Fallback to lastDayUptimes histogram if incident method didn't work
+    if ($lastDayUptimeRatio === null && !empty($m['lastDayUptimes']['histogram']) && is_array($m['lastDayUptimes']['histogram'])) {
         $uptimes = array_column($m['lastDayUptimes']['histogram'], 'uptime');
         // Validate that we have numeric uptime values
         $uptimes = array_filter($uptimes, 'is_numeric');
