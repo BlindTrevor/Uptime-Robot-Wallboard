@@ -1,7 +1,4 @@
-# Environment file - contains sensitive API key
-api_token.env
-
-# Configuration file - may contain custom settings
+# Configuration file - contains sensitive API token and settings
 config.env
 
 # Error logs

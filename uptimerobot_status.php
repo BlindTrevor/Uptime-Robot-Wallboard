@@ -49,39 +49,34 @@ function parseEnvFile($filePath, $keys = []) {
     return $result;
 }
 
-// Try loading environment variables from api_token.env file
+// Load all configuration from unified config.env file
 // Checks outside webroot first (most secure), then fallback to current directory
-$envPaths = [
-    __DIR__ . '/../api_token.env',  // Outside webroot (recommended)
-    __DIR__ . '/api_token.env',     // Current directory (fallback)
-];
-
-$TOKEN = '';
-foreach ($envPaths as $envPath) {
-    $parsed = parseEnvFile($envPath, ['UPTIMEROBOT_API_TOKEN']);
-    if (isset($parsed['UPTIMEROBOT_API_TOKEN'])) {
-        $TOKEN = $parsed['UPTIMEROBOT_API_TOKEN'];
-        break;
-    }
-}
-
-// Load wallboard configuration from config.env file
 $configPaths = [
     __DIR__ . '/../config.env',  // Outside webroot (recommended)
     __DIR__ . '/config.env',     // Current directory (fallback)
 ];
 
+$TOKEN = '';
 $WALLBOARD_CONFIG = [
     'title' => '',
     'logo' => '',
 ];
+
 foreach ($configPaths as $configPath) {
-    $parsed = parseEnvFile($configPath, ['WALLBOARD_TITLE', 'WALLBOARD_LOGO']);
+    $parsed = parseEnvFile($configPath, ['UPTIMEROBOT_API_TOKEN', 'WALLBOARD_TITLE', 'WALLBOARD_LOGO']);
     if (!empty($parsed)) {
+        // Load API token
+        if (isset($parsed['UPTIMEROBOT_API_TOKEN'])) {
+            $TOKEN = $parsed['UPTIMEROBOT_API_TOKEN'];
+        }
+        
+        // Load wallboard title
         if (isset($parsed['WALLBOARD_TITLE'])) {
             // Sanitize title to prevent XSS
             $WALLBOARD_CONFIG['title'] = htmlspecialchars($parsed['WALLBOARD_TITLE'], ENT_QUOTES, 'UTF-8');
         }
+        
+        // Load wallboard logo
         if (isset($parsed['WALLBOARD_LOGO']) && !empty($parsed['WALLBOARD_LOGO'])) {
             $logo = $parsed['WALLBOARD_LOGO'];
             // Validate logo path/URL
@@ -105,7 +100,7 @@ $onlyProblems = isset($_GET['only_problems']) && $_GET['only_problems'] === '1';
 
 if (!$TOKEN) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'Missing UPTIMEROBOT_API_TOKEN. Please create api_token.env file with UPTIMEROBOT_API_TOKEN=your-key']);
+    echo json_encode(['ok' => false, 'error' => 'Missing UPTIMEROBOT_API_TOKEN. Please create config.env file with UPTIMEROBOT_API_TOKEN=your-key']);
     exit;
 }
 
