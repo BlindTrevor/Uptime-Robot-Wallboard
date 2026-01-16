@@ -4,6 +4,17 @@
 
 declare(strict_types=1);
 
+// Block direct browsing - only allow access from application
+// Check if request has a valid Referer header (indicates it's from our application)
+$referer = $_SERVER['HTTP_REFERER'] ?? '';
+$host = $_SERVER['HTTP_HOST'] ?? '';
+
+// If no referer or referer doesn't match our host, return blank page
+if (empty($referer) || stripos($referer, $host) === false) {
+    http_response_code(403);
+    exit;
+}
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
