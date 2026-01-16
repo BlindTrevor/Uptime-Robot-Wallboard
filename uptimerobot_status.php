@@ -13,7 +13,22 @@ ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/uptime_errors.log');
 
 // --- CONFIG ---
-$TOKEN = trim(file_get_contents(__DIR__ . '/api_token.tok'));
+// Try loading token from outside webroot first (most secure)
+// Then fallback to current directory for backward compatibility
+$tokenPaths = [
+    __DIR__ . '/../api_token.tok',  // Outside webroot (recommended)
+    __DIR__ . '/api_token.tok',     // Current directory (fallback)
+];
+
+$TOKEN = '';
+foreach ($tokenPaths as $tokenPath) {
+    if (file_exists($tokenPath) && is_readable($tokenPath)) {
+        $TOKEN = trim(file_get_contents($tokenPath));
+        if ($TOKEN) {
+            break;
+        }
+    }
+}
 
 $onlyProblems = isset($_GET['only_problems']) && $_GET['only_problems'] === '1';
 

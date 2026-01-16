@@ -1,0 +1,16 @@
+# API Token - contains sensitive API key
+api_token.tok
+
+# Error logs
+uptime_errors.log
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,9 @@
+# Deny access to .tok files (API token storage)
+<Files "*.tok">
+    Require all denied
+</Files>
+
+# Additional protection: deny access to specific sensitive files
+<FilesMatch "^(api_token\.tok|.*\.log)$">
+    Require all denied
+</FilesMatch>
