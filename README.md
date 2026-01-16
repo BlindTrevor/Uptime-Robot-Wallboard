@@ -28,6 +28,9 @@ The application needs your UptimeRobot API token to fetch monitor data. Follow t
    ```bash
    # If your webroot is /var/www/html/status, create the file at:
    echo "your-api-token-here" > /var/www/html/api_token.tok
+   
+   # Or if your webroot is /var/www/html, create the file at:
+   # echo "your-api-token-here" > /var/www/api_token.tok
    ```
 
 2. Set restrictive file permissions so only the web server can read it:

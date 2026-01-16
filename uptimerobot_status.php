@@ -34,7 +34,7 @@ $onlyProblems = isset($_GET['only_problems']) && $_GET['only_problems'] === '1';
 
 if (!$TOKEN) {
     http_response_code(500);
-    echo json_encode(['ok' => false, 'error' => 'Missing UPTIMEROBOT_API_TOKEN']);
+    echo json_encode(['ok' => false, 'error' => 'Missing UPTIMEROBOT_API_TOKEN. Please create api_token.tok file with your API key.']);
     exit;
 }
 
