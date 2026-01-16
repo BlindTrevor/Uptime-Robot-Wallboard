@@ -33,6 +33,8 @@
     }
     body.has-offline { background: var(--bg-offline); }
     header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .header-content { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+    .logo { max-height: 50px; max-width: 200px; height: auto; width: auto; object-fit: contain; }
     h1 { margin: 0 1rem 0 0; font-size: 1.25rem; }
     .meta { color: var(--subtle); }
     .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -69,7 +71,10 @@
 </head>
 <body>
   <header>
-    <h1>UptimeRobot – Current Status</h1>
+    <div class="header-content">
+      <img id="logo" class="logo" style="display:none" alt="Logo" />
+      <h1 id="title">UptimeRobot – Current Status</h1>
+    </div>
     <div class="meta row">
       <span id="last-updated">Last updated: —</span>
       <span id="problem-pill" class="pill" style="display:none"></span>
@@ -156,6 +161,27 @@
       const last = document.getElementById('last-updated');
       const pill = document.getElementById('problem-pill');
       const footer = document.getElementById('footer');
+      const title = document.getElementById('title');
+      const logo = document.getElementById('logo');
+
+      // Apply configuration if provided
+      if (data.config) {
+        if (data.config.title) {
+          title.textContent = data.config.title;
+          document.title = data.config.title;
+        }
+        if (data.config.logo) {
+          logo.src = data.config.logo;
+          logo.style.display = 'block';
+          // Handle image load errors
+          logo.onerror = function() {
+            console.warn('Failed to load logo:', data.config.logo);
+            logo.style.display = 'none';
+          };
+        } else {
+          logo.style.display = 'none';
+        }
+      }
 
       err.textContent = '';
       last.textContent = `Last updated: ${new Date().toLocaleString()}`;
