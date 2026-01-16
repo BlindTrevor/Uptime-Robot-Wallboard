@@ -358,6 +358,10 @@
       return s !== 'up';
     }
 
+    // Constants for 24-hour status visualization
+    const UPTIME_THRESHOLD_PERCENT = 50; // Consider >= 50% uptime as "up"
+    const SECONDS_PER_HOUR = 3600;
+
     // Process lastDayUptimes histogram data for 24-hour visualization
     function process24HourData(lastDayUptimes) {
       if (!lastDayUptimes || !lastDayUptimes.histogram || !Array.isArray(lastDayUptimes.histogram)) {
@@ -380,15 +384,15 @@
         totalUptime += uptime;
         
         // Detect incidents: transitions from up to down
-        const currentStatus = uptime >= 50 ? 'up' : 'down'; // Consider >50% uptime as "up"
+        const currentStatus = uptime >= UPTIME_THRESHOLD_PERCENT ? 'up' : 'down';
         if (lastStatus === 'up' && currentStatus === 'down') {
           incidentCount++;
         }
         lastStatus = currentStatus;
         
-        // Calculate downtime in seconds (assuming 1-hour intervals = 3600 seconds)
+        // Calculate downtime in seconds (assuming 1-hour intervals)
         const downtimePercent = 100 - uptime;
-        totalDowntimeSeconds += (downtimePercent / 100) * 3600;
+        totalDowntimeSeconds += (downtimePercent / 100) * SECONDS_PER_HOUR;
       });
       
       const avgUptime = hourlyData.length > 0 ? totalUptime / hourlyData.length : 0;
@@ -425,11 +429,13 @@
         return ''; // No data available
       }
       
-      // Generate 24 bars
+      // Generate 24 bars with relative time labels
       const bars = data.hourlyData.map((hour, index) => {
         const uptime = parseFloat(hour.uptime) || 0;
-        const statusClass = uptime >= 50 ? 'up' : (uptime > 0 ? 'down' : 'unknown');
-        const title = `Hour ${index + 1}: ${uptime.toFixed(1)}% uptime`;
+        const statusClass = uptime >= UPTIME_THRESHOLD_PERCENT ? 'up' : (uptime > 0 ? 'down' : 'unknown');
+        const hoursAgo = data.hourlyData.length - index - 1;
+        const timeLabel = hoursAgo === 0 ? 'Current hour' : `${hoursAgo} hour${hoursAgo === 1 ? '' : 's'} ago`;
+        const title = `${timeLabel}: ${uptime.toFixed(1)}% uptime`;
         return `<div class="status-24h-bar ${statusClass}" title="${title}"></div>`;
       }).join('');
       
