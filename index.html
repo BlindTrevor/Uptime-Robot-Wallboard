@@ -125,8 +125,11 @@
 
     // --- Theme Management ---
     // Cookie utilities
-    function setCookie(name, value, days = 365) {
-      const expires = new Date(Date.now() + days * 864e5).toUTCString();
+    const COOKIE_EXPIRY_DAYS = 365;
+    const MS_PER_DAY = 864e5; // Milliseconds in a day
+    
+    function setCookie(name, value, days = COOKIE_EXPIRY_DAYS) {
+      const expires = new Date(Date.now() + days * MS_PER_DAY).toUTCString();
       document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/; SameSite=Lax';
     }
 
@@ -263,7 +266,8 @@
         Object.assign(config, queryConfig);
       }
       
-      // Initialize theme after configuration is applied
+      // Re-initialize theme after server configuration is applied
+      // This respects the priority: cookie > query string > server config
       initializeTheme();
     }
 
