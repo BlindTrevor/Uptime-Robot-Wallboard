@@ -71,30 +71,32 @@ $nowUtc = (new DateTime('now', new DateTimeZone('UTC')))->format(DateTime::ATOM)
 $transformed = array_map(function ($m) {
     $status = strtolower((string)($m['status'] ?? 'unknown'));
 
-    // API v3 doesn't have last_check_at/next_check_at
-    // Use lastIncident.startedAt if available, otherwise use createDateTime
+    // API v3 doesn't provide explicit last_check/next_check timestamps
+    // Best approximation: use currentStateDuration to calculate when state changed
     $lastCheck = null;
-    if (!empty($m['lastIncident']['startedAt'])) {
-        $lastCheck = is_numeric($m['lastIncident']['startedAt']) 
-            ? (int)$m['lastIncident']['startedAt'] 
-            : strtotime($m['lastIncident']['startedAt']);
+    if (isset($m['currentStateDuration']) && is_numeric($m['currentStateDuration'])) {
+        $lastCheck = time() - (int)$m['currentStateDuration'];
     } elseif (!empty($m['createDateTime'])) {
+        // Fallback to creation time if state duration unavailable
         $lastCheck = is_numeric($m['createDateTime']) 
             ? (int)$m['createDateTime'] 
             : strtotime($m['createDateTime']);
     }
     
-    // Calculate next check from interval if available
+    // Calculate next check from interval
     $nextCheck = null;
     if ($lastCheck && !empty($m['interval'])) {
+        // Add interval to estimated last check time
         $nextCheck = $lastCheck + (int)$m['interval'];
     }
     
-    // Calculate uptime from lastDayUptimes if available
+    // Calculate uptime from lastDayUptimes histogram
+    // The histogram contains uptime percentage samples over the last day
     $uptimeRatio = null;
     if (!empty($m['lastDayUptimes']['histogram']) && is_array($m['lastDayUptimes']['histogram'])) {
         $uptimes = array_column($m['lastDayUptimes']['histogram'], 'uptime');
         if (!empty($uptimes)) {
+            // Average the uptime samples to get approximate daily uptime
             $uptimeRatio = round(array_sum($uptimes) / count($uptimes), 2);
         }
     }
