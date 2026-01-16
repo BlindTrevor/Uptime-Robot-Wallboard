@@ -178,7 +178,8 @@
           // Block: javascript:, file:, and other potentially dangerous schemes
           const isValidUrl = /^https?:\/\/.+\.(png|jpg|jpeg|gif|svg|webp)$/i.test(logoPath);
           const isValidPath = /^[a-zA-Z0-9_\/.-]+\.(png|jpg|jpeg|gif|svg|webp)$/i.test(logoPath) && !logoPath.includes('..');
-          const isDataUri = /^data:image\/(png|jpg|jpeg|gif|svg\+xml|webp);base64,/i.test(logoPath);
+          // Data URIs are limited to 100KB to prevent abuse
+          const isDataUri = /^data:image\/(png|jpg|jpeg|gif|svg\+xml|webp);base64,/i.test(logoPath) && logoPath.length < 102400;
           
           if (isValidUrl || isValidPath || isDataUri) {
             logo.src = logoPath;

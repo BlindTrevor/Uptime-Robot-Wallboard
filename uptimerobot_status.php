@@ -89,7 +89,8 @@ foreach ($configPaths as $configPath) {
             // Disallow: file:// URIs, javascript: URIs, path traversal with ../
             $isValidUrl = preg_match('#^https?://.+\.(png|jpg|jpeg|gif|svg|webp)$#i', $logo);
             $isValidPath = preg_match('#^[a-zA-Z0-9_/.-]+\.(png|jpg|jpeg|gif|svg|webp)$#i', $logo) && strpos($logo, '..') === false;
-            $isDataUri = preg_match('#^data:image/(png|jpg|jpeg|gif|svg\+xml|webp);base64,#i', $logo);
+            // Data URIs are limited to 100KB to prevent abuse
+            $isDataUri = preg_match('#^data:image/(png|jpg|jpeg|gif|svg\+xml|webp);base64,#i', $logo) && strlen($logo) < 102400;
             
             if ($isValidUrl || $isValidPath || $isDataUri) {
                 $WALLBOARD_CONFIG['logo'] = htmlspecialchars($logo, ENT_QUOTES, 'UTF-8');
