@@ -1,4 +1,7 @@
 <?php
+
+// API Documentation: https://uptimerobot.com/api/v3/
+
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
