@@ -33,6 +33,8 @@
     }
     body.has-offline { background: var(--bg-offline); }
     header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .header-content { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+    .logo { height: 50px; max-width: 400px; width: auto; object-fit: contain; }
     h1 { margin: 0 1rem 0 0; font-size: 1.25rem; }
     .meta { color: var(--subtle); }
     .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -69,7 +71,10 @@
 </head>
 <body>
   <header>
-    <h1>UptimeRobot – Current Status</h1>
+    <div class="header-content">
+      <img id="logo" class="logo" style="display:none" alt="Logo" />
+      <h1 id="title">UptimeRobot – Current Status</h1>
+    </div>
     <div class="meta row">
       <span id="last-updated">Last updated: —</span>
       <span id="problem-pill" class="pill" style="display:none"></span>
@@ -156,6 +161,41 @@
       const last = document.getElementById('last-updated');
       const pill = document.getElementById('problem-pill');
       const footer = document.getElementById('footer');
+      const title = document.getElementById('title');
+      const logo = document.getElementById('logo');
+
+      // Apply configuration if provided
+      if (data.config) {
+        if (data.config.title) {
+          // Use textContent (not innerHTML) to prevent XSS
+          title.textContent = data.config.title;
+          document.title = data.config.title;
+        }
+        if (data.config.logo) {
+          // Validate logo URL/path before setting
+          const logoPath = data.config.logo;
+          // Allow: relative paths ending in image extensions, http/https URLs, data URIs
+          // Block: javascript:, file:, and other potentially dangerous schemes
+          const isValidUrl = /^https?:\/\/.+\.(png|jpg|jpeg|gif|svg|webp)$/i.test(logoPath);
+          const isValidPath = /^[a-zA-Z0-9_\/.-]+\.(png|jpg|jpeg|gif|svg|webp)$/i.test(logoPath) && !logoPath.includes('..');
+          // Data URIs are limited to 100KB to prevent abuse
+          const isDataUri = /^data:image\/(png|jpg|jpeg|gif|svg\+xml|webp);base64,/i.test(logoPath) && logoPath.length < 102400;
+          
+          if (isValidUrl || isValidPath || isDataUri) {
+            logo.src = logoPath;
+            logo.style.display = 'block';
+            // Handle image load errors
+            logo.onerror = function() {
+              console.warn('Failed to load logo:', logoPath);
+              logo.style.display = 'none';
+            };
+          } else {
+            console.warn('Invalid logo path:', logoPath);
+          }
+        } else {
+          logo.style.display = 'none';
+        }
+      }
 
       err.textContent = '';
       last.textContent = `Last updated: ${new Date().toLocaleString()}`;

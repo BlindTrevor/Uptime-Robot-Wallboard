@@ -13,6 +13,42 @@ ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/uptime_errors.log');
 
 // --- CONFIG ---
+// Helper function to parse environment files
+function parseEnvFile($filePath, $keys = []) {
+    $result = [];
+    if (!file_exists($filePath) || !is_readable($filePath)) {
+        return $result;
+    }
+    
+    // Use @ to suppress errors and prevent information disclosure
+    $content = @file_get_contents($filePath);
+    if ($content === false) {
+        return $result;
+    }
+    
+    $lines = explode("\n", $content);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        // Skip comments and empty lines
+        if (empty($line) || strpos($line, '#') === 0) {
+            continue;
+        }
+        // Parse KEY=VALUE format
+        if (strpos($line, '=') !== false) {
+            $parts = array_map('trim', explode('=', $line, 2));
+            if (count($parts) === 2) {
+                list($key, $value) = $parts;
+                // If specific keys requested, only return those
+                if (empty($keys) || in_array($key, $keys, true)) {
+                    // Remove surrounding quotes if present
+                    $result[$key] = trim($value, '"\'');
+                }
+            }
+        }
+    }
+    return $result;
+}
+
 // Try loading environment variables from api_token.env file
 // Checks outside webroot first (most secure), then fallback to current directory
 $envPaths = [
@@ -22,34 +58,46 @@ $envPaths = [
 
 $TOKEN = '';
 foreach ($envPaths as $envPath) {
-    if (file_exists($envPath) && is_readable($envPath)) {
-        // Use @ to suppress errors and prevent information disclosure
-        // Explicit false check ensures proper error handling
-        $content = @file_get_contents($envPath);
-        if ($content !== false) {
-            // Parse api_token.env file for UPTIMEROBOT_API_TOKEN
-            $lines = explode("\n", $content);
-            foreach ($lines as $line) {
-                $line = trim($line);
-                // Skip comments and empty lines
-                if (empty($line) || strpos($line, '#') === 0) {
-                    continue;
-                }
-                // Parse KEY=VALUE format
-                if (strpos($line, '=') !== false) {
-                    $parts = array_map('trim', explode('=', $line, 2));
-                    if (count($parts) === 2) {
-                        list($key, $value) = $parts;
-                        if ($key === 'UPTIMEROBOT_API_TOKEN') {
-                            // Remove surrounding quotes if present
-                            $value = trim($value, '"\'');
-                            $TOKEN = $value;
-                            break 2; // Break both loops
-                        }
-                    }
-                }
-            }
+    $parsed = parseEnvFile($envPath, ['UPTIMEROBOT_API_TOKEN']);
+    if (isset($parsed['UPTIMEROBOT_API_TOKEN'])) {
+        $TOKEN = $parsed['UPTIMEROBOT_API_TOKEN'];
+        break;
+    }
+}
+
+// Load wallboard configuration from config.env file
+$configPaths = [
+    __DIR__ . '/../config.env',  // Outside webroot (recommended)
+    __DIR__ . '/config.env',     // Current directory (fallback)
+];
+
+$WALLBOARD_CONFIG = [
+    'title' => '',
+    'logo' => '',
+];
+foreach ($configPaths as $configPath) {
+    $parsed = parseEnvFile($configPath, ['WALLBOARD_TITLE', 'WALLBOARD_LOGO']);
+    if (!empty($parsed)) {
+        if (isset($parsed['WALLBOARD_TITLE'])) {
+            // Sanitize title to prevent XSS
+            $WALLBOARD_CONFIG['title'] = htmlspecialchars($parsed['WALLBOARD_TITLE'], ENT_QUOTES, 'UTF-8');
         }
+        if (isset($parsed['WALLBOARD_LOGO']) && !empty($parsed['WALLBOARD_LOGO'])) {
+            $logo = $parsed['WALLBOARD_LOGO'];
+            // Validate logo path/URL
+            // Allow: relative paths ending in image extensions, absolute HTTP(S) URLs, data URIs
+            // Disallow: file:// URIs, javascript: URIs, path traversal with ../
+            $isValidUrl = preg_match('#^https?://.+\.(png|jpg|jpeg|gif|svg|webp)$#i', $logo);
+            $isValidPath = preg_match('#^[a-zA-Z0-9_/.-]+\.(png|jpg|jpeg|gif|svg|webp)$#i', $logo) && strpos($logo, '..') === false;
+            // Data URIs are limited to 100KB to prevent abuse
+            $isDataUri = preg_match('#^data:image/(png|jpg|jpeg|gif|svg\+xml|webp);base64,#i', $logo) && strlen($logo) < 102400;
+            
+            if ($isValidUrl || $isValidPath || $isDataUri) {
+                $WALLBOARD_CONFIG['logo'] = htmlspecialchars($logo, ENT_QUOTES, 'UTF-8');
+            }
+            // If validation fails, logo remains empty (safe default)
+        }
+        break;
     }
 }
 
@@ -207,4 +255,8 @@ echo json_encode([
     'count' => count($transformed),
     'monitors' => $transformed,
     'meta' => $data['meta'] ?? new stdClass(),
+    'config' => [
+        'title' => $WALLBOARD_CONFIG['title'],
+        'logo' => $WALLBOARD_CONFIG['logo'],
+    ],
 ], JSON_UNESCAPED_SLASHES);

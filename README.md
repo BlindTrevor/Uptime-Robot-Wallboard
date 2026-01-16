@@ -9,6 +9,8 @@ A real-time status wallboard for monitoring UptimeRobot services using their API
 - Filter view to show only problematic services
 - Automatic refresh every 20 seconds
 - Clean, modern UI with dark theme
+- **Customizable wallboard title** - Set your own title for branding
+- **Optional logo display** - Upload and display your company logo
 
 ## Setup
 
@@ -85,7 +87,44 @@ If you cannot store files outside the webroot:
 2. Ensure `.htaccess` file is present and Apache `mod_authz_core` is enabled
 3. Access `index.html` in your browser
 
-### 4. Verify Security
+### 4. Customize Your Wallboard (Optional)
+
+You can personalize the wallboard with a custom title and logo:
+
+1. Copy the configuration template:
+   ```bash
+   cp config.env.example config.env
+   ```
+
+2. Edit `config.env` to set your preferences:
+   ```bash
+   # Custom wallboard title (optional)
+   WALLBOARD_TITLE=My Company Status Dashboard
+   
+   # Custom logo path (optional)
+   # Can be a relative path, absolute path, or external URL
+   WALLBOARD_LOGO=logo.png
+   # Examples:
+   #   WALLBOARD_LOGO=images/company-logo.svg
+   #   WALLBOARD_LOGO=https://example.com/logo.png
+   ```
+
+3. If using a logo, upload your logo file to the application directory (or use an external URL)
+
+4. Set restrictive permissions on the config file:
+   ```bash
+   chmod 600 config.env
+   chown www-data:www-data config.env  # Adjust user/group as needed
+   ```
+
+**Notes:**
+- Both title and logo are optional
+- If no `config.env` file exists, default values will be used
+- Logo should be reasonably sized (recommended max: 200x50 pixels)
+- Supported logo formats: PNG, SVG, JPG, GIF
+- The logo will be displayed in the wallboard header alongside the title
+
+### 5. Verify Security
 
 **Critical Security Checks:**
 

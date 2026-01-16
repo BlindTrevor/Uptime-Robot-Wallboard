@@ -1,6 +1,9 @@
 # Environment file - contains sensitive API key
 api_token.env
 
+# Configuration file - may contain custom settings
+config.env
+
 # Error logs
 uptime_errors.log
 
