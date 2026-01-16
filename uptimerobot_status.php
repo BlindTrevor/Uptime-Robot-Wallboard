@@ -80,24 +80,24 @@ $transformed = array_map(function ($m) {
     // Note: We don't fallback to createDateTime as it's misleading for "last check"
     
     // Calculate next check based on interval
-    // Since we don't have actual last check time, estimate next check from current time
+    // Since API v3 doesn't provide actual check times, estimate next check
     $nextCheck = null;
     if (!empty($m['interval']) && is_numeric($m['interval'])) {
-        $interval = (int)$m['interval'];
-        // Estimate: current time + remaining time in current interval cycle
-        $nextCheck = time() + ($interval - (time() % $interval));
+        // Simple estimate: current time + interval
+        $nextCheck = time() + (int)$m['interval'];
     }
     
     // Calculate uptime from lastDayUptimes histogram
     // The histogram contains uptime percentage samples over the last day
-    $uptimeRatio = null;
+    // Note: This is DAILY uptime, not all-time uptime (API v3 limitation)
+    $lastDayUptimeRatio = null;
     if (!empty($m['lastDayUptimes']['histogram']) && is_array($m['lastDayUptimes']['histogram'])) {
         $uptimes = array_column($m['lastDayUptimes']['histogram'], 'uptime');
         // Validate that we have numeric uptime values
         $uptimes = array_filter($uptimes, 'is_numeric');
         if (!empty($uptimes)) {
             // Average the uptime samples to get approximate daily uptime
-            $uptimeRatio = round(array_sum($uptimes) / count($uptimes), 2);
+            $lastDayUptimeRatio = round(array_sum($uptimes) / count($uptimes), 2);
         }
     }
 
@@ -109,13 +109,15 @@ $transformed = array_map(function ($m) {
         'interval' => isset($m['interval']) ? (int)$m['interval'] : null,
         'status_code' => null,
         'status' => $status,
-        'all_time_uptime_ratio' => $uptimeRatio,
+        // Note: API v3 doesn't provide all-time uptime, using last day uptime instead
+        'all_time_uptime_ratio' => $lastDayUptimeRatio,
         'custom_uptime_ratios' => null,
         'last_check' => $lastCheck,
         'next_check' => $nextCheck,
         'recent_incident' => $m['lastIncident'] ?? null,
         'logs' => null,
         'alert_contacts' => $m['assignedAlertContacts'] ?? null,
+        // Tags are passed as-is; formatTags() in index.html handles object-to-name conversion
         'tags' => $m['tags'] ?? [],
     ];
 }, $monitors);
