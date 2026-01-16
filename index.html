@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Status Wallboard – UptimeRobot (v3)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #121c33;
+      --border: #213155;
+      --accent: #3a569c;
+      --text: #e8eefc;
+      --subtle: #9fb0d1;
+      --muted: #b9c6e2;
+      --ok: #3ad29f;
+      --warn: #ffd27a;
+      --bad: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; padding: 1rem;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+    }
+    header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    h1 { margin: 0 1rem 0 0; font-size: 1.25rem; }
+    .meta { color: var(--subtle); }
+    .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .controls { margin: 0.6rem 0 0.8rem; display: flex; gap: 10px; flex-wrap: wrap; }
+    button {
+      background: var(--border); color: var(--text);
+      border: 1px solid var(--accent); border-radius: 8px;
+      padding: 6px 10px; cursor: pointer; font-weight: 600;
+    }
+    button:hover { background: #274071; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 10px; border-radius: 999px; font-size: 0.85rem;
+      border: 1px solid var(--border);
+    }
+    .pill.warn { background: #3b2a1a; color: var(--warn); border-color: #5e4123; }
+    .pill.ok { background: #163327; color: #8af0c9; border-color: #184836; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .name { font-weight: 700; font-size: 1.05rem; margin-bottom: 6px; }
+    .url { color: var(--subtle); font-size: 0.9rem; word-break: break-word; }
+    .status { margin-top: 8px; font-weight: 800; letter-spacing: 0.4px; }
+    .status.up { color: var(--ok); }
+    .status.seems_down, .status.down { color: var(--bad); }
+    .status.paused { color: var(--warn); }
+    .status.not_checked { color: var(--subtle); }
+    .kv { font-size: 0.86rem; color: var(--muted); margin-top: 6px; }
+    .small { font-size: 0.78rem; color: var(--subtle); margin-top: 6px; }
+    .err { color: var(--bad); margin: 0.4rem 0; white-space: pre-wrap; }
+    .footer { color: var(--subtle); margin-top: 0.5rem; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>UptimeRobot – Current Status</h1>
+    <div class="meta row">
+      <span id="last-updated">Last updated: —</span>
+      <span id="problem-pill" class="pill" style="display:none"></span>
+    </div>
+  </header>
+
+  <div class="controls">
+    <button id="toggle-problems">Show Only Problems</button>
+    <button id="refresh-btn">Refresh Now</button>
+  </div>
+
+  <div id="error" class="err"></div>
+  <div id="grid" class="grid"></div>
+  <div id="footer" class="footer"></div>
+
+  <script>
+    // --- Configuration ---
+    const ENDPOINT = '/status/uptimerobot_status.php'; // adjust if you host elsewhere
+    const REFRESH_MS = 20000; // 20 seconds
+
+    // State
+    let onlyProblems = false;
+    let lastStatuses = new Map(); // id -> previous status (for change detection)
+
+    // Utilities
+    function epochToLocal(epoch) {
+      const n = Number(epoch);
+      if (!n) return '—';
+      const d = new Date(n * 1000);
+      return isNaN(d.getTime()) ? '—' : d.toLocaleString();
+    }
+    const toClass = s => (s || 'unknown').toLowerCase().replace(/\s+/g, '_');
+
+    function isProblem(m) {
+      const s = (m.status || '').toLowerCase();
+      return s !== 'up';
+    }
+
+    // Fetch
+    async function loadData() {
+      const params = new URLSearchParams();
+      if (onlyProblems) params.set('only_problems', '1');
+
+      const url = ENDPOINT + (params.toString() ? ('?' + params.toString()) : '');
+      const res = await fetch(url, { cache: 'no-store' });
+      const text = await res.text(); // read once
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        throw new Error(`Invalid JSON: ${e.message}\nBody: ${text.slice(0, 400)}${text.length > 400 ? '…' : ''}`);
+      }
+    }
+
+    // Render
+    function render(data) {
+      const grid = document.getElementById('grid');
+      const err = document.getElementById('error');
+      const last = document.getElementById('last-updated');
+      const pill = document.getElementById('problem-pill');
+      const footer = document.getElementById('footer');
+
+      err.textContent = '';
+      last.textContent = `Last updated: ${new Date().toLocaleString()}`;
+
+      let mons = Array.isArray(data.monitors) ? data.monitors.slice() : [];
+
+      // Sort: problems first, then by name
+      mons.sort((a, b) => {
+        const ap = isProblem(a), bp = isProblem(b);
+        if (ap !== bp) return ap ? -1 : 1;
+        return (a.friendly_name || '').localeCompare(b.friendly_name || '');
+      });
+
+      // Problem count pill
+      const problemCount = mons.filter(isProblem).length;
+      if (problemCount > 0) {
+        pill.style.display = 'inline-flex';
+        pill.className = 'pill warn';
+        pill.textContent = `${problemCount} issue${problemCount === 1 ? '' : 's'}`;
+      } else {
+        pill.style.display = 'inline-flex';
+        pill.className = 'pill ok';
+        pill.textContent = 'All good';
+      }
+
+      // Build cards
+      grid.innerHTML = mons.map(m => {
+        const cls = `status ${toClass(m.status)}`;
+        // Prefer custom ratios if present, otherwise all-time
+        const ratios = m.custom_uptime_ratios
+          ? `${m.custom_uptime_ratios}% (1/7/30/90d)`
+          : (m.all_time_uptime_ratio ? `${m.all_time_uptime_ratio}% (all-time)` : '—');
+
+        return `
+          <div class="card">
+            <div class="name">${m.friendly_name || '—'}</div>
+            <div class="url">${m.url || '—'}</div>
+            <div class="${cls}">${(m.status || 'UNKNOWN').toUpperCase()}</div>
+            <div class="kv">Last check: ${epochToLocal(m.last_check)} | Next: ${epochToLocal(m.next_check)}</div>
+            <div class="kv">Uptime: ${ratios}</div>
+            ${Array.isArray(m.tags) && m.tags.length ? `<div class="small">Tags: ${m.tags.join(', ')}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+
+      // Footer (optionally show pagination meta if sent)
+      if (data.meta && (data.meta.next_cursor || data.meta.prev_cursor)) {
+        footer.textContent = `Page size: ${mons.length} — Cursor: next=${data.meta.next_cursor || '∅'}`;
+      } else {
+        footer.textContent = '';
+      }
+
+      // Track status changes (you can add audio/visual cues here)
+      const changes = [];
+      for (const m of mons) {
+        const prev = lastStatuses.get(m.id);
+        if (prev && prev !== m.status) {
+          changes.push({ id: m.id, name: m.friendly_name, from: prev, to: m.status });
+        }
+        lastStatuses.set(m.id, m.status);
+      }
+      // Example: simple console log on state change
+      if (changes.length) {
+        console.log('State changes:', changes);
+      }
+    }
+
+    async function refresh() {
+      const err = document.getElementById('error');
+      try {
+        const data = await loadData();
+        if (!data.ok) throw new Error(data.error || 'Unknown error');
+        render(data);
+      } catch (e) {
+        err.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    // Events
+    document.getElementById('refresh-btn').addEventListener('click', refresh);
+    document.getElementById('toggle-problems').addEventListener('click', () => {
+      onlyProblems = !onlyProblems;
+      document.getElementById('toggle-problems').textContent = onlyProblems ? 'Show All' : 'Show Only Problems';
+      refresh();
+    });
+
+    // Initial load + polling
+    refresh();
+    setInterval(refresh, REFRESH_MS);
+  </script>
+</body>
+</html>
