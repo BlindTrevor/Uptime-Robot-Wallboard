@@ -7,10 +7,23 @@ declare(strict_types=1);
 // Block direct browsing - only allow access from application
 // Check if request has a valid Referer header (indicates it's from our application)
 $referer = $_SERVER['HTTP_REFERER'] ?? '';
-$host = $_SERVER['HTTP_HOST'] ?? '';
 
-// If no referer or referer doesn't match our host, return blank page
-if (empty($referer) || stripos($referer, $host) === false) {
+// Use SERVER_NAME (not HTTP_HOST) to prevent header injection attacks
+// SERVER_NAME comes from server config and cannot be manipulated by client
+$serverName = $_SERVER['SERVER_NAME'] ?? '';
+
+// Parse referer URL and validate hostname matches server name
+$refererValid = false;
+if (!empty($referer) && !empty($serverName)) {
+    $refererParts = parse_url($referer);
+    if ($refererParts !== false && isset($refererParts['host'])) {
+        // Compare hostnames exactly (case-insensitive) to prevent subdomain bypasses
+        $refererValid = strcasecmp($refererParts['host'], $serverName) === 0;
+    }
+}
+
+// If referer validation fails, return 403 Forbidden with no output
+if (!$refererValid) {
     http_response_code(403);
     exit;
 }
