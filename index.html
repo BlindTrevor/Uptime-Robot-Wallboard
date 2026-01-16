@@ -325,7 +325,8 @@
     refresh();
     setInterval(refresh, REFRESH_MS);
     
-    // Start polling for config changes
+    // Initialize config version and start polling for config changes
+    checkConfigVersion();
     setInterval(checkConfigVersion, CONFIG_CHECK_MS);
   </script>
 </body>
