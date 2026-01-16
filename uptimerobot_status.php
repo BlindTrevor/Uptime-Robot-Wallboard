@@ -79,10 +79,22 @@ foreach ($configPaths as $configPath) {
     $parsed = parseEnvFile($configPath, ['WALLBOARD_TITLE', 'WALLBOARD_LOGO']);
     if (!empty($parsed)) {
         if (isset($parsed['WALLBOARD_TITLE'])) {
-            $WALLBOARD_CONFIG['title'] = $parsed['WALLBOARD_TITLE'];
+            // Sanitize title to prevent XSS
+            $WALLBOARD_CONFIG['title'] = htmlspecialchars($parsed['WALLBOARD_TITLE'], ENT_QUOTES, 'UTF-8');
         }
-        if (isset($parsed['WALLBOARD_LOGO'])) {
-            $WALLBOARD_CONFIG['logo'] = $parsed['WALLBOARD_LOGO'];
+        if (isset($parsed['WALLBOARD_LOGO']) && !empty($parsed['WALLBOARD_LOGO'])) {
+            $logo = $parsed['WALLBOARD_LOGO'];
+            // Validate logo path/URL
+            // Allow: relative paths ending in image extensions, absolute HTTP(S) URLs, data URIs
+            // Disallow: file:// URIs, javascript: URIs, path traversal with ../
+            $isValidUrl = preg_match('#^https?://.+\.(png|jpg|jpeg|gif|svg|webp)$#i', $logo);
+            $isValidPath = preg_match('#^[a-zA-Z0-9_/.-]+\.(png|jpg|jpeg|gif|svg|webp)$#i', $logo) && strpos($logo, '..') === false;
+            $isDataUri = preg_match('#^data:image/(png|jpg|jpeg|gif|svg\+xml|webp);base64,#i', $logo);
+            
+            if ($isValidUrl || $isValidPath || $isDataUri) {
+                $WALLBOARD_CONFIG['logo'] = htmlspecialchars($logo, ENT_QUOTES, 'UTF-8');
+            }
+            // If validation fails, logo remains empty (safe default)
         }
         break;
     }

@@ -167,17 +167,30 @@
       // Apply configuration if provided
       if (data.config) {
         if (data.config.title) {
+          // Use textContent (not innerHTML) to prevent XSS
           title.textContent = data.config.title;
           document.title = data.config.title;
         }
         if (data.config.logo) {
-          logo.src = data.config.logo;
-          logo.style.display = 'block';
-          // Handle image load errors
-          logo.onerror = function() {
-            console.warn('Failed to load logo:', data.config.logo);
-            logo.style.display = 'none';
-          };
+          // Validate logo URL/path before setting
+          const logoPath = data.config.logo;
+          // Allow: relative paths ending in image extensions, http/https URLs, data URIs
+          // Block: javascript:, file:, and other potentially dangerous schemes
+          const isValidUrl = /^https?:\/\/.+\.(png|jpg|jpeg|gif|svg|webp)$/i.test(logoPath);
+          const isValidPath = /^[a-zA-Z0-9_\/.-]+\.(png|jpg|jpeg|gif|svg|webp)$/i.test(logoPath) && !logoPath.includes('..');
+          const isDataUri = /^data:image\/(png|jpg|jpeg|gif|svg\+xml|webp);base64,/i.test(logoPath);
+          
+          if (isValidUrl || isValidPath || isDataUri) {
+            logo.src = logoPath;
+            logo.style.display = 'block';
+            // Handle image load errors
+            logo.onerror = function() {
+              console.warn('Failed to load logo:', logoPath);
+              logo.style.display = 'none';
+            };
+          } else {
+            console.warn('Invalid logo path:', logoPath);
+          }
         } else {
           logo.style.display = 'none';
         }
