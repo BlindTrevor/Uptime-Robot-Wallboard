@@ -163,6 +163,7 @@
     let currentConfigVersion = null; // Track config file version
     let refreshInterval = null;
     let configCheckInterval = null;
+    let initialConfigApplied = false; // Flag to prevent race conditions on initial load
 
     // Utilities
     function epochToLocal(epoch) {
@@ -233,8 +234,9 @@
       if (data.config) {
         applyConfiguration(data.config);
         
-        // Apply showProblemsOnly from config on first load
-        if (currentConfigVersion === null) {
+        // Apply showProblemsOnly from config on first load only
+        if (!initialConfigApplied) {
+          initialConfigApplied = true;
           onlyProblems = config.showProblemsOnly;
           document.getElementById('toggle-problems').textContent = onlyProblems ? 'Show All' : 'Show Only Problems';
         }
@@ -388,9 +390,11 @@
       // Clear existing intervals
       if (refreshInterval) {
         clearInterval(refreshInterval);
+        refreshInterval = null;
       }
       if (configCheckInterval) {
         clearInterval(configCheckInterval);
+        configCheckInterval = null;
       }
       
       // Set new intervals based on config
@@ -407,12 +411,8 @@
     });
 
     // Initial load + polling
-    refresh().then(() => {
-      // After first refresh, update intervals based on loaded config
-      updateIntervals();
-    }).catch((err) => {
-      console.error('Initial refresh failed:', err);
-      // Still set up intervals with default config
+    refresh().finally(() => {
+      // After first refresh (success or failure), update intervals based on loaded config
       updateIntervals();
     });
     

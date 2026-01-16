@@ -10,11 +10,6 @@
 #   3. Reload NGINX: sudo nginx -t && sudo systemctl reload nginx
 
 # Deny access to .env configuration files
-location ~ /\.env$ {
-    deny all;
-    return 403;
-}
-
 location ~ \.env$ {
     deny all;
     return 403;
