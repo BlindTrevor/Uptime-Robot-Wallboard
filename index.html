@@ -434,7 +434,7 @@
             <div class="name">${m.friendly_name || '—'}</div>
             <div class="url">${m.url || '—'}</div>
             <div class="${cls}">${statusIcon}${(m.status || 'UNKNOWN').toUpperCase()}</div>
-            <div class="kv">Last check: ${epochToLocal(m.last_check)} | Next: ${epochToLocal(m.next_check)}</div>
+            <div class="kv">Up since: ${epochToLocal(m.last_check)} | Next check: ${epochToLocal(m.next_check)}</div>
             <div class="kv">Uptime: ${ratios}</div>
             ${tags ? `<div class="small">Tags: ${tags}</div>` : ''}
           </div>
