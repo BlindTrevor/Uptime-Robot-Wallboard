@@ -303,7 +303,7 @@
       if (days > 0) parts.push(`${days}d`);
       if (hours > 0) parts.push(`${hours}h`);
       if (minutes > 0) parts.push(`${minutes}m`);
-      if (seconds < 60 || parts.length === 0) parts.push(`${secs}s`);
+      if (parts.length === 0) parts.push(`${secs}s`); // Only show seconds if no other units
       
       return parts.slice(0, 2).join(' '); // Show max 2 units
     }
