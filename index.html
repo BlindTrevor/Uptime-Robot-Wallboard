@@ -429,12 +429,25 @@
           : (m.all_time_uptime_ratio ? `${m.all_time_uptime_ratio}% (all-time)` : '—');
         const tags = formatTags(m.tags);
 
+        // Determine the status label based on current status
+        const status = (m.status || '').toLowerCase();
+        let statusLabel = '';
+        if (status === 'up') {
+          statusLabel = `Up since: ${epochToLocal(m.last_check)}`;
+        } else if (status === 'down' || status === 'seems_down') {
+          statusLabel = `Down since: ${epochToLocal(m.last_check)}`;
+        } else if (status === 'paused') {
+          statusLabel = ''; // No status time for paused monitors
+        } else {
+          statusLabel = `Last check: ${epochToLocal(m.last_check)}`;
+        }
+
         return `
           <div class="${cardClass}">
             <div class="name">${m.friendly_name || '—'}</div>
             <div class="url">${m.url || '—'}</div>
             <div class="${cls}">${statusIcon}${(m.status || 'UNKNOWN').toUpperCase()}</div>
-            <div class="kv">Up since: ${epochToLocal(m.last_check)} | Next check: ${epochToLocal(m.next_check)}</div>
+            <div class="kv">${statusLabel}${statusLabel ? ' | ' : ''}Next check: ${epochToLocal(m.next_check)}</div>
             <div class="kv">Uptime: ${ratios}</div>
             ${tags ? `<div class="small">Tags: ${tags}</div>` : ''}
           </div>
