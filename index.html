@@ -288,6 +288,26 @@
     }
     const toClass = s => (s || 'unknown').toLowerCase().replace(/\s+/g, '_');
 
+    function formatDuration(epoch) {
+      const n = Number(epoch);
+      if (!n) return '';
+      const seconds = Math.floor((Date.now() / 1000) - n);
+      if (seconds < 0) return '';
+      
+      const days = Math.floor(seconds / 86400);
+      const hours = Math.floor((seconds % 86400) / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      
+      const parts = [];
+      if (days > 0) parts.push(`${days}d`);
+      if (hours > 0) parts.push(`${hours}h`);
+      if (minutes > 0) parts.push(`${minutes}m`);
+      if (parts.length === 0) parts.push(`${secs}s`); // Only show seconds if no other units
+      
+      return parts.slice(0, 2).join(' '); // Show max 2 units
+    }
+
     function getStatusIcon(status) {
       const s = (status || '').toLowerCase();
       switch (s) {
@@ -429,12 +449,26 @@
           : (m.all_time_uptime_ratio ? `${m.all_time_uptime_ratio}% (all-time)` : '—');
         const tags = formatTags(m.tags);
 
+        // Determine the status label based on current status
+        const status = (m.status || '').toLowerCase();
+        let statusLabel = '';
+        if (status === 'up') {
+          statusLabel = `Up since: ${epochToLocal(m.last_check)}`;
+        } else if (status === 'down' || status === 'seems_down') {
+          const duration = formatDuration(m.last_check);
+          statusLabel = `Down since: ${epochToLocal(m.last_check)}${duration ? ` (${duration})` : ''}`;
+        } else if (status === 'paused') {
+          statusLabel = ''; // No status time for paused monitors
+        } else {
+          statusLabel = `Last check: ${epochToLocal(m.last_check)}`;
+        }
+
         return `
           <div class="${cardClass}">
             <div class="name">${m.friendly_name || '—'}</div>
             <div class="url">${m.url || '—'}</div>
             <div class="${cls}">${statusIcon}${(m.status || 'UNKNOWN').toUpperCase()}</div>
-            <div class="kv">Last check: ${epochToLocal(m.last_check)} | Next: ${epochToLocal(m.next_check)}</div>
+            <div class="kv">${statusLabel}${statusLabel ? ' | ' : ''}Next check: ${epochToLocal(m.next_check)}</div>
             <div class="kv">Uptime: ${ratios}</div>
             ${tags ? `<div class="small">Tags: ${tags}</div>` : ''}
           </div>
