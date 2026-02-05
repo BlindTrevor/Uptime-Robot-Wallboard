@@ -14,40 +14,8 @@ ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/uptime_errors.log');
 
-// Function to find config.env by traversing up parent directories
-function findConfigPath() {
-    $currentDir = __DIR__;
-    $maxLevels = 10; // Safety limit to prevent infinite loops
-    
-    // Start with current directory
-    $testPaths = [
-        $currentDir . '/config.env'
-    ];
-    
-    // Add parent directories
-    $testPath = $currentDir;
-    for ($i = 0; $i < $maxLevels; $i++) {
-        $parentPath = dirname($testPath);
-        
-        // Stop if we've reached root or can't go further
-        if ($parentPath === $testPath || $parentPath === '/') {
-            break;
-        }
-        
-        $testPaths[] = $parentPath . '/config.env';
-        $testPath = $parentPath;
-    }
-    
-    // Check each path and return the first one that exists
-    // Use @ to suppress warnings from open_basedir restrictions
-    foreach ($testPaths as $path) {
-        if (@file_exists($path)) {
-            return $path;
-        }
-    }
-    
-    return null;
-}
+// Load shared configuration utilities
+require_once __DIR__ . '/config-utils.php';
 
 // Find config.env by searching parent directories
 $configPath = findConfigPath();

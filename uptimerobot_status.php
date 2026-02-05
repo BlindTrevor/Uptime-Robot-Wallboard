@@ -40,81 +40,12 @@ ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/uptime_errors.log');
 
 // --- CONFIG ---
-// Helper function to parse environment files
-function parseEnvFile($filePath, $keys = []) {
-    $result = [];
-    if (!file_exists($filePath) || !is_readable($filePath)) {
-        return $result;
-    }
-    
-    // Use @ to suppress errors and prevent information disclosure
-    $content = @file_get_contents($filePath);
-    if ($content === false) {
-        return $result;
-    }
-    
-    $lines = explode("\n", $content);
-    foreach ($lines as $line) {
-        $line = trim($line);
-        // Skip comments and empty lines
-        if (empty($line) || strpos($line, '#') === 0) {
-            continue;
-        }
-        // Parse KEY=VALUE format
-        if (strpos($line, '=') !== false) {
-            $parts = array_map('trim', explode('=', $line, 2));
-            if (count($parts) === 2) {
-                list($key, $value) = $parts;
-                // If specific keys requested, only return those
-                if (empty($keys) || in_array($key, $keys, true)) {
-                    // Remove surrounding quotes if present
-                    $result[$key] = trim($value, '"\'');
-                }
-            }
-        }
-    }
-    return $result;
-}
-
-// Function to find config.env by traversing up parent directories
-function findConfigPath() {
-    $currentDir = __DIR__;
-    $maxLevels = 10; // Safety limit to prevent infinite loops
-    
-    // Start with current directory
-    $testPaths = [
-        $currentDir . '/config.env'
-    ];
-    
-    // Add parent directories
-    $testPath = $currentDir;
-    for ($i = 0; $i < $maxLevels; $i++) {
-        $parentPath = dirname($testPath);
-        
-        // Stop if we've reached root or can't go further
-        if ($parentPath === $testPath || $parentPath === '/') {
-            break;
-        }
-        
-        $testPaths[] = $parentPath . '/config.env';
-        $testPath = $parentPath;
-    }
-    
-    // Check each path and return the first one that exists
-    // Use @ to suppress warnings from open_basedir restrictions
-    foreach ($testPaths as $path) {
-        if (@file_exists($path)) {
-            return $path;
-        }
-    }
-    
-    return null;
-}
+// Load shared configuration utilities
+require_once __DIR__ . '/config-utils.php';
 
 // Load all configuration from unified config.env file
 // Searches parent directories until config is found
 $configPath = findConfigPath();
-$configPaths = $configPath ? [$configPath] : [];
 
 $TOKEN = '';
 $WALLBOARD_CONFIG = [
@@ -133,7 +64,8 @@ $CONFIG = [
     'autoFullscreen' => false,
 ];
 
-foreach ($configPaths as $configPath) {
+// Load configuration if config file exists
+if ($configPath !== null) {
     $parsed = parseEnvFile($configPath, [
         'UPTIMEROBOT_API_TOKEN', 
         'WALLBOARD_TITLE', 
@@ -146,74 +78,71 @@ foreach ($configPaths as $configPath) {
         'THEME',
         'AUTO_FULLSCREEN'
     ]);
-    if (!empty($parsed)) {
-        // Load API token
-        if (isset($parsed['UPTIMEROBOT_API_TOKEN'])) {
-            $TOKEN = $parsed['UPTIMEROBOT_API_TOKEN'];
-        }
+    
+    // Load API token
+    if (isset($parsed['UPTIMEROBOT_API_TOKEN'])) {
+        $TOKEN = $parsed['UPTIMEROBOT_API_TOKEN'];
+    }
+    
+    // Load wallboard title
+    if (isset($parsed['WALLBOARD_TITLE'])) {
+        // Sanitize title to prevent XSS
+        $WALLBOARD_CONFIG['title'] = htmlspecialchars($parsed['WALLBOARD_TITLE'], ENT_QUOTES, 'UTF-8');
+    }
+    
+    // Load wallboard logo
+    if (isset($parsed['WALLBOARD_LOGO']) && !empty($parsed['WALLBOARD_LOGO'])) {
+        $logo = $parsed['WALLBOARD_LOGO'];
+        // Validate logo path/URL
+        // Allow: relative paths ending in image extensions, absolute HTTP(S) URLs, data URIs
+        // Disallow: file:// URIs, javascript: URIs, path traversal with ../
+        $isValidUrl = preg_match('#^https?://.+\.(png|jpg|jpeg|gif|svg|webp)$#i', $logo);
+        $isValidPath = preg_match('#^[a-zA-Z0-9_/.-]+\.(png|jpg|jpeg|gif|svg|webp)$#i', $logo) && strpos($logo, '..') === false;
+        // Data URIs are limited to 100KB to prevent abuse
+        $isDataUri = preg_match('#^data:image/(png|jpg|jpeg|gif|svg\+xml|webp);base64,#i', $logo) && strlen($logo) < 102400;
         
-        // Load wallboard title
-        if (isset($parsed['WALLBOARD_TITLE'])) {
-            // Sanitize title to prevent XSS
-            $WALLBOARD_CONFIG['title'] = htmlspecialchars($parsed['WALLBOARD_TITLE'], ENT_QUOTES, 'UTF-8');
+        if ($isValidUrl || $isValidPath || $isDataUri) {
+            $WALLBOARD_CONFIG['logo'] = htmlspecialchars($logo, ENT_QUOTES, 'UTF-8');
         }
-        
-        // Load wallboard logo
-        if (isset($parsed['WALLBOARD_LOGO']) && !empty($parsed['WALLBOARD_LOGO'])) {
-            $logo = $parsed['WALLBOARD_LOGO'];
-            // Validate logo path/URL
-            // Allow: relative paths ending in image extensions, absolute HTTP(S) URLs, data URIs
-            // Disallow: file:// URIs, javascript: URIs, path traversal with ../
-            $isValidUrl = preg_match('#^https?://.+\.(png|jpg|jpeg|gif|svg|webp)$#i', $logo);
-            $isValidPath = preg_match('#^[a-zA-Z0-9_/.-]+\.(png|jpg|jpeg|gif|svg|webp)$#i', $logo) && strpos($logo, '..') === false;
-            // Data URIs are limited to 100KB to prevent abuse
-            $isDataUri = preg_match('#^data:image/(png|jpg|jpeg|gif|svg\+xml|webp);base64,#i', $logo) && strlen($logo) < 102400;
-            
-            if ($isValidUrl || $isValidPath || $isDataUri) {
-                $WALLBOARD_CONFIG['logo'] = htmlspecialchars($logo, ENT_QUOTES, 'UTF-8');
-            }
-            // If validation fails, logo remains empty (safe default)
+        // If validation fails, logo remains empty (safe default)
+    }
+    
+    // Load display options
+    if (isset($parsed['SHOW_PROBLEMS_ONLY'])) {
+        $CONFIG['showProblemsOnly'] = filter_var($parsed['SHOW_PROBLEMS_ONLY'], FILTER_VALIDATE_BOOLEAN);
+    }
+    
+    // Load show paused devices option
+    if (isset($parsed['SHOW_PAUSED_DEVICES'])) {
+        $CONFIG['showPausedDevices'] = filter_var($parsed['SHOW_PAUSED_DEVICES'], FILTER_VALIDATE_BOOLEAN);
+    }
+    
+    // Load refresh rate (minimum 10 seconds to prevent API abuse)
+    if (isset($parsed['REFRESH_RATE']) && is_numeric($parsed['REFRESH_RATE'])) {
+        $CONFIG['refreshRate'] = max(10, (int)$parsed['REFRESH_RATE']);
+    }
+    
+    // Load config check rate (minimum 1 second)
+    if (isset($parsed['CONFIG_CHECK_RATE']) && is_numeric($parsed['CONFIG_CHECK_RATE'])) {
+        $CONFIG['configCheckRate'] = max(1, (int)$parsed['CONFIG_CHECK_RATE']);
+    }
+    
+    // Load query override setting
+    if (isset($parsed['ALLOW_QUERY_OVERRIDE'])) {
+        $CONFIG['allowQueryOverride'] = filter_var($parsed['ALLOW_QUERY_OVERRIDE'], FILTER_VALIDATE_BOOLEAN);
+    }
+    
+    // Load theme setting
+    if (isset($parsed['THEME'])) {
+        $theme = strtolower($parsed['THEME']);
+        if (in_array($theme, ['dark', 'light', 'auto'], true)) {
+            $CONFIG['theme'] = $theme;
         }
-        
-        // Load display options
-        if (isset($parsed['SHOW_PROBLEMS_ONLY'])) {
-            $CONFIG['showProblemsOnly'] = filter_var($parsed['SHOW_PROBLEMS_ONLY'], FILTER_VALIDATE_BOOLEAN);
-        }
-        
-        // Load show paused devices option
-        if (isset($parsed['SHOW_PAUSED_DEVICES'])) {
-            $CONFIG['showPausedDevices'] = filter_var($parsed['SHOW_PAUSED_DEVICES'], FILTER_VALIDATE_BOOLEAN);
-        }
-        
-        // Load refresh rate (minimum 10 seconds to prevent API abuse)
-        if (isset($parsed['REFRESH_RATE']) && is_numeric($parsed['REFRESH_RATE'])) {
-            $CONFIG['refreshRate'] = max(10, (int)$parsed['REFRESH_RATE']);
-        }
-        
-        // Load config check rate (minimum 1 second)
-        if (isset($parsed['CONFIG_CHECK_RATE']) && is_numeric($parsed['CONFIG_CHECK_RATE'])) {
-            $CONFIG['configCheckRate'] = max(1, (int)$parsed['CONFIG_CHECK_RATE']);
-        }
-        
-        // Load query override setting
-        if (isset($parsed['ALLOW_QUERY_OVERRIDE'])) {
-            $CONFIG['allowQueryOverride'] = filter_var($parsed['ALLOW_QUERY_OVERRIDE'], FILTER_VALIDATE_BOOLEAN);
-        }
-        
-        // Load theme setting
-        if (isset($parsed['THEME'])) {
-            $theme = strtolower($parsed['THEME']);
-            if (in_array($theme, ['dark', 'light', 'auto'], true)) {
-                $CONFIG['theme'] = $theme;
-            }
-        }
-        
-        // Load auto fullscreen setting
-        if (isset($parsed['AUTO_FULLSCREEN'])) {
-            $CONFIG['autoFullscreen'] = filter_var($parsed['AUTO_FULLSCREEN'], FILTER_VALIDATE_BOOLEAN);
-        }
-        
-        break;
+    }
+    
+    // Load auto fullscreen setting
+    if (isset($parsed['AUTO_FULLSCREEN'])) {
+        $CONFIG['autoFullscreen'] = filter_var($parsed['AUTO_FULLSCREEN'], FILTER_VALIDATE_BOOLEAN);
     }
 }
 
