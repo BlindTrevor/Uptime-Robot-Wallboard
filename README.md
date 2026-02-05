@@ -118,7 +118,7 @@ This approach ensures compliance with browser security policies while providing 
 You can exit fullscreen mode by:
 - Clicking the "Exit Fullscreen" button in the controls
 - Pressing the `Esc` (Escape) key
-- Using browser-specific fullscreen exit shortcuts (e.g., `F11` on some browsers)
+- Using your browser's fullscreen exit shortcut
 
 ## Query String Configuration
 
