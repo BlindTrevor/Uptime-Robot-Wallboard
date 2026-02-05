@@ -2,7 +2,7 @@
 
 A real-time status wallboard for monitoring your UptimeRobot services. Display service health, uptime status, and alerts on a clean, customizable dashboard perfect for NOC displays, office monitors, or personal dashboards.
 
-![Status Wallboard](https://github.com/user-attachments/assets/df95564d-da7b-46c5-b008-2f990d67ea62)
+![Status Wallboard](https://github.com/user-attachments/assets/dccafa9b-ad72-40fd-80ee-630e3270773a)
 
 ## ✨ Key Features
 
@@ -174,10 +174,10 @@ If you must store `config.env` in the webroot:
 ## 🎨 Themes
 
 ### Dark Theme (Default)
-![Dark Theme](https://github.com/user-attachments/assets/df95564d-da7b-46c5-b008-2f990d67ea62)
+![Dark Theme](https://github.com/user-attachments/assets/dccafa9b-ad72-40fd-80ee-630e3270773a)
 
 ### Light Theme
-![Light Theme](https://github.com/user-attachments/assets/cb4b3114-5a31-4e83-96f5-ab27f446fc75)
+![Light Theme](https://github.com/user-attachments/assets/cae35529-41ab-482f-a4d9-96bac8e7b38e)
 
 Switch themes using:
 - The theme toggle button in the UI
