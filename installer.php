@@ -30,13 +30,69 @@ if ($configExists) {
     exit;
 }
 
+// Function to find secure config path outside webroot
+function findSecureConfigPath() {
+    $currentDir = __DIR__;
+    
+    // Try to detect document root from server variables
+    $documentRoot = null;
+    if (!empty($_SERVER['DOCUMENT_ROOT'])) {
+        $documentRoot = realpath($_SERVER['DOCUMENT_ROOT']);
+    }
+    
+    // If we have document root, find first directory outside of it
+    if ($documentRoot !== null && $documentRoot !== false) {
+        $testPath = $currentDir;
+        $maxLevels = 10; // Safety limit
+        
+        for ($i = 0; $i < $maxLevels; $i++) {
+            $parentPath = dirname($testPath);
+            
+            // Stop if we've reached root or can't go further
+            if ($parentPath === $testPath || $parentPath === '/') {
+                break;
+            }
+            
+            // Check if this path is outside document root
+            if (strpos($parentPath, $documentRoot) === false) {
+                // Found a path outside document root
+                $configPath = $parentPath . '/config.env';
+                // Check if we can write here
+                if (is_writable($parentPath)) {
+                    return [
+                        'path' => $configPath,
+                        'writable' => true,
+                        'reason' => 'Outside webroot (most secure)'
+                    ];
+                } else {
+                    return [
+                        'path' => $configPath,
+                        'writable' => false,
+                        'reason' => 'Outside webroot but not writable'
+                    ];
+                }
+            }
+            
+            $testPath = $parentPath;
+        }
+    }
+    
+    // Fallback: just use parent directory
+    $parentPath = __DIR__ . '/../config.env';
+    return [
+        'path' => $parentPath,
+        'writable' => is_writable(dirname($parentPath)),
+        'reason' => 'One level up'
+    ];
+}
+
 // Config path options
 $currentDirPath = __DIR__ . '/config.env';     // Current directory (default)
-$parentDirPath = __DIR__ . '/../config.env';   // Parent directory (more secure)
+$securePathInfo = findSecureConfigPath();      // Find secure path outside webroot
+$parentDirPath = $securePathInfo['path'];      // Use secure path
+$canWriteToParent = $securePathInfo['writable'];
+$securePathReason = $securePathInfo['reason'];
 $defaultConfigLocation = 'current';             // Default location
-
-// Check if we can write to parent directory
-$canWriteToParent = is_writable(dirname($parentDirPath));
 
 // Handle form submission
 $errors = [];
@@ -476,21 +532,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <?php echo $canWriteToParent ? '' : 'disabled'; ?> 
                                         <?php echo isset($_POST['config_location']) && $_POST['config_location'] === 'parent' ? 'checked' : ''; ?>
                                         <?php if (!$canWriteToParent): ?>
-                                            aria-label="Parent directory option - not available due to insufficient write permissions"
+                                            aria-label="Secure directory option - not available due to insufficient write permissions"
                                             aria-describedby="parent-dir-disabled-reason"
                                         <?php endif; ?>
                                     >
                                     <div class="radio-content">
                                         <div class="radio-title">
-                                            Parent Directory (Outside Webroot)
+                                            Secure Directory (Outside Webroot)
                                             <span class="security-badge badge-recommended">RECOMMENDED</span>
                                         </div>
                                         <div class="radio-description">
                                             Save to: <code><?php echo htmlspecialchars($parentDirPath); ?></code><br>
-                                            <strong>Better Security:</strong> Config file cannot be accessed via web browser even if .htaccess fails. 
-                                            This is the most secure option and follows industry best practices.
+                                            <strong>Best Security:</strong> <?php echo htmlspecialchars($securePathReason); ?>. 
+                                            Config file cannot be accessed via web browser even if .htaccess fails.
                                             <?php if (!$canWriteToParent): ?>
-                                                <br><span id="parent-dir-disabled-reason" style="color: var(--bad);">⚠ Not available: Cannot write to parent directory. Check permissions.</span>
+                                                <br><span id="parent-dir-disabled-reason" style="color: var(--bad);">⚠ Not available: Cannot write to this directory. Check permissions.</span>
                                             <?php endif; ?>
                                         </div>
                                     </div>
