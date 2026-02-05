@@ -277,6 +277,15 @@
     let refreshInterval = null;
     let configCheckInterval = null;
     let initialConfigApplied = false; // Flag to prevent race conditions on initial load
+    
+    // Initialize onlyProblems from query string early (before first refresh)
+    // This ensures the first data load has the correct filter applied
+    (function initializeOnlyProblems() {
+      const queryConfig = parseQueryString();
+      if (config.allowQueryOverride && typeof queryConfig.showProblemsOnly === 'boolean') {
+        onlyProblems = queryConfig.showProblemsOnly;
+      }
+    })();
 
     // Utilities
     function epochToLocal(epoch) {
@@ -367,10 +376,15 @@
       if (data.config) {
         applyConfiguration(data.config);
         
-        // Apply showProblemsOnly from config on first load only
+        // Apply showProblemsOnly from config on first load only (if not already set by query string)
         if (!initialConfigApplied) {
           initialConfigApplied = true;
-          onlyProblems = config.showProblemsOnly;
+          // Only override onlyProblems if query string didn't set it
+          const queryConfig = parseQueryString();
+          const hasQueryOverride = config.allowQueryOverride && queryConfig.hasOwnProperty('showProblemsOnly');
+          if (!hasQueryOverride) {
+            onlyProblems = config.showProblemsOnly;
+          }
           document.getElementById('toggle-problems').textContent = onlyProblems ? 'Show All' : 'Show Only Problems';
         }
         
