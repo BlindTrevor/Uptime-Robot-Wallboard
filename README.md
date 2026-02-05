@@ -1,567 +1,305 @@
-# Uptime-Robot-Wallboard
+# UptimeRobot Wallboard
 
-A real-time status wallboard for monitoring UptimeRobot services using their API v3.
+A real-time status wallboard for monitoring your UptimeRobot services. Display service health, uptime status, and alerts on a clean, customizable dashboard perfect for NOC displays, office monitors, or personal dashboards.
 
-## Features
+![Status Wallboard](https://github.com/user-attachments/assets/df95564d-da7b-46c5-b008-2f990d67ea62)
 
-- **Easy Setup with Installer** - Automatic configuration wizard for first-time setup
-- Real-time monitoring of all your UptimeRobot monitors
-- Visual status indicators (up, down, paused)
-- Filter view to show only problematic services
-- **Paused Device Control** - Choose to show or hide paused monitors with a dedicated counter
-- **Toggle Paused Button** - One-click button to show/hide paused devices on demand
-- Automatic refresh every 20 seconds
-- **Auto-refresh on config changes** - Front-end automatically reloads when configuration is updated
-- **Auto Fullscreen Mode** - Automatically enter fullscreen on load for kiosk displays
-- **Dark/Light Theme Toggle** - Switch between dark and light themes with user preference persistence
-- **Customizable wallboard title** - Set your own title for branding
-- **Optional logo display** - Upload and display your company logo
-- **Query String Configuration** - Override settings via URL parameters (e.g., `?showProblemsOnly=true&refreshRate=30`)
-- **Flexible Configuration** - Control whether users can modify settings via query string
+## ✨ Key Features
 
-## Dark/Light Theme
+- 🚀 **Easy Setup** - Built-in installer wizard for first-time configuration
+- 📊 **Real-time Monitoring** - Automatic refresh with live status updates
+- 🎨 **Dark/Light Themes** - Toggle between themes with system preference support
+- 🔍 **Smart Filtering** - Show all monitors or only those with issues
+- ⏸️ **Paused Device Control** - Show/hide paused monitors with one click
+- 🖥️ **Fullscreen Mode** - Auto-fullscreen support for kiosk displays
+- 🎯 **Customizable** - Add your logo and custom title
+- ⚙️ **Flexible Configuration** - URL parameters and config file options
+- 🔄 **Auto-refresh** - Detects configuration changes automatically
 
-The wallboard supports both dark and light themes with multiple ways to control the appearance:
+## 🚀 Quick Start
 
-### Theme Toggle Button
+### Prerequisites
 
-Click the theme toggle button in the controls section to instantly switch between dark and light modes. Your selection is automatically saved in a cookie and will persist across browser sessions.
+- Web server with PHP 7.4+ (Apache or Nginx)
+- UptimeRobot account with API access
+- Basic knowledge of file permissions and web hosting
 
-### Theme Configuration Options
+### Installation
 
-1. **User Toggle** (Highest Priority): Click the theme button to manually switch themes. The selection is stored in a browser cookie.
-
-2. **Query String Parameter**: Set the theme via URL parameter
-   ```
-   ?theme=dark   # Force dark theme
-   ?theme=light  # Force light theme
-   ?theme=auto   # Follow system preference
-   ```
-
-3. **Config File**: Set the default theme in `config.env`
+1. **Clone or download** this repository to your web server:
    ```bash
-   THEME=dark   # Default: dark theme
-   THEME=light  # Default: light theme
-   THEME=auto   # Default: follow system preference
+   cd /var/www/html
+   git clone https://github.com/BlindTrevor/Uptime-Robot-Wallboard.git status
+   cd status
    ```
 
-4. **System Preference** (Lowest Priority): When set to `auto` or no preference is stored, the wallboard automatically detects your system's dark/light mode preference using the `prefers-color-scheme` media query.
+2. **Access the installer** by navigating to the application in your browser. If no configuration exists, you'll be automatically redirected to `installer.php`.
 
-### Theme Screenshots
+3. **Enter your UptimeRobot API token** (Get it from: [UptimeRobot Settings → API Settings](https://uptimerobot.com/dashboard#mySettings))
 
-**Dark Theme (Default)**
+4. **Configure your preferences** in the installer form and click "Create Configuration"
 
-![Dark Theme](https://github.com/user-attachments/assets/df95564d-da7b-46c5-b008-2f990d67ea62)
+5. **Done!** The wallboard will automatically load and display your monitors
 
-**Light Theme**
+### Manual Configuration (Alternative)
 
-![Light Theme](https://github.com/user-attachments/assets/cb4b3114-5a31-4e83-96f5-ab27f446fc75)
+If you prefer manual setup:
 
-### Accessibility
-
-Both themes have been designed with accessibility in mind:
-- High contrast ratios for text readability
-- Clear visual distinction between status indicators
-- Smooth transitions between themes
-
-## Paused Device Control
-
-The wallboard provides flexible control over how paused monitors are displayed, allowing administrators to customize the view based on their needs.
-
-### Default Behavior
-
-By default, **paused monitors are hidden** from the wallboard. This provides a clean view focused on monitors that are actively being checked. Monitors that are temporarily paused for maintenance or other reasons won't clutter the display.
-
-### Showing Paused Monitors
-
-When enabled, paused monitors will:
-- **Appear on the wallboard** with a "PAUSED" status indicator
-- **Be counted separately** with a dedicated paused device counter next to the "All Good" / "Issues" pill
-- **Be clearly identified** with a pause icon and warning color
-- **Interact with "Show Only Problems" filter**: When you click "Show Only Problems" button, paused monitors will be included if `SHOW_PAUSED_DEVICES=true`, or excluded if `SHOW_PAUSED_DEVICES=false`
-- **NOT trigger** the red background that indicates service problems (only down/offline monitors do this)
-
-### Configuration
-
-Set the behavior in your `config.env` file:
-
-```bash
-# Show paused monitors on the wallboard (true/false)
-# Default: false (paused monitors are hidden)
-SHOW_PAUSED_DEVICES=false
-```
-
-To enable paused monitor visibility:
-
-```bash
-SHOW_PAUSED_DEVICES=true
-```
-
-### Visual Indicators
-
-**When paused monitors are shown** (`SHOW_PAUSED_DEVICES=true`):
-- A **paused counter pill** appears in the header (e.g., "2 paused")
-- Paused monitors show with an **orange/yellow warning color**
-- The status displays **"PAUSED"** in uppercase
-- A **pause icon** (⏸) is shown next to the status
-
-**When paused monitors are hidden** (`SHOW_PAUSED_DEVICES=false`):
-- A **hidden count indicator** appears showing how many monitors are paused but not displayed (e.g., "3 paused hidden")
-- Uses an **eye-slash icon** (👁️‍🗨️) to indicate hidden status
-- Provides visibility into paused monitors without cluttering the main display
-- Click-able link to toggle visibility (via querystring) could be implemented
-
-### Query String Override
-
-You can temporarily override the config setting using a URL parameter:
-
-```bash
-# Show paused monitors (override config)
-https://your-domain.com/status/?showPausedDevices=true
-
-# Hide paused monitors (override config)
-https://your-domain.com/status/?showPausedDevices=false
-```
-
-This is useful for:
-- Temporarily checking paused monitors without changing configuration
-- Creating different views for different displays or users
-- Testing configuration changes before making them permanent
-
-### Interaction with "Show Only Problems" Filter
-
-The `SHOW_PAUSED_DEVICES` setting controls whether paused monitors appear at all, while the "Show Only Problems" button filters the display:
-
-| SHOW_PAUSED_DEVICES | "Show Only Problems" Button | Result |
-|---------------------|----------------------------|--------|
-| `false` (default) | Off (Show All) | Only UP monitors shown |
-| `false` (default) | On | Only DOWN/offline monitors shown |
-| `true` | Off (Show All) | All monitors shown (UP, DOWN, PAUSED) |
-| `true` | On | DOWN/offline AND PAUSED monitors shown |
-
-In summary: When `SHOW_PAUSED_DEVICES=false`, paused monitors are never shown regardless of other filters. When `SHOW_PAUSED_DEVICES=true`, paused monitors follow the same filtering rules as other non-UP monitors.
-
-### Use Cases
-
-**Hide Paused Monitors (Default):**
-- Clean dashboard focused on active monitoring
-- Hide monitors under planned maintenance
-- Reduce visual clutter on public displays
-- Keep focus on actual service availability
-
-**Show Paused Monitors:**
-- Review which monitors are currently paused
-- Audit maintenance windows
-- Ensure monitors aren't accidentally left paused
-- Full visibility of all configured monitors
-
-### Toggle Paused Button
-
-A convenient **"Show Paused" / "Hide Paused"** button is available in the control panel for quick toggling of paused device visibility:
-
-**Button Location:**
-- Located between "Show Only Problems" and "Refresh Now" buttons
-- Part of the main control panel at the top of the wallboard
-
-**Behavior:**
-- **"Show Paused"** (default): Click to show paused monitors
-- **"Hide Paused"**: Click to hide paused monitors
-- Button text updates to reflect current action
-- Automatically refreshes display after toggle
-- Works in conjunction with config and query string settings
-
-**Use Cases:**
-- 🎯 **Quick Review**: Instantly see which monitors are paused without editing configs
-- 🎯 **Flexible Views**: Switch between views on demand
-- 🎯 **Easy Auditing**: Check paused monitors with a single click
-- 🎯 **Clean Display**: Hide paused monitors to focus on active services
-
-## Auto Fullscreen Mode
-
-The wallboard supports automatic fullscreen mode, ideal for kiosk displays, public monitors, and unattended deployments.
-
-### Fullscreen Toggle Button
-
-Click the fullscreen toggle button in the controls section to enter or exit fullscreen mode at any time. The button shows:
-- **Fullscreen** icon when not in fullscreen - click to enter fullscreen
-- **Exit Fullscreen** icon when in fullscreen - click to exit fullscreen
-
-### Auto Fullscreen Configuration Options
-
-1. **Query String Parameter** (Recommended for Kiosks): Set auto fullscreen via URL parameter
-   ```
-   ?autoFullscreen=true   # Automatically enter fullscreen on load
-   ?autoFullscreen=false  # Normal mode (default)
-   ```
-
-2. **Config File**: Set the default auto fullscreen mode in `config.env`
+1. Copy the example configuration:
    ```bash
-   AUTO_FULLSCREEN=true   # Automatically enter fullscreen on load
-   AUTO_FULLSCREEN=false  # Normal mode (default)
+   cp config.env.example config.env
    ```
 
-### Use Cases
+2. Edit `config.env` and add your UptimeRobot API token:
+   ```bash
+   UPTIMEROBOT_API_TOKEN=your-api-token-here
+   WALLBOARD_TITLE=My Status Dashboard
+   SHOW_PROBLEMS_ONLY=false
+   SHOW_PAUSED_DEVICES=false
+   REFRESH_RATE=20
+   THEME=dark
+   ```
 
-- **Kiosk Displays**: Set `?autoFullscreen=true` in the kiosk browser URL to automatically enter fullscreen
-- **Public Monitors**: Configure `AUTO_FULLSCREEN=true` in config.env for persistent fullscreen behavior
-- **Unattended Displays**: Combine with browser kiosk mode for completely immersive display
-- **Manual Control**: Use the fullscreen button for temporary fullscreen viewing
+3. Set secure file permissions:
+   ```bash
+   chmod 600 config.env
+   chown www-data:www-data config.env
+   ```
 
-### Browser Compatibility
+4. Access `index.html` in your browser
 
-The fullscreen feature is compatible with modern browsers including:
-- Chrome/Edge (desktop and mobile)
-- Firefox (desktop and mobile)
-- Safari (desktop and mobile)
-- Opera
+## 📖 Configuration Options
 
-### How Auto Fullscreen Works
+Edit `config.env` to customize your wallboard:
 
-Due to browser security policies, fullscreen mode requires a user interaction (click/tap). When you use `?autoFullscreen=true`:
+| Option | Description | Default |
+|--------|-------------|---------|
+| `UPTIMEROBOT_API_TOKEN` | Your UptimeRobot API token (required) | - |
+| `WALLBOARD_TITLE` | Custom title for your wallboard | `UptimeRobot – Current Status` |
+| `WALLBOARD_LOGO` | Path to logo image or URL | (empty) |
+| `SHOW_PROBLEMS_ONLY` | Show only monitors with issues | `false` |
+| `SHOW_PAUSED_DEVICES` | Display paused monitors | `false` |
+| `REFRESH_RATE` | Data refresh interval (seconds) | `20` |
+| `CONFIG_CHECK_RATE` | Config file check interval (seconds) | `5` |
+| `THEME` | Theme: `dark`, `light`, or `auto` | `dark` |
+| `AUTO_FULLSCREEN` | Auto-enter fullscreen on load | `false` |
+| `ALLOW_QUERY_OVERRIDE` | Allow URL parameter overrides | `true` |
 
-1. **Automatic Attempt**: The wallboard first attempts to enter fullscreen automatically after page load
-2. **User Prompt**: If blocked by browser security (most common), a prominent overlay appears with an "Enter Fullscreen" button
-3. **One Click**: Simply click the button to enter fullscreen mode
-4. **Seamless Experience**: Once clicked, the wallboard enters fullscreen and the prompt disappears
+## 🎯 Usage
 
-This approach ensures compliance with browser security policies while providing the best user experience for kiosk deployments.
+### Basic Usage
 
-**Browser Security Note**: Modern browsers (Chrome, Edge, Firefox, Safari) require explicit user interaction before entering fullscreen mode. This is a security feature to prevent malicious websites from hijacking the screen. The prompt overlay provides this required interaction in a user-friendly way.
+Simply open the wallboard in your browser. It will automatically:
+- Load and display all your UptimeRobot monitors
+- Refresh every 20 seconds (configurable)
+- Show status with color-coded indicators:
+  - 🟢 Green = Up/Operational
+  - 🔴 Red = Down/Offline
+  - 🟡 Yellow = Paused
 
-### Exiting Fullscreen
+### URL Parameters
 
-You can exit fullscreen mode by:
-- Clicking the "Exit Fullscreen" button in the controls
-- Pressing the `Esc` (Escape) key
-- Using your browser's fullscreen exit shortcut
-
-## Query String Configuration
-
-The wallboard supports runtime configuration through URL query parameters, allowing you to customize behavior without editing files.
-
-### Available Query Parameters
-
-- `showProblemsOnly` - Show only monitors with problems (values: `true` or `false`)
-- `showPausedDevices` - Show or hide paused monitors (values: `true` or `false`)
-- `refreshRate` - Set page refresh interval in seconds (minimum: 10)
-- `configCheckRate` - Set config file check interval in seconds (minimum: 1)
-- `theme` - Set the theme (values: `dark`, `light`, or `auto`)
-- `autoFullscreen` - Automatically enter fullscreen mode on load (values: `true` or `false`)
-
-### Examples
+Override settings temporarily using URL parameters:
 
 ```
-# Show only monitors with problems, refresh every 30 seconds
+# Show only problems, refresh every 30 seconds
 https://your-domain.com/status/?showProblemsOnly=true&refreshRate=30
 
-# Show all monitors, refresh every 60 seconds
-https://your-domain.com/status/?showProblemsOnly=false&refreshRate=60
+# Use light theme and auto-fullscreen for kiosk
+https://your-domain.com/status/?theme=light&autoFullscreen=true
 
-# Show paused monitors (override config)
+# Show paused devices
 https://your-domain.com/status/?showPausedDevices=true
-
-# Hide paused monitors (override config)
-https://your-domain.com/status/?showPausedDevices=false
-
-# Check config changes every 10 seconds instead of default 5
-https://your-domain.com/status/?configCheckRate=10
-
-# Use light theme
-https://your-domain.com/status/?theme=light
-
-# Use auto theme (follows system preference)
-https://your-domain.com/status/?theme=auto
-
-# Auto fullscreen mode for kiosk displays
-https://your-domain.com/status/?autoFullscreen=true
-
-# Combine multiple parameters for kiosk setup
-https://your-domain.com/status/?autoFullscreen=true&showProblemsOnly=true&theme=dark&showPausedDevices=false
 ```
 
-### Security: Controlling Query String Overrides
+### Control Buttons
 
-By default, query string parameters are **enabled** to provide flexibility. However, you can disable them for security:
+- **Show Only Problems** - Toggle between all monitors and problem-only view
+- **Show/Hide Paused** - Quickly toggle paused monitor visibility
+- **Theme Toggle** - Switch between dark and light themes
+- **Fullscreen** - Enter/exit fullscreen mode
+- **Refresh Now** - Manually trigger data refresh
 
-1. Edit your `config.env` file:
+## 🔒 Security Best Practices
+
+### Store Config Outside Webroot (Recommended)
+
+The most secure approach is to store `config.env` **outside** your web-accessible directory:
+
+```bash
+# If your webroot is /var/www/html/status
+# Store config at /var/www/html/config.env (one level up)
+
+cat > /var/www/html/config.env << 'EOF'
+UPTIMEROBOT_API_TOKEN=your-token-here
+# ... other settings ...
+EOF
+
+chmod 600 /var/www/html/config.env
+chown www-data:www-data /var/www/html/config.env
+```
+
+The application automatically searches parent directories for the config file.
+
+### If Storing in Webroot
+
+If you must store `config.env` in the webroot:
+
+1. **Set restrictive permissions**:
    ```bash
-   ALLOW_QUERY_OVERRIDE=false
-   ```
-
-2. Save the file - the wallboard will automatically reload within 5 seconds
-
-When `ALLOW_QUERY_OVERRIDE=false`, all query string parameters are ignored and only the `config.env` settings apply. This is useful for:
-- Public displays where you don't want users modifying settings
-- Controlled environments where consistency is important
-- Security-sensitive deployments
-
-### Configuration Priority
-
-Settings are applied in this order (later overrides earlier):
-1. **Default values** (built into the application)
-2. **config.env file** (your persistent configuration)
-3. **Query string parameters** (if `ALLOW_QUERY_OVERRIDE=true`)
-
-## Setup
-
-### Quick Start with Installer (Recommended for New Users)
-
-The easiest way to set up the wallboard is using the built-in installer:
-
-1. **Upload the application files** to your web server
-2. **Open the wallboard** in your browser (navigate to `index.html`)
-3. **Automatic redirect** - If no config file exists, you'll be automatically redirected to the installer
-4. **Fill in the configuration form** with your UptimeRobot API token and preferences
-5. **Click "Create Configuration"** - the installer will create a properly formatted config file with secure permissions
-
-Alternatively, you can navigate directly to `installer.php` to access the configuration wizard.
-
-![Installer Interface](https://github.com/user-attachments/assets/c7991e2e-adfb-4a99-bf03-a02869284954)
-
-![Installation Success](https://github.com/user-attachments/assets/08e69940-643d-4cec-9468-3ac0685faf55)
-
-**Benefits of using the installer:**
-- ✅ No manual file editing required
-- ✅ Automatic validation of all settings
-- ✅ Sets secure file permissions (600)
-- ✅ Prefers secure location outside webroot when possible
-- ✅ User-friendly error messages
-- ✅ Prevents overwriting existing configurations
-
-**How it works:**
-- When you access `index.html` for the first time, it attempts to load your monitors
-- If no config file exists, the API returns an error and you're automatically redirected to the installer
-- The installer validates all inputs before creating the config file
-- Once created, the installer automatically redirects to the main wallboard
-- If you try to access the installer when a config already exists, it redirects to the wallboard
-
-### Manual Configuration (Alternative Method)
-
-If you prefer to create the configuration file manually, follow these steps:
-
-### 1. Get Your UptimeRobot API Token
-
-1. Log in to your [UptimeRobot account](https://uptimerobot.com)
-2. Navigate to Settings → API Settings
-3. Generate or copy your API token
-
-### 2. Configure the Application (IMPORTANT - Security Best Practices)
-
-The application uses a single `config.env` file for all configuration, including your UptimeRobot API token. Follow these steps for secure storage:
-
-#### Option A: Store Outside Webroot (MOST SECURE - Recommended)
-
-1. Create the `config.env` file **one directory above** your webroot:
-   ```bash
-   # Example: If your webroot is /var/www/html/status
-   # Create the config.env file at /var/www/html/config.env (one level up)
-   
-   # Secure method (avoids shell history):
-   cat > /var/www/html/config.env << 'EOF'
-   UPTIMEROBOT_API_TOKEN=your-api-token-here
-   WALLBOARD_TITLE=UptimeRobot – Current Status
-   WALLBOARD_LOGO=
-   SHOW_PROBLEMS_ONLY=false
-   SHOW_PAUSED_DEVICES=false
-   REFRESH_RATE=20
-   CONFIG_CHECK_RATE=5
-   ALLOW_QUERY_OVERRIDE=true
-   THEME=dark
-   EOF
-   
-   # Set restrictive permissions
-   chmod 600 /var/www/html/config.env
-   chown www-data:www-data /var/www/html/config.env  # Adjust user/group as needed
-   ```
-
-2. Or if your webroot is `/var/www/html` (the application is at root):
-   ```bash
-   # Create the config.env file at /var/www/config.env (one level up)
-   
-   # Secure method (avoids shell history):
-   cat > /var/www/config.env << 'EOF'
-   UPTIMEROBOT_API_TOKEN=your-api-token-here
-   WALLBOARD_TITLE=UptimeRobot – Current Status
-   WALLBOARD_LOGO=
-   SHOW_PROBLEMS_ONLY=false
-   SHOW_PAUSED_DEVICES=false
-   REFRESH_RATE=20
-   CONFIG_CHECK_RATE=5
-   ALLOW_QUERY_OVERRIDE=true
-   THEME=dark
-   EOF
-   
-   # Set restrictive permissions
-   chmod 600 /var/www/config.env
-   chown www-data:www-data /var/www/config.env  # Adjust user/group as needed
-   ```
-
-#### Option B: Store in Webroot (Fallback)
-
-If you cannot store files outside the webroot:
-
-1. Copy the example file and add your configuration:
-   ```bash
-   # Navigate to the application directory first
-   cd /path/to/your/webroot/status  # Adjust to your actual path
-   
-   # Create the config.env file (secure method to avoid shell history)
-   cp config.env.example config.env
-   cat > config.env << 'EOF'
-   UPTIMEROBOT_API_TOKEN=your-api-token-here
-   WALLBOARD_TITLE=My Company Status Dashboard
-   WALLBOARD_LOGO=logo.png
-   SHOW_PROBLEMS_ONLY=false
-   SHOW_PAUSED_DEVICES=false
-   REFRESH_RATE=20
-   CONFIG_CHECK_RATE=5
-   ALLOW_QUERY_OVERRIDE=true
-   THEME=dark
-   EOF
-   
-   # Set restrictive file permissions
    chmod 600 config.env
-   chown www-data:www-data config.env  # Adjust user/group as needed
    ```
 
-2. Verify `.htaccess` is working to block HTTP access to the file:
+2. **Verify `.htaccess` protection** (Apache):
    ```bash
-   curl http://your-domain.com/status/config.env
-   # Should return 403 Forbidden (works for both HTTP and HTTPS)
-   ```
-
-3. **For NGINX Users**: If you're using NGINX instead of Apache, the `.htaccess` file won't work. Use the provided `nginx.conf.example` file:
-   ```bash
-   # Copy the NGINX configuration directives from nginx.conf.example
-   # and add them to your NGINX server block configuration
-   
-   # Then test and reload NGINX
-   sudo nginx -t
-   sudo systemctl reload nginx
-   
-   # Verify protection is working
    curl http://your-domain.com/status/config.env
    # Should return 403 Forbidden
    ```
 
-### 3. Deploy the Application
-
-1. Upload all files to your web server
-2. Ensure `.htaccess` file is present and Apache `mod_authz_core` is enabled
-3. Access `index.html` in your browser
-
-**Note:** The wallboard will automatically refresh when you modify the `config.env` file (within 5 seconds), so you can update your title or logo without manually reloading the page.
-
-### 4. Customize Your Wallboard (Optional)
-
-You can personalize the wallboard with various settings by editing the `config.env` file you created earlier:
-
-1. Edit `config.env` to set your preferences:
-   ```bash
-   # UptimeRobot API Token (REQUIRED)
-   UPTIMEROBOT_API_TOKEN=your-api-token-here
-   
-   # Custom wallboard title (optional)
-   WALLBOARD_TITLE=My Company Status Dashboard
-   
-   # Custom logo path (optional)
-   # Can be a relative path, absolute path, or external URL
-   WALLBOARD_LOGO=logo.png
-   # Examples:
-   #   WALLBOARD_LOGO=images/company-logo.svg
-   #   WALLBOARD_LOGO=https://example.com/logo.png
-   
-   # Display options
-   SHOW_PROBLEMS_ONLY=false      # Show only monitors with problems by default
-   SHOW_PAUSED_DEVICES=false     # Show paused monitors on wallboard (true/false, default: false)
-   
-   # Theme options
-   THEME=dark                    # Theme: dark, light, or auto (follows system preference)
-   
-   # Auto fullscreen options
-   AUTO_FULLSCREEN=false         # Automatically enter fullscreen on load (true/false)
-   
-   # Refresh intervals (in seconds)
-   REFRESH_RATE=20               # How often to refresh data from API (min: 10)
-   CONFIG_CHECK_RATE=5           # How often to check for config changes (min: 1)
-   
-   # Security
-   ALLOW_QUERY_OVERRIDE=true     # Allow URL parameters to override settings
+3. **For Nginx users**, add to your server block:
+   ```nginx
+   location ~ /config\.env {
+       deny all;
+       return 403;
+   }
    ```
 
-2. If using a logo, upload your logo file to the application directory (or use an external URL)
+### Security Checklist
 
-3. Save the file - the wallboard will automatically refresh within 5 seconds to show your changes!
+- ✅ `config.env` returns 403 when accessed via HTTP
+- ✅ File permissions set to `600` (owner read/write only)
+- ✅ `config.env` is in `.gitignore` (never commit secrets!)
+- ✅ Consider storing outside webroot for maximum security
 
-**Notes:**
-- All configuration options are optional except `UPTIMEROBOT_API_TOKEN`
-- If no `config.env` file exists, default values will be used
-- Logo should be reasonably sized (recommended max: 200x50 pixels)
-- Supported logo formats: PNG, SVG, JPG, GIF
-- The logo will be displayed in the wallboard header alongside the title
-- Changes to `config.env` are detected automatically and the wallboard refreshes within 5 seconds
+## 🎨 Themes
 
-### 5. Verify Security
+### Dark Theme (Default)
+![Dark Theme](https://github.com/user-attachments/assets/df95564d-da7b-46c5-b008-2f990d67ea62)
 
-**Critical Security Checks:**
+### Light Theme
+![Light Theme](https://github.com/user-attachments/assets/cb4b3114-5a31-4e83-96f5-ab27f446fc75)
 
-- [ ] `config.env` is **NOT** accessible via HTTP (should return 403 Forbidden)
-- [ ] File permissions are set to `600` (readable only by owner)
-- [ ] `config.env` is listed in `.gitignore`
-- [ ] Never commit `config.env` to version control
+Switch themes using:
+- The theme toggle button in the UI
+- `?theme=dark`, `?theme=light`, or `?theme=auto` URL parameter
+- `THEME` setting in `config.env`
 
-## Security Notes
+## 🖥️ Kiosk Mode
 
-### Why These Security Measures Matter
+Perfect for dedicated monitoring displays:
 
-Storing API keys in plain text files presents several risks:
+1. Set up auto-fullscreen:
+   ```bash
+   # In config.env
+   AUTO_FULLSCREEN=true
+   ```
 
-- **Accidental exposure**: Files may be committed to version control
-- **Web access**: Files in webroot may be served over HTTP
-- **Server access**: Anyone with filesystem access can read the key
-- **Backups**: Unencrypted backups may expose the key
+2. Or use URL parameter:
+   ```
+   https://your-domain.com/status/?autoFullscreen=true&showProblemsOnly=true
+   ```
 
-### Security Layers Implemented
+3. Combine with browser kiosk mode for an immersive experience
 
-1. **`.htaccess` protection**: Blocks HTTP access to `.env` files (Apache only)
-2. **File permissions**: Restricts filesystem access to web server user only
-3. **`.gitignore`**: Prevents accidental commits to version control
-4. **External storage**: Supports storing `config.env` file outside webroot
-5. **Example template**: Provides `config.env.example` as safe reference
+## 🔧 Troubleshooting
 
-### For Production Environments
+### No data showing
 
-If you have access to more advanced secret management:
+- Check browser console for errors (F12)
+- Verify API token is correct in `config.env`
+- Ensure `uptimerobot_status.php` is accessible
+- Check `uptime_errors.log` for PHP errors
 
-- Use environment variables (via `getenv()` in PHP)
-- Use a secrets manager (AWS Secrets Manager, HashiCorp Vault, etc.)
-- Use encrypted key storage with hardware security modules (HSM)
+### Configuration not loading
 
-### References
+- Verify `config.env` file exists and has correct permissions
+- Check file format: `KEY=value` (no spaces around `=`)
+- Ensure web server can read the file (`chmod 600` and correct ownership)
 
-- [OWASP Secrets Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html)
-- [PHP: Keeping Secrets](https://www.php.net/manual/en/security.secrets.php)
+### 403 Forbidden errors
 
-## Troubleshooting
+- For `.env` files: This is expected and correct (security protection)
+- For PHP files: Check Apache/Nginx configuration allows PHP execution
+- Verify `.htaccess` is not blocking legitimate requests
 
-### "Missing UPTIMEROBOT_API_TOKEN" Error
+### Installer redirects immediately
 
-- Check that `config.env` file exists in the correct location
-- Verify the file contains `UPTIMEROBOT_API_TOKEN=your-token` format
-- Check file permissions allow the web server to read it
+- Config file already exists - use the main application
+- To reconfigure, delete or rename existing `config.env`
 
-### 403 Forbidden on PHP Script
+## 📚 Advanced Features
 
-- Verify `.htaccess` is not blocking PHP files (only `.env` files should be blocked)
-- Check Apache configuration allows `.htaccess` overrides
+### Paused Device Control
 
-### No Data Showing
+Control visibility of paused monitors:
+- **Default**: Paused monitors are hidden
+- **Show Paused**: Display paused monitors with warning indicators
+- **Toggle Button**: Quick show/hide via UI button
+- **URL Override**: `?showPausedDevices=true` or `false`
 
-- Check browser console for errors
-- Verify your API token is valid
-- Check that `uptimerobot_status.php` is accessible
-- Review error logs (check `uptime_errors.log`)
+When shown, paused monitors:
+- Display "PAUSED" status with ⏸️ icon
+- Use warning (yellow/orange) color
+- Are counted separately in the header
+- Don't trigger the red "issues" background
 
-## License
+### Query String Parameters
+
+All configuration options can be overridden via URL (when `ALLOW_QUERY_OVERRIDE=true`):
+
+```
+?showProblemsOnly=true          # Show only problematic monitors
+?showPausedDevices=true         # Show/hide paused monitors
+?refreshRate=30                 # Set refresh interval (seconds)
+?theme=light                    # Set theme (dark/light/auto)
+?autoFullscreen=true            # Auto-enter fullscreen
+?configCheckRate=10             # Config check interval
+```
+
+### Auto-Refresh on Config Changes
+
+The wallboard automatically detects changes to `config.env` and refreshes the display within 5 seconds. No manual reload needed when updating:
+- Title or logo
+- Theme settings
+- Display filters
+- Refresh rates
+
+### Logo Display
+
+Add your company logo to the wallboard:
+
+1. Upload your logo file to the application directory
+2. Edit `config.env`:
+   ```bash
+   WALLBOARD_LOGO=logo.png
+   # Or use a URL:
+   # WALLBOARD_LOGO=https://example.com/logo.png
+   ```
+3. Recommended size: 200x50 pixels or similar aspect ratio
+4. Supported formats: PNG, SVG, JPG, GIF
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to:
+- Report bugs or issues
+- Suggest new features
+- Submit pull requests
+- Improve documentation
+
+## 📄 License
 
 This project is open source and available for use and modification.
+
+## 🙏 Acknowledgments
+
+- Built for [UptimeRobot](https://uptimerobot.com) API v3
+- Font Awesome for icons
+- Community contributions and feedback
+
+## 📞 Support
+
+For issues, questions, or feature requests, please use the [GitHub Issues](https://github.com/BlindTrevor/Uptime-Robot-Wallboard/issues) page.
+
+---
+
+**Made with ❤️ for monitoring enthusiasts**
