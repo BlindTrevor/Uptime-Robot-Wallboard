@@ -64,7 +64,6 @@ $CONFIG = [
     'autoFullscreen' => false,
 ];
 
-// Load configuration if config file exists
 if ($configPath !== null) {
     $parsed = parseEnvFile($configPath, [
         'UPTIMEROBOT_API_TOKEN', 

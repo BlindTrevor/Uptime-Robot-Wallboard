@@ -523,7 +523,10 @@
      * @param {string} falseText - Text when state is false
      */
     function updateButtonText(elementId, state, trueText, falseText) {
-      document.getElementById(elementId).textContent = state ? trueText : falseText;
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.textContent = state ? trueText : falseText;
+      }
     }
 
     function formatDuration(epoch) {
