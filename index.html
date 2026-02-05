@@ -480,6 +480,55 @@
     }
     const toClass = s => (s || 'unknown').toLowerCase().replace(/\s+/g, '_');
 
+    /**
+     * Update or create paused pill element
+     * @param {number} totalCount - Total count of paused monitors
+     * @param {number} visibleCount - Count of visible paused monitors
+     * @param {boolean} showPaused - Whether paused devices are being shown
+     * @param {HTMLElement} referencePill - Pill element to insert after
+     */
+    function updatePausedPill(totalCount, visibleCount, showPaused, referencePill) {
+      const pausedPill = document.getElementById('paused-pill');
+      
+      // Remove pill if no paused devices or shouldn't be shown
+      if (totalCount === 0) {
+        pausedPill?.remove();
+        return;
+      }
+      
+      // Create pill if it doesn't exist
+      let pill = pausedPill;
+      if (!pill) {
+        pill = document.createElement('span');
+        pill.id = 'paused-pill';
+        pill.className = 'pill paused';
+        referencePill.parentNode.insertBefore(pill, referencePill.nextSibling);
+      }
+      
+      // Update pill content based on visibility
+      pill.style.display = 'inline-flex';
+      pill.className = 'pill paused';
+      if (showPaused) {
+        pill.innerHTML = `<i class="fas fa-pause-circle"></i><span>${visibleCount} paused</span>`;
+      } else {
+        pill.innerHTML = `<i class="fas fa-eye-slash"></i><span>${totalCount} paused hidden</span>`;
+      }
+    }
+
+    /**
+     * Update button text based on state
+     * @param {string} elementId - ID of button element
+     * @param {boolean} state - Current state
+     * @param {string} trueText - Text when state is true
+     * @param {string} falseText - Text when state is false
+     */
+    function updateButtonText(elementId, state, trueText, falseText) {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.textContent = state ? trueText : falseText;
+      }
+    }
+
     function formatDuration(epoch) {
       const n = Number(epoch);
       if (!n) return '';
@@ -590,8 +639,8 @@
           if (!showPausedSetByQuery) {
             showPaused = config.showPausedDevices;
           }
-          document.getElementById('toggle-problems').textContent = onlyProblems ? 'Show All' : 'Show Only Problems';
-          document.getElementById('toggle-paused').textContent = showPaused ? 'Hide Paused' : 'Show Paused';
+          updateButtonText('toggle-problems', onlyProblems, 'Show All', 'Show Only Problems');
+          updateButtonText('toggle-paused', showPaused, 'Hide Paused', 'Show Paused');
         }
         
         if (data.config.title) {
@@ -654,41 +703,9 @@
         pill.innerHTML = '<i class="fas fa-check"></i><span>All good</span>';
       }
       
-      // Show paused count if there are paused devices and showPausedDevices is enabled
-      // OR show hidden paused count if there are paused devices but showPausedDevices is disabled
+      // Update paused pill display
       const totalPausedCount = data.paused_count || pausedCount; // Use backend count if available
-      
-      if (totalPausedCount > 0 && config.showPausedDevices) {
-        // Show paused devices that are visible
-        let pausedPill = document.getElementById('paused-pill');
-        if (!pausedPill) {
-          pausedPill = document.createElement('span');
-          pausedPill.id = 'paused-pill';
-          pausedPill.className = 'pill';
-          pill.parentNode.insertBefore(pausedPill, pill.nextSibling);
-        }
-        pausedPill.style.display = 'inline-flex';
-        pausedPill.className = 'pill paused';
-        pausedPill.innerHTML = `<i class="fas fa-pause-circle"></i><span>${pausedCount} paused</span>`;
-      } else if (totalPausedCount > 0 && !config.showPausedDevices) {
-        // Show count of hidden paused devices
-        let pausedPill = document.getElementById('paused-pill');
-        if (!pausedPill) {
-          pausedPill = document.createElement('span');
-          pausedPill.id = 'paused-pill';
-          pausedPill.className = 'pill';
-          pill.parentNode.insertBefore(pausedPill, pill.nextSibling);
-        }
-        pausedPill.style.display = 'inline-flex';
-        pausedPill.className = 'pill paused';
-        pausedPill.innerHTML = `<i class="fas fa-eye-slash"></i><span>${totalPausedCount} paused hidden</span>`;
-      } else {
-        // Remove paused pill if it exists but shouldn't be shown
-        const pausedPill = document.getElementById('paused-pill');
-        if (pausedPill) {
-          pausedPill.remove();
-        }
-      }
+      updatePausedPill(totalPausedCount, pausedCount, config.showPausedDevices, pill);
 
       // Update body background based on offline status
       if (problemCount > 0) {
@@ -820,12 +837,12 @@
     document.getElementById('refresh-btn').addEventListener('click', refresh);
     document.getElementById('toggle-problems').addEventListener('click', () => {
       onlyProblems = !onlyProblems;
-      document.getElementById('toggle-problems').textContent = onlyProblems ? 'Show All' : 'Show Only Problems';
+      updateButtonText('toggle-problems', onlyProblems, 'Show All', 'Show Only Problems');
       refresh();
     });
     document.getElementById('toggle-paused').addEventListener('click', () => {
       showPaused = !showPaused;
-      document.getElementById('toggle-paused').textContent = showPaused ? 'Hide Paused' : 'Show Paused';
+      updateButtonText('toggle-paused', showPaused, 'Hide Paused', 'Show Paused');
       refresh();
     });
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
