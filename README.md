@@ -2,6 +2,8 @@
 
 A real-time status wallboard for monitoring UptimeRobot services using their API v3.
 
+![Visitor Count](https://profile-counter.glitch.me/{YOUR USER}/count.svg)
+
 ## Features
 
 - Real-time monitoring of all your UptimeRobot monitors
