@@ -9,6 +9,7 @@ A real-time status wallboard for monitoring UptimeRobot services using their API
 - Filter view to show only problematic services
 - Automatic refresh every 20 seconds
 - **Auto-refresh on config changes** - Front-end automatically reloads when configuration is updated
+- **Auto Fullscreen Mode** - Automatically enter fullscreen on load for kiosk displays
 - **Dark/Light Theme Toggle** - Switch between dark and light themes with user preference persistence
 - **Customizable wallboard title** - Set your own title for branding
 - **Optional logo display** - Upload and display your company logo
@@ -60,6 +61,54 @@ Both themes have been designed with accessibility in mind:
 - Clear visual distinction between status indicators
 - Smooth transitions between themes
 
+## Auto Fullscreen Mode
+
+The wallboard supports automatic fullscreen mode, ideal for kiosk displays, public monitors, and unattended deployments.
+
+### Fullscreen Toggle Button
+
+Click the fullscreen toggle button in the controls section to enter or exit fullscreen mode at any time. The button shows:
+- **Fullscreen** icon when not in fullscreen - click to enter fullscreen
+- **Exit Fullscreen** icon when in fullscreen - click to exit fullscreen
+
+### Auto Fullscreen Configuration Options
+
+1. **Query String Parameter** (Recommended for Kiosks): Set auto fullscreen via URL parameter
+   ```
+   ?autoFullscreen=true   # Automatically enter fullscreen on load
+   ?autoFullscreen=false  # Normal mode (default)
+   ```
+
+2. **Config File**: Set the default auto fullscreen mode in `config.env`
+   ```bash
+   AUTO_FULLSCREEN=true   # Automatically enter fullscreen on load
+   AUTO_FULLSCREEN=false  # Normal mode (default)
+   ```
+
+### Use Cases
+
+- **Kiosk Displays**: Set `?autoFullscreen=true` in the kiosk browser URL to automatically enter fullscreen
+- **Public Monitors**: Configure `AUTO_FULLSCREEN=true` in config.env for persistent fullscreen behavior
+- **Unattended Displays**: Combine with browser kiosk mode for completely immersive display
+- **Manual Control**: Use the fullscreen button for temporary fullscreen viewing
+
+### Browser Compatibility
+
+The fullscreen feature is compatible with modern browsers including:
+- Chrome/Edge (desktop and mobile)
+- Firefox (desktop and mobile)
+- Safari (desktop and mobile)
+- Opera
+
+**Note**: Some browsers may require user interaction before allowing fullscreen. The auto fullscreen feature will attempt to enter fullscreen automatically but may be blocked by browser security policies on initial page load. If this occurs, use the fullscreen button to manually enter fullscreen mode.
+
+### Exiting Fullscreen
+
+You can exit fullscreen mode by:
+- Clicking the "Exit Fullscreen" button in the controls
+- Pressing the `Esc` (Escape) key
+- Using browser-specific fullscreen exit shortcuts (e.g., `F11` on some browsers)
+
 ## Query String Configuration
 
 The wallboard supports runtime configuration through URL query parameters, allowing you to customize behavior without editing files.
@@ -70,6 +119,7 @@ The wallboard supports runtime configuration through URL query parameters, allow
 - `refreshRate` - Set page refresh interval in seconds (minimum: 10)
 - `configCheckRate` - Set config file check interval in seconds (minimum: 1)
 - `theme` - Set the theme (values: `dark`, `light`, or `auto`)
+- `autoFullscreen` - Automatically enter fullscreen mode on load (values: `true` or `false`)
 
 ### Examples
 
@@ -88,6 +138,12 @@ https://your-domain.com/status/?theme=light
 
 # Use auto theme (follows system preference)
 https://your-domain.com/status/?theme=auto
+
+# Auto fullscreen mode for kiosk displays
+https://your-domain.com/status/?autoFullscreen=true
+
+# Combine multiple parameters for kiosk setup
+https://your-domain.com/status/?autoFullscreen=true&showProblemsOnly=true&theme=dark
 ```
 
 ### Security: Controlling Query String Overrides
@@ -249,6 +305,9 @@ You can personalize the wallboard with various settings by editing the `config.e
    
    # Theme options
    THEME=dark                    # Theme: dark, light, or auto (follows system preference)
+   
+   # Auto fullscreen options
+   AUTO_FULLSCREEN=false         # Automatically enter fullscreen on load (true/false)
    
    # Refresh intervals (in seconds)
    REFRESH_RATE=20               # How often to refresh data from API (min: 10)

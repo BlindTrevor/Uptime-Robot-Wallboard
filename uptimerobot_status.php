@@ -96,6 +96,7 @@ $CONFIG = [
     'configCheckRate' => 5,
     'allowQueryOverride' => true,
     'theme' => 'dark',
+    'autoFullscreen' => false,
 ];
 
 foreach ($configPaths as $configPath) {
@@ -107,7 +108,8 @@ foreach ($configPaths as $configPath) {
         'REFRESH_RATE',
         'CONFIG_CHECK_RATE',
         'ALLOW_QUERY_OVERRIDE',
-        'THEME'
+        'THEME',
+        'AUTO_FULLSCREEN'
     ]);
     if (!empty($parsed)) {
         // Load API token
@@ -164,6 +166,11 @@ foreach ($configPaths as $configPath) {
             if (in_array($theme, ['dark', 'light', 'auto'], true)) {
                 $CONFIG['theme'] = $theme;
             }
+        }
+        
+        // Load auto fullscreen setting
+        if (isset($parsed['AUTO_FULLSCREEN'])) {
+            $CONFIG['autoFullscreen'] = filter_var($parsed['AUTO_FULLSCREEN'], FILTER_VALIDATE_BOOLEAN);
         }
         
         break;

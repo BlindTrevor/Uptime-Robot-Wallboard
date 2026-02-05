@@ -102,6 +102,7 @@
     <button id="toggle-problems">Show Only Problems</button>
     <button id="refresh-btn">Refresh Now</button>
     <button id="theme-toggle"><i class="fas fa-sun"></i> Light Mode</button>
+    <button id="fullscreen-toggle"><i class="fas fa-expand"></i> Fullscreen</button>
   </div>
 
   <div id="error" class="err"></div>
@@ -120,6 +121,7 @@
       showProblemsOnly: false,
       allowQueryOverride: true,
       theme: 'dark', // 'dark', 'light', or 'auto'
+      autoFullscreen: false,
     };
 
     // --- Theme Management ---
@@ -201,6 +203,61 @@
       });
     }
     
+    // --- Fullscreen Management ---
+    function requestFullscreen() {
+      const elem = document.documentElement;
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(err => {
+          console.warn('Failed to enter fullscreen:', err);
+        });
+      } else if (elem.webkitRequestFullscreen) { // Safari
+        elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) { // IE11
+        elem.msRequestFullscreen();
+      }
+    }
+
+    function exitFullscreen() {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(err => {
+          console.warn('Failed to exit fullscreen:', err);
+        });
+      } else if (document.webkitExitFullscreen) { // Safari
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) { // IE11
+        document.msExitFullscreen();
+      }
+    }
+
+    function isFullscreen() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement || 
+                document.msFullscreenElement);
+    }
+
+    function toggleFullscreen() {
+      if (isFullscreen()) {
+        exitFullscreen();
+      } else {
+        requestFullscreen();
+      }
+    }
+
+    function updateFullscreenButton() {
+      const btn = document.getElementById('fullscreen-toggle');
+      if (btn) {
+        if (isFullscreen()) {
+          btn.innerHTML = '<i class="fas fa-compress"></i> Exit Fullscreen';
+        } else {
+          btn.innerHTML = '<i class="fas fa-expand"></i> Fullscreen';
+        }
+      }
+    }
+
+    // Listen for fullscreen changes
+    ['fullscreenchange', 'webkitfullscreenchange', 'msfullscreenchange'].forEach(event => {
+      document.addEventListener(event, updateFullscreenButton);
+    });
+    
     // Parse query string parameters
     function parseQueryString() {
       const params = new URLSearchParams(window.location.search);
@@ -235,6 +292,11 @@
         }
       }
       
+      // Parse autoFullscreen
+      if (params.has('autoFullscreen')) {
+        queryConfig.autoFullscreen = params.get('autoFullscreen') === 'true';
+      }
+      
       return queryConfig;
     }
     
@@ -256,6 +318,9 @@
         }
         if (typeof serverConfig.theme === 'string' && ['dark', 'light', 'auto'].includes(serverConfig.theme)) {
           config.theme = serverConfig.theme;
+        }
+        if (typeof serverConfig.autoFullscreen === 'boolean') {
+          config.autoFullscreen = serverConfig.autoFullscreen;
         }
       }
       
@@ -566,11 +631,24 @@
       refresh();
     });
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+    document.getElementById('fullscreen-toggle').addEventListener('click', toggleFullscreen);
+
+    // Auto fullscreen on load if enabled
+    function handleAutoFullscreen() {
+      if (config.autoFullscreen) {
+        // Small delay to ensure page is fully loaded
+        setTimeout(() => {
+          requestFullscreen();
+        }, 500);
+      }
+    }
 
     // Initial load + polling
     refresh().finally(() => {
       // After first refresh (success or failure), update intervals based on loaded config
       updateIntervals();
+      // Handle auto fullscreen after config is loaded
+      handleAutoFullscreen();
     });
     
     // Initialize config version checking
