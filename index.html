@@ -542,14 +542,24 @@
       const url = ENDPOINT + (params.toString() ? ('?' + params.toString()) : '');
       const res = await fetch(url, { cache: 'no-store' });
       const text = await res.text(); // read once
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${text}`);
-      }
+      
+      // Try to parse JSON even on error responses
+      let parsedData;
       try {
-        return JSON.parse(text);
+        parsedData = JSON.parse(text);
       } catch (e) {
+        // If JSON parsing fails, throw with the raw text
         throw new Error(`Invalid JSON: ${e.message}\nBody: ${text.slice(0, 400)}${text.length > 400 ? '…' : ''}`);
       }
+      
+      // If HTTP error but we have parsed JSON, return it so we can check for specific errors
+      if (!res.ok) {
+        // Add status code to the parsed data for error handling
+        parsedData.httpStatus = res.status;
+        return parsedData;
+      }
+      
+      return parsedData;
     }
 
     // Render
@@ -751,7 +761,9 @@
             window.location.href = 'installer.php';
             return;
           }
-          throw new Error(errorMsg);
+          // Include HTTP status in error message if available
+          const statusMsg = data.httpStatus ? `HTTP ${data.httpStatus}: ` : '';
+          throw new Error(statusMsg + errorMsg);
         }
         render(data);
       } catch (e) {
