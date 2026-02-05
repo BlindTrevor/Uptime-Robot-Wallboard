@@ -513,11 +513,9 @@
 
     function isProblem(m) {
       const s = (m.status || '').toLowerCase();
-      // If showPausedDevices is true, paused monitors are considered problems (issues)
-      // If showPausedDevices is false, they won't be shown at all (filtered by backend)
-      if (s === 'paused' && config.showPausedDevices) {
-        return true; // Treat paused as a problem when shown
-      }
+      // Paused monitors are only shown if showPausedDevices is true (filtered by backend)
+      // When shown, they should be considered as issues/problems
+      // When not shown (showPausedDevices=false), backend filters them out
       return s !== 'up';
     }
 
