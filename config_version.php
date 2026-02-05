@@ -39,8 +39,9 @@ function findConfigPath() {
     }
     
     // Check each path and return the first one that exists
+    // Use @ to suppress warnings from open_basedir restrictions
     foreach ($testPaths as $path) {
-        if (file_exists($path)) {
+        if (@file_exists($path)) {
             return $path;
         }
     }
