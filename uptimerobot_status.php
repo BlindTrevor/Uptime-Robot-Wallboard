@@ -190,6 +190,17 @@ foreach ($configPaths as $configPath) {
 // This is different from the showProblemsOnly config which sets the initial state
 $onlyProblems = isset($_GET['only_problems']) && $_GET['only_problems'] === '1';
 
+// Allow query parameter to override showPausedDevices config
+// This enables runtime control via URL like ?showPausedDevices=true
+if (isset($_GET['showPausedDevices'])) {
+    $queryShowPaused = $_GET['showPausedDevices'];
+    if ($queryShowPaused === 'true' || $queryShowPaused === '1') {
+        $CONFIG['showPausedDevices'] = true;
+    } elseif ($queryShowPaused === 'false' || $queryShowPaused === '0') {
+        $CONFIG['showPausedDevices'] = false;
+    }
+}
+
 if (!$TOKEN) {
     http_response_code(500);
     echo json_encode(['ok' => false, 'error' => 'Missing UPTIMEROBOT_API_TOKEN. Please create config.env file with UPTIMEROBOT_API_TOKEN=your-key']);
@@ -233,6 +244,12 @@ if (!is_array($data)) {
 }
 
 $monitors = $data['data'] ?? [];
+
+// Count paused devices before any filtering (for display when hidden)
+$pausedCount = count(array_filter($monitors, function ($m) {
+    return strtolower((string)($m['status'] ?? 'unknown')) === 'paused';
+}));
+
 if ($onlyProblems) {
     $monitors = array_values(array_filter($monitors, function ($m) {
         return strtolower((string)($m['status'] ?? 'unknown')) !== 'up';
@@ -347,6 +364,7 @@ echo json_encode([
     'ok' => true,
     'fetched_at_utc' => $nowUtc,
     'count' => count($transformed),
+    'paused_count' => $pausedCount,
     'monitors' => $transformed,
     'meta' => $data['meta'] ?? new stdClass(),
     'config' => [

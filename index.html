@@ -399,6 +399,11 @@
         queryConfig.autoFullscreen = params.get('autoFullscreen') === 'true';
       }
       
+      // Parse showPausedDevices
+      if (params.has('showPausedDevices')) {
+        queryConfig.showPausedDevices = params.get('showPausedDevices') === 'true';
+      }
+      
       return queryConfig;
     }
     
@@ -523,6 +528,12 @@
     async function loadData() {
       const params = new URLSearchParams();
       if (onlyProblems) params.set('only_problems', '1');
+      
+      // Pass showPausedDevices if set via query string to override backend config
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('showPausedDevices')) {
+        params.set('showPausedDevices', urlParams.get('showPausedDevices'));
+      }
 
       const url = ENDPOINT + (params.toString() ? ('?' + params.toString()) : '');
       const res = await fetch(url, { cache: 'no-store' });
@@ -622,8 +633,11 @@
       }
       
       // Show paused count if there are paused devices and showPausedDevices is enabled
-      if (pausedCount > 0 && config.showPausedDevices) {
-        // Create or update paused pill
+      // OR show hidden paused count if there are paused devices but showPausedDevices is disabled
+      const totalPausedCount = data.paused_count || pausedCount; // Use backend count if available
+      
+      if (totalPausedCount > 0 && config.showPausedDevices) {
+        // Show paused devices that are visible
         let pausedPill = document.getElementById('paused-pill');
         if (!pausedPill) {
           pausedPill = document.createElement('span');
@@ -634,6 +648,18 @@
         pausedPill.style.display = 'inline-flex';
         pausedPill.className = 'pill paused';
         pausedPill.innerHTML = `<i class="fas fa-pause-circle"></i><span>${pausedCount} paused</span>`;
+      } else if (totalPausedCount > 0 && !config.showPausedDevices) {
+        // Show count of hidden paused devices
+        let pausedPill = document.getElementById('paused-pill');
+        if (!pausedPill) {
+          pausedPill = document.createElement('span');
+          pausedPill.id = 'paused-pill';
+          pausedPill.className = 'pill';
+          pill.parentNode.insertBefore(pausedPill, pill.nextSibling);
+        }
+        pausedPill.style.display = 'inline-flex';
+        pausedPill.className = 'pill paused';
+        pausedPill.innerHTML = `<i class="fas fa-eye-slash"></i><span>${totalPausedCount} paused hidden</span>`;
       } else {
         // Remove paused pill if it exists but shouldn't be shown
         const pausedPill = document.getElementById('paused-pill');
