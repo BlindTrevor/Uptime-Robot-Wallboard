@@ -1,4 +1,4 @@
-# Uptime Robot Wallboard
+# UptimeRobot Wallboard
 
 A real-time status wallboard for monitoring your UptimeRobot services. Display service health, uptime status, and alerts on a clean, customizable dashboard perfect for NOC displays, office monitors, or personal dashboards.
 
