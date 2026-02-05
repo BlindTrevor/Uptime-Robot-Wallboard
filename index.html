@@ -549,14 +549,17 @@
         parsedData = JSON.parse(text);
       } catch (e) {
         // If JSON parsing fails, throw with the raw text
-        throw new Error(`Invalid JSON: ${e.message}\nBody: ${text.slice(0, 400)}${text.length > 400 ? '…' : ''}`);
+        const errorDetail = e && e.message ? e.message : 'Unknown parsing error';
+        throw new Error(`Invalid JSON: ${errorDetail}\nBody: ${text.slice(0, 400)}${text.length > 400 ? '…' : ''}`);
       }
       
-      // If HTTP error but we have parsed JSON, return it so we can check for specific errors
+      // If HTTP error but we have parsed JSON, return wrapper with status
+      // Use wrapper to avoid mutating API response object
       if (!res.ok) {
-        // Add status code to the parsed data for error handling
-        parsedData.httpStatus = res.status;
-        return parsedData;
+        return {
+          ...parsedData,
+          _httpStatus: res.status
+        };
       }
       
       return parsedData;
@@ -762,7 +765,7 @@
             return;
           }
           // Include HTTP status in error message if available
-          const statusMsg = data.httpStatus ? `HTTP ${data.httpStatus}: ` : '';
+          const statusMsg = data._httpStatus ? `HTTP ${data._httpStatus}: ` : '';
           throw new Error(statusMsg + errorMsg);
         }
         render(data);
