@@ -3,6 +3,7 @@
 ![Last Commit](https://img.shields.io/github/last-commit/BlindTrevor/Uptime-Robot-Wallboard)
 ![Issues](https://img.shields.io/github/issues/BlindTrevor/Uptime-Robot-Wallboard)
 ![Repo Size](https://img.shields.io/github/repo-size/BlindTrevor/Uptime-Robot-Wallboard)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/USER/REPO?display_name=release)
 
 A real-time status wallboard for monitoring your UptimeRobot services. Display service health, uptime status, and alerts on a clean, customizable dashboard perfect for NOC displays, office monitors, or personal dashboards.
 
