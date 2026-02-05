@@ -2,7 +2,7 @@
 
 A real-time status wallboard for monitoring UptimeRobot services using their API v3.
 
-![Visitor Count](https://profile-counter.glitch.me/{YOUR USER}/count.svg)
+![Visitor Count](https://profile-counter.glitch.me/BlindTrevor/count.svg)
 
 ## Features
 
