@@ -84,6 +84,68 @@
     .small { font-size: 0.78rem; color: var(--subtle); margin-top: 6px; }
     .err { color: var(--bad); margin: 0.4rem 0; white-space: pre-wrap; }
     .footer { color: var(--subtle); margin-top: 0.5rem; font-size: 0.85rem; }
+    
+    /* Fullscreen prompt overlay */
+    .fullscreen-prompt {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .fullscreen-prompt.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .fullscreen-prompt-content {
+      background: var(--card);
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+    .fullscreen-prompt-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      color: var(--accent);
+    }
+    .fullscreen-prompt h2 {
+      margin: 0 0 1rem;
+      font-size: 1.5rem;
+      color: var(--text);
+    }
+    .fullscreen-prompt p {
+      margin: 0 0 1.5rem;
+      color: var(--subtle);
+      line-height: 1.5;
+    }
+    .fullscreen-prompt button {
+      font-size: 1.1rem;
+      padding: 12px 32px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: all 0.2s ease;
+    }
+    .fullscreen-prompt button:hover {
+      background: #4a6fa5;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(58, 86, 156, 0.4);
+    }
   </style>
 </head>
 <body>
@@ -108,6 +170,20 @@
   <div id="error" class="err"></div>
   <div id="grid" class="grid"></div>
   <div id="footer" class="footer"></div>
+  
+  <!-- Fullscreen prompt overlay -->
+  <div id="fullscreen-prompt" class="fullscreen-prompt">
+    <div class="fullscreen-prompt-content">
+      <div class="fullscreen-prompt-icon">
+        <i class="fas fa-expand-arrows-alt"></i>
+      </div>
+      <h2>Fullscreen Mode Requested</h2>
+      <p>Click the button below to enter fullscreen mode. This is required by your browser's security policy.</p>
+      <button id="fullscreen-prompt-btn">
+        <i class="fas fa-expand"></i> Enter Fullscreen
+      </button>
+    </div>
+  </div>
 
   <script>
     // --- Configuration ---
@@ -207,14 +283,18 @@
     function requestFullscreen() {
       const elem = document.documentElement;
       if (elem.requestFullscreen) {
-        elem.requestFullscreen().catch(err => {
+        return elem.requestFullscreen().catch(err => {
           console.warn('Failed to enter fullscreen:', err);
+          return Promise.reject(err);
         });
       } else if (elem.webkitRequestFullscreen) { // Safari
         elem.webkitRequestFullscreen();
+        return Promise.resolve();
       } else if (elem.msRequestFullscreen) { // IE11
         elem.msRequestFullscreen();
+        return Promise.resolve();
       }
+      return Promise.reject(new Error('Fullscreen not supported'));
     }
 
     function exitFullscreen() {
@@ -252,10 +332,30 @@
         }
       }
     }
+    
+    function showFullscreenPrompt() {
+      const prompt = document.getElementById('fullscreen-prompt');
+      if (prompt) {
+        prompt.classList.add('visible');
+      }
+    }
+    
+    function hideFullscreenPrompt() {
+      const prompt = document.getElementById('fullscreen-prompt');
+      if (prompt) {
+        prompt.classList.remove('visible');
+      }
+    }
 
     // Listen for fullscreen changes
     ['fullscreenchange', 'webkitfullscreenchange', 'msfullscreenchange'].forEach(event => {
-      document.addEventListener(event, updateFullscreenButton);
+      document.addEventListener(event, () => {
+        updateFullscreenButton();
+        // Hide prompt when fullscreen is entered
+        if (isFullscreen()) {
+          hideFullscreenPrompt();
+        }
+      });
     });
     
     // Parse query string parameters
@@ -632,6 +732,17 @@
     });
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
     document.getElementById('fullscreen-toggle').addEventListener('click', toggleFullscreen);
+    document.getElementById('fullscreen-prompt-btn').addEventListener('click', () => {
+      requestFullscreen()
+        .then(() => {
+          hideFullscreenPrompt();
+        })
+        .catch(err => {
+          console.error('Failed to enter fullscreen from prompt:', err);
+          alert('Unable to enter fullscreen mode. Please try using the Fullscreen button or press F11.');
+          hideFullscreenPrompt();
+        });
+    });
 
     // Auto fullscreen on load if enabled
     function handleAutoFullscreen() {
@@ -639,7 +750,12 @@
         // Delay to ensure DOM is fully rendered and browser security policies allow fullscreen request
         // Most browsers require user interaction or slight delay after page load for fullscreen API
         setTimeout(() => {
-          requestFullscreen();
+          requestFullscreen()
+            .catch(err => {
+              // If automatic fullscreen fails (browser security policy), show prompt
+              console.log('Auto fullscreen blocked by browser, showing user prompt');
+              showFullscreenPrompt();
+            });
         }, 500);
       }
     }

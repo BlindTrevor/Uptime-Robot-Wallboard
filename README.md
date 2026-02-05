@@ -100,7 +100,18 @@ The fullscreen feature is compatible with modern browsers including:
 - Safari (desktop and mobile)
 - Opera
 
-**Note**: Some browsers may require user interaction before allowing fullscreen. The auto fullscreen feature will attempt to enter fullscreen automatically but may be blocked by browser security policies on initial page load. If this occurs, use the fullscreen button to manually enter fullscreen mode.
+### How Auto Fullscreen Works
+
+Due to browser security policies, fullscreen mode requires a user interaction (click/tap). When you use `?autoFullscreen=true`:
+
+1. **Automatic Attempt**: The wallboard first attempts to enter fullscreen automatically after page load
+2. **User Prompt**: If blocked by browser security (most common), a prominent overlay appears with an "Enter Fullscreen" button
+3. **One Click**: Simply click the button to enter fullscreen mode
+4. **Seamless Experience**: Once clicked, the wallboard enters fullscreen and the prompt disappears
+
+This approach ensures compliance with browser security policies while providing the best user experience for kiosk deployments.
+
+**Browser Security Note**: Modern browsers (Chrome, Edge, Firefox, Safari) require explicit user interaction before entering fullscreen mode. This is a security feature to prevent malicious websites from hijacking the screen. The prompt overlay provides this required interaction in a user-friendly way.
 
 ### Exiting Fullscreen
 
