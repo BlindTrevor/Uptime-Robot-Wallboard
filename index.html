@@ -636,7 +636,8 @@
     // Auto fullscreen on load if enabled
     function handleAutoFullscreen() {
       if (config.autoFullscreen) {
-        // Small delay to ensure page is fully loaded
+        // Delay to ensure DOM is fully rendered and browser security policies allow fullscreen request
+        // Most browsers require user interaction or slight delay after page load for fullscreen API
         setTimeout(() => {
           requestFullscreen();
         }, 500);
