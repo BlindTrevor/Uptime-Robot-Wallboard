@@ -56,6 +56,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $autoFullscreen = isset($_POST['auto_fullscreen']) ? 'true' : 'false';
     $configLocation = $_POST['config_location'] ?? $defaultConfigLocation;
     
+    // Handle logo file upload
+    if (isset($_FILES['logo_file']) && $_FILES['logo_file']['error'] === UPLOAD_ERR_OK) {
+        $uploadFile = $_FILES['logo_file'];
+        $uploadName = $uploadFile['name'];
+        $uploadSize = $uploadFile['size'];
+        $uploadTmpPath = $uploadFile['tmp_name'];
+        
+        // Validate file type
+        $allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/svg+xml', 'image/webp'];
+        $fileType = mime_content_type($uploadTmpPath);
+        
+        if (!in_array($fileType, $allowedTypes, true)) {
+            $errors[] = 'Invalid logo file type. Please upload a PNG, JPG, GIF, SVG, or WebP image.';
+        }
+        
+        // Validate file size (max 2MB)
+        if ($uploadSize > 2 * 1024 * 1024) {
+            $errors[] = 'Logo file is too large. Maximum size is 2MB.';
+        }
+        
+        // Generate safe filename
+        $fileExtension = pathinfo($uploadName, PATHINFO_EXTENSION);
+        $safeFilename = 'logo_' . time() . '.' . preg_replace('/[^a-z0-9]/i', '', $fileExtension);
+        $uploadDestination = __DIR__ . '/' . $safeFilename;
+        
+        // Move uploaded file if no errors so far
+        if (empty($errors)) {
+            if (move_uploaded_file($uploadTmpPath, $uploadDestination)) {
+                // Set logo to the uploaded filename (relative path)
+                $logo = $safeFilename;
+                // Set secure permissions
+                @chmod($uploadDestination, 0644);
+            } else {
+                $errors[] = 'Failed to save uploaded logo file. Please check permissions.';
+            }
+        }
+    }
+    
     // Determine target path based on user selection
     if ($configLocation === 'parent') {
         if ($canWriteToParent) {
@@ -398,7 +436,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <a href="https://uptimerobot.com" target="_blank">UptimeRobot</a> → Settings → API Settings
                 </div>
                 
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     <div class="form-group">
                         <label>
                             UptimeRobot API Token <span class="required">*</span>
@@ -472,9 +510,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="form-group">
                         <label>
                             Logo Path or URL
-                            <div class="label-description">Path to logo image or URL (optional)</div>
+                            <div class="label-description">Enter a path/URL or upload a logo file (optional)</div>
                         </label>
-                        <input type="text" name="logo" value="<?php echo htmlspecialchars($_POST['logo'] ?? ''); ?>" placeholder="logo.png or https://example.com/logo.png">
+                        <input type="text" name="logo" id="logo-input" value="<?php echo htmlspecialchars($_POST['logo'] ?? ''); ?>" placeholder="logo.png or https://example.com/logo.png">
+                        <div style="margin-top: 0.75rem;">
+                            <label for="logo-upload" style="display: inline-block; cursor: pointer; padding: 0.5rem 1rem; background: var(--border); border: 1px solid var(--accent); border-radius: 6px; font-size: 0.9rem;">
+                                📁 Upload Logo File
+                            </label>
+                            <input type="file" name="logo_file" id="logo-upload" accept="image/*" style="display: none;">
+                            <span id="upload-filename" style="margin-left: 0.75rem; color: var(--subtle); font-size: 0.9rem;"></span>
+                        </div>
+                        <div class="label-description" style="margin-top: 0.5rem;">
+                            Uploaded files will be saved to the application directory. Supported formats: PNG, JPG, GIF, SVG, WebP
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -532,6 +580,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     <button type="submit">Create Configuration</button>
                 </form>
+                
+                <script>
+                    // Handle logo file upload
+                    document.getElementById('logo-upload').addEventListener('change', function(e) {
+                        const file = e.target.files[0];
+                        const filenameDisplay = document.getElementById('upload-filename');
+                        const logoInput = document.getElementById('logo-input');
+                        
+                        if (file) {
+                            filenameDisplay.textContent = '✓ ' + file.name + ' selected';
+                            filenameDisplay.style.color = 'var(--ok)';
+                            // Clear the text input since we're uploading
+                            logoInput.value = '';
+                            logoInput.placeholder = 'Upload selected, or enter path/URL here to override';
+                        } else {
+                            filenameDisplay.textContent = '';
+                            logoInput.placeholder = 'logo.png or https://example.com/logo.png';
+                        }
+                    });
+                </script>
             <?php endif; ?>
         </div>
     </div>
