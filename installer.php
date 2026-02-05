@@ -383,7 +383,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     <div class="form-group">
                         <div class="checkbox-group">
-                            <input type="checkbox" name="allow_query_override" id="allow_query_override" <?php echo !isset($_POST['allow_query_override']) || isset($_POST['allow_query_override']) ? 'checked' : ''; ?>>
+                            <input type="checkbox" name="allow_query_override" id="allow_query_override" <?php echo ($_SERVER['REQUEST_METHOD'] !== 'POST') || isset($_POST['allow_query_override']) ? 'checked' : ''; ?>>
                             <label for="allow_query_override">Allow URL query parameters to override settings</label>
                         </div>
                     </div>

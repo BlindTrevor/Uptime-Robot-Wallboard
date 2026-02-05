@@ -309,9 +309,12 @@ Settings are applied in this order (later overrides earlier):
 The easiest way to set up the wallboard is using the built-in installer:
 
 1. **Upload the application files** to your web server
-2. **Navigate to `installer.php`** in your browser (or simply open `index.html` and you'll be redirected automatically)
-3. **Fill in the configuration form** with your UptimeRobot API token and preferences
-4. **Click "Create Configuration"** - the installer will create a properly formatted config file with secure permissions
+2. **Open the wallboard** in your browser (navigate to `index.html`)
+3. **Automatic redirect** - If no config file exists, you'll be automatically redirected to the installer
+4. **Fill in the configuration form** with your UptimeRobot API token and preferences
+5. **Click "Create Configuration"** - the installer will create a properly formatted config file with secure permissions
+
+Alternatively, you can navigate directly to `installer.php` to access the configuration wizard.
 
 ![Installer Interface](https://github.com/user-attachments/assets/c7991e2e-adfb-4a99-bf03-a02869284954)
 
@@ -326,7 +329,8 @@ The easiest way to set up the wallboard is using the built-in installer:
 - ✅ Prevents overwriting existing configurations
 
 **How it works:**
-- On first access to `index.html`, if no config file exists, you'll be automatically redirected to the installer
+- When you access `index.html` for the first time, it attempts to load your monitors
+- If no config file exists, the API returns an error and you're automatically redirected to the installer
 - The installer validates all inputs before creating the config file
 - Once created, the installer automatically redirects to the main wallboard
 - If you try to access the installer when a config already exists, it redirects to the wallboard
