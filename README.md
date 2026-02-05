@@ -97,11 +97,34 @@ SHOW_PAUSED_DEVICES=true
 
 ### Visual Indicators
 
-When `SHOW_PAUSED_DEVICES=true` and there are paused monitors:
+**When paused monitors are shown** (`SHOW_PAUSED_DEVICES=true`):
 - A **paused counter pill** appears in the header (e.g., "2 paused")
 - Paused monitors show with an **orange/yellow warning color**
 - The status displays **"PAUSED"** in uppercase
 - A **pause icon** (⏸) is shown next to the status
+
+**When paused monitors are hidden** (`SHOW_PAUSED_DEVICES=false`):
+- A **hidden count indicator** appears showing how many monitors are paused but not displayed (e.g., "3 paused hidden")
+- Uses an **eye-slash icon** (👁️‍🗨️) to indicate hidden status
+- Provides visibility into paused monitors without cluttering the main display
+- Click-able link to toggle visibility (via querystring) could be implemented
+
+### Query String Override
+
+You can temporarily override the config setting using a URL parameter:
+
+```bash
+# Show paused monitors (override config)
+https://your-domain.com/status/?showPausedDevices=true
+
+# Hide paused monitors (override config)
+https://your-domain.com/status/?showPausedDevices=false
+```
+
+This is useful for:
+- Temporarily checking paused monitors without changing configuration
+- Creating different views for different displays or users
+- Testing configuration changes before making them permanent
 
 ### Interaction with "Show Only Problems" Filter
 
@@ -196,6 +219,7 @@ The wallboard supports runtime configuration through URL query parameters, allow
 ### Available Query Parameters
 
 - `showProblemsOnly` - Show only monitors with problems (values: `true` or `false`)
+- `showPausedDevices` - Show or hide paused monitors (values: `true` or `false`)
 - `refreshRate` - Set page refresh interval in seconds (minimum: 10)
 - `configCheckRate` - Set config file check interval in seconds (minimum: 1)
 - `theme` - Set the theme (values: `dark`, `light`, or `auto`)
@@ -210,6 +234,12 @@ https://your-domain.com/status/?showProblemsOnly=true&refreshRate=30
 # Show all monitors, refresh every 60 seconds
 https://your-domain.com/status/?showProblemsOnly=false&refreshRate=60
 
+# Show paused monitors (override config)
+https://your-domain.com/status/?showPausedDevices=true
+
+# Hide paused monitors (override config)
+https://your-domain.com/status/?showPausedDevices=false
+
 # Check config changes every 10 seconds instead of default 5
 https://your-domain.com/status/?configCheckRate=10
 
@@ -223,7 +253,7 @@ https://your-domain.com/status/?theme=auto
 https://your-domain.com/status/?autoFullscreen=true
 
 # Combine multiple parameters for kiosk setup
-https://your-domain.com/status/?autoFullscreen=true&showProblemsOnly=true&theme=dark
+https://your-domain.com/status/?autoFullscreen=true&showProblemsOnly=true&theme=dark&showPausedDevices=false
 ```
 
 ### Security: Controlling Query String Overrides
