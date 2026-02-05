@@ -70,6 +70,7 @@
     }
     .pill.warn { background: #3b2a1a; color: var(--warn); border-color: #5e4123; }
     .pill.ok { background: #163327; color: #8af0c9; border-color: #184836; }
+    .pill.paused { background: #3b2a1a; color: var(--warn); border-color: #5e4123; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
     .card.offline { background: var(--card-offline); border-color: var(--border-offline); }
@@ -162,6 +163,7 @@
 
   <div class="controls">
     <button id="toggle-problems">Show Only Problems</button>
+    <button id="toggle-paused">Show Paused</button>
     <button id="refresh-btn">Refresh Now</button>
     <button id="theme-toggle"><i class="fas fa-sun"></i> Light Mode</button>
     <button id="fullscreen-toggle"><i class="fas fa-expand"></i> Fullscreen</button>
@@ -195,6 +197,7 @@
       refreshRate: 20,
       configCheckRate: 5,
       showProblemsOnly: false,
+      showPausedDevices: false,
       allowQueryOverride: true,
       theme: 'dark', // 'dark', 'light', or 'auto'
       autoFullscreen: false,
@@ -397,6 +400,11 @@
         queryConfig.autoFullscreen = params.get('autoFullscreen') === 'true';
       }
       
+      // Parse showPausedDevices
+      if (params.has('showPausedDevices')) {
+        queryConfig.showPausedDevices = params.get('showPausedDevices') === 'true';
+      }
+      
       return queryConfig;
     }
     
@@ -406,6 +414,9 @@
       if (serverConfig) {
         if (typeof serverConfig.showProblemsOnly === 'boolean') {
           config.showProblemsOnly = serverConfig.showProblemsOnly;
+        }
+        if (typeof serverConfig.showPausedDevices === 'boolean') {
+          config.showPausedDevices = serverConfig.showPausedDevices;
         }
         if (typeof serverConfig.refreshRate === 'number') {
           config.refreshRate = serverConfig.refreshRate;
@@ -437,12 +448,14 @@
 
     // State
     let onlyProblems = false;
+    let showPaused = false; // Toggle for showing paused devices
     let lastStatuses = new Map(); // id -> previous status (for change detection)
     let currentConfigVersion = null; // Track config file version
     let refreshInterval = null;
     let configCheckInterval = null;
     let initialConfigApplied = false; // Flag to prevent race conditions on initial load
     let onlyProblemsSetByQuery = false; // Track if query string set onlyProblems
+    let showPausedSetByQuery = false; // Track if query string set showPaused
     
     // Initialize onlyProblems from query string early (before first refresh)
     // This ensures the first data load has the correct filter applied
@@ -451,6 +464,10 @@
       if (config.allowQueryOverride && typeof queryConfig.showProblemsOnly === 'boolean') {
         onlyProblems = queryConfig.showProblemsOnly;
         onlyProblemsSetByQuery = true;
+      }
+      if (config.allowQueryOverride && typeof queryConfig.showPausedDevices === 'boolean') {
+        showPaused = queryConfig.showPausedDevices;
+        showPausedSetByQuery = true;
       }
     })();
 
@@ -508,6 +525,9 @@
 
     function isProblem(m) {
       const s = (m.status || '').toLowerCase();
+      // Monitors with status !== 'up' are problems
+      // Paused monitors are filtered by backend when showPausedDevices=false
+      // When shown, they are counted separately from other issues
       return s !== 'up';
     }
 
@@ -515,6 +535,9 @@
     async function loadData() {
       const params = new URLSearchParams();
       if (onlyProblems) params.set('only_problems', '1');
+      
+      // Pass showPausedDevices based on current state (button or query string)
+      params.set('showPausedDevices', showPaused ? 'true' : 'false');
 
       const url = ENDPOINT + (params.toString() ? ('?' + params.toString()) : '');
       const res = await fetch(url, { cache: 'no-store' });
@@ -550,7 +573,12 @@
           if (!onlyProblemsSetByQuery) {
             onlyProblems = config.showProblemsOnly;
           }
+          // Only override showPaused if query string didn't set it
+          if (!showPausedSetByQuery) {
+            showPaused = config.showPausedDevices;
+          }
           document.getElementById('toggle-problems').textContent = onlyProblems ? 'Show All' : 'Show Only Problems';
+          document.getElementById('toggle-paused').textContent = showPaused ? 'Hide Paused' : 'Show Paused';
         }
         
         if (data.config.title) {
@@ -596,8 +624,13 @@
         return (a.friendly_name || '').localeCompare(b.friendly_name || '');
       });
 
-      // Problem count pill
-      const problemCount = mons.filter(isProblem).length;
+      // Problem count pill and paused count
+      const pausedCount = mons.filter(m => (m.status || '').toLowerCase() === 'paused').length;
+      const problemCount = mons.filter(m => {
+        const s = (m.status || '').toLowerCase();
+        return s !== 'up' && s !== 'paused';
+      }).length;
+      
       if (problemCount > 0) {
         pill.style.display = 'inline-flex';
         pill.className = 'pill warn';
@@ -606,6 +639,42 @@
         pill.style.display = 'inline-flex';
         pill.className = 'pill ok';
         pill.innerHTML = '<i class="fas fa-check"></i><span>All good</span>';
+      }
+      
+      // Show paused count if there are paused devices and showPausedDevices is enabled
+      // OR show hidden paused count if there are paused devices but showPausedDevices is disabled
+      const totalPausedCount = data.paused_count || pausedCount; // Use backend count if available
+      
+      if (totalPausedCount > 0 && config.showPausedDevices) {
+        // Show paused devices that are visible
+        let pausedPill = document.getElementById('paused-pill');
+        if (!pausedPill) {
+          pausedPill = document.createElement('span');
+          pausedPill.id = 'paused-pill';
+          pausedPill.className = 'pill';
+          pill.parentNode.insertBefore(pausedPill, pill.nextSibling);
+        }
+        pausedPill.style.display = 'inline-flex';
+        pausedPill.className = 'pill paused';
+        pausedPill.innerHTML = `<i class="fas fa-pause-circle"></i><span>${pausedCount} paused</span>`;
+      } else if (totalPausedCount > 0 && !config.showPausedDevices) {
+        // Show count of hidden paused devices
+        let pausedPill = document.getElementById('paused-pill');
+        if (!pausedPill) {
+          pausedPill = document.createElement('span');
+          pausedPill.id = 'paused-pill';
+          pausedPill.className = 'pill';
+          pill.parentNode.insertBefore(pausedPill, pill.nextSibling);
+        }
+        pausedPill.style.display = 'inline-flex';
+        pausedPill.className = 'pill paused';
+        pausedPill.innerHTML = `<i class="fas fa-eye-slash"></i><span>${totalPausedCount} paused hidden</span>`;
+      } else {
+        // Remove paused pill if it exists but shouldn't be shown
+        const pausedPill = document.getElementById('paused-pill');
+        if (pausedPill) {
+          pausedPill.remove();
+        }
       }
 
       // Update body background based on offline status
@@ -728,6 +797,11 @@
     document.getElementById('toggle-problems').addEventListener('click', () => {
       onlyProblems = !onlyProblems;
       document.getElementById('toggle-problems').textContent = onlyProblems ? 'Show All' : 'Show Only Problems';
+      refresh();
+    });
+    document.getElementById('toggle-paused').addEventListener('click', () => {
+      showPaused = !showPaused;
+      document.getElementById('toggle-paused').textContent = showPaused ? 'Hide Paused' : 'Show Paused';
       refresh();
     });
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
