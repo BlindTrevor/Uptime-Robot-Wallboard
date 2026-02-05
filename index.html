@@ -743,7 +743,16 @@
       const err = document.getElementById('error');
       try {
         const data = await loadData();
-        if (!data.ok) throw new Error(data.error || 'Unknown error');
+        if (!data.ok) {
+          // Check if error is about missing config
+          const errorMsg = data.error || 'Unknown error';
+          if (errorMsg.includes('Missing UPTIMEROBOT_API_TOKEN') || errorMsg.includes('config.env')) {
+            // Redirect to installer
+            window.location.href = 'installer.php';
+            return;
+          }
+          throw new Error(errorMsg);
+        }
         render(data);
       } catch (e) {
         err.textContent = 'Error: ' + e.message;
