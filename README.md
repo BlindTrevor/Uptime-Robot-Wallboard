@@ -2,8 +2,6 @@
 
 A real-time status wallboard for monitoring UptimeRobot services using their API v3.
 
-![](https://komarev.com/ghpvc/?username=BlindTrevor)
-
 ## Features
 
 - Real-time monitoring of all your UptimeRobot monitors
