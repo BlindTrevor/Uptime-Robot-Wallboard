@@ -33,6 +33,7 @@ if ($configExists) {
 // Config path options
 $currentDirPath = __DIR__ . '/config.env';     // Current directory (default)
 $parentDirPath = __DIR__ . '/../config.env';   // Parent directory (more secure)
+$defaultConfigLocation = 'current';             // Default location
 
 // Check if we can write to parent directory
 $canWriteToParent = is_writable(dirname($parentDirPath));
@@ -53,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $allowQueryOverride = isset($_POST['allow_query_override']) ? 'true' : 'false';
     $theme = $_POST['theme'] ?? 'dark';
     $autoFullscreen = isset($_POST['auto_fullscreen']) ? 'true' : 'false';
-    $configLocation = $_POST['config_location'] ?? 'current';
+    $configLocation = $_POST['config_location'] ?? $defaultConfigLocation;
     
     // Determine target path based on user selection
     if ($configLocation === 'parent') {
@@ -414,7 +415,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="radio-options">
                             <label class="radio-option">
                                 <div class="radio-group">
-                                    <input type="radio" name="config_location" value="current" <?php echo (!isset($_POST['config_location']) || $_POST['config_location'] === 'current') ? 'checked' : ''; ?>>
+                                    <input type="radio" name="config_location" value="current" <?php echo (!isset($_POST['config_location']) || $_POST['config_location'] === $defaultConfigLocation) ? 'checked' : ''; ?>>
                                     <div class="radio-content">
                                         <div class="radio-title">
                                             Current Directory (Inside Webroot)
@@ -430,7 +431,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             
                             <label class="radio-option <?php echo !$canWriteToParent ? 'disabled' : ''; ?>">
                                 <div class="radio-group">
-                                    <input type="radio" name="config_location" value="parent" <?php echo $canWriteToParent ? '' : 'disabled'; ?> <?php echo isset($_POST['config_location']) && $_POST['config_location'] === 'parent' ? 'checked' : ''; ?>>
+                                    <input 
+                                        type="radio" 
+                                        name="config_location" 
+                                        value="parent" 
+                                        <?php echo $canWriteToParent ? '' : 'disabled'; ?> 
+                                        <?php echo isset($_POST['config_location']) && $_POST['config_location'] === 'parent' ? 'checked' : ''; ?>
+                                        <?php if (!$canWriteToParent): ?>
+                                            aria-label="Parent directory option - not available due to insufficient write permissions"
+                                            aria-describedby="parent-dir-disabled-reason"
+                                        <?php endif; ?>
+                                    >
                                     <div class="radio-content">
                                         <div class="radio-title">
                                             Parent Directory (Outside Webroot)
@@ -441,7 +452,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <strong>Better Security:</strong> Config file cannot be accessed via web browser even if .htaccess fails. 
                                             This is the most secure option and follows industry best practices.
                                             <?php if (!$canWriteToParent): ?>
-                                                <br><span style="color: var(--bad);">⚠ Not available: Cannot write to parent directory. Check permissions.</span>
+                                                <br><span id="parent-dir-disabled-reason" style="color: var(--bad);">⚠ Not available: Cannot write to parent directory. Check permissions.</span>
                                             <?php endif; ?>
                                         </div>
                                     </div>
