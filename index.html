@@ -74,7 +74,6 @@
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
     .card.offline { background: var(--card-offline); border-color: var(--border-offline); }
     .name { font-weight: 700; font-size: 1.05rem; margin-bottom: 6px; }
-    .url { color: var(--subtle); font-size: 0.9rem; word-break: break-word; }
     .status { margin-top: 8px; font-weight: 800; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px; }
     .status i { font-size: 1.1em; }
     .status.up { color: var(--ok); }
@@ -443,17 +442,14 @@
         const statusIcon = getStatusIcon(m.status);
         const isOffline = isProblem(m);
         const cardClass = isOffline ? 'card offline' : 'card';
-        // Prefer custom ratios if present, otherwise all-time
-        const ratios = m.custom_uptime_ratios
-          ? `${m.custom_uptime_ratios}% (1/7/30/90d)`
-          : (m.all_time_uptime_ratio ? `${m.all_time_uptime_ratio}% (all-time)` : '—');
         const tags = formatTags(m.tags);
 
         // Determine the status label based on current status
         const status = (m.status || '').toLowerCase();
         let statusLabel = '';
         if (status === 'up') {
-          statusLabel = `Up since: ${epochToLocal(m.last_check)}`;
+          const duration = formatDuration(m.last_check);
+          statusLabel = `Up since: ${epochToLocal(m.last_check)}${duration ? ` (${duration})` : ''}`;
         } else if (status === 'down' || status === 'seems_down') {
           const duration = formatDuration(m.last_check);
           statusLabel = `Down since: ${epochToLocal(m.last_check)}${duration ? ` (${duration})` : ''}`;
@@ -466,10 +462,8 @@
         return `
           <div class="${cardClass}">
             <div class="name">${m.friendly_name || '—'}</div>
-            <div class="url">${m.url || '—'}</div>
             <div class="${cls}">${statusIcon}${(m.status || 'UNKNOWN').toUpperCase()}</div>
-            <div class="kv">${statusLabel}${statusLabel ? ' | ' : ''}Next check: ${epochToLocal(m.next_check)}</div>
-            <div class="kv">Uptime: ${ratios}</div>
+            <div class="kv">${statusLabel}</div>
             ${tags ? `<div class="small">Tags: ${tags}</div>` : ''}
           </div>
         `;
