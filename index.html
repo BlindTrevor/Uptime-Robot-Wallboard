@@ -70,6 +70,7 @@
     }
     .pill.warn { background: #3b2a1a; color: var(--warn); border-color: #5e4123; }
     .pill.ok { background: #163327; color: #8af0c9; border-color: #184836; }
+    .pill.paused { background: #3b2a1a; color: var(--warn); border-color: #5e4123; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
     .card.offline { background: var(--card-offline); border-color: var(--border-offline); }
@@ -195,6 +196,7 @@
       refreshRate: 20,
       configCheckRate: 5,
       showProblemsOnly: false,
+      showPausedDevices: false,
       allowQueryOverride: true,
       theme: 'dark', // 'dark', 'light', or 'auto'
       autoFullscreen: false,
@@ -407,6 +409,9 @@
         if (typeof serverConfig.showProblemsOnly === 'boolean') {
           config.showProblemsOnly = serverConfig.showProblemsOnly;
         }
+        if (typeof serverConfig.showPausedDevices === 'boolean') {
+          config.showPausedDevices = serverConfig.showPausedDevices;
+        }
         if (typeof serverConfig.refreshRate === 'number') {
           config.refreshRate = serverConfig.refreshRate;
         }
@@ -508,6 +513,11 @@
 
     function isProblem(m) {
       const s = (m.status || '').toLowerCase();
+      // If showPausedDevices is true, paused monitors are considered problems (issues)
+      // If showPausedDevices is false, they won't be shown at all (filtered by backend)
+      if (s === 'paused' && config.showPausedDevices) {
+        return true; // Treat paused as a problem when shown
+      }
       return s !== 'up';
     }
 
@@ -596,8 +606,13 @@
         return (a.friendly_name || '').localeCompare(b.friendly_name || '');
       });
 
-      // Problem count pill
-      const problemCount = mons.filter(isProblem).length;
+      // Problem count pill and paused count
+      const pausedCount = mons.filter(m => (m.status || '').toLowerCase() === 'paused').length;
+      const problemCount = mons.filter(m => {
+        const s = (m.status || '').toLowerCase();
+        return s !== 'up' && s !== 'paused';
+      }).length;
+      
       if (problemCount > 0) {
         pill.style.display = 'inline-flex';
         pill.className = 'pill warn';
@@ -606,6 +621,27 @@
         pill.style.display = 'inline-flex';
         pill.className = 'pill ok';
         pill.innerHTML = '<i class="fas fa-check"></i><span>All good</span>';
+      }
+      
+      // Show paused count if there are paused devices and showPausedDevices is enabled
+      if (pausedCount > 0 && config.showPausedDevices) {
+        // Create or update paused pill
+        let pausedPill = document.getElementById('paused-pill');
+        if (!pausedPill) {
+          pausedPill = document.createElement('span');
+          pausedPill.id = 'paused-pill';
+          pausedPill.className = 'pill';
+          pill.parentNode.insertBefore(pausedPill, pill.nextSibling);
+        }
+        pausedPill.style.display = 'inline-flex';
+        pausedPill.className = 'pill paused';
+        pausedPill.innerHTML = `<i class="fas fa-pause-circle"></i><span>${pausedCount} paused</span>`;
+      } else {
+        // Remove paused pill if it exists but shouldn't be shown
+        const pausedPill = document.getElementById('paused-pill');
+        if (pausedPill) {
+          pausedPill.remove();
+        }
       }
 
       // Update body background based on offline status

@@ -92,6 +92,7 @@ $WALLBOARD_CONFIG = [
 // Default configuration values
 $CONFIG = [
     'showProblemsOnly' => false,
+    'showPausedDevices' => false,
     'refreshRate' => 20,
     'configCheckRate' => 5,
     'allowQueryOverride' => true,
@@ -105,6 +106,7 @@ foreach ($configPaths as $configPath) {
         'WALLBOARD_TITLE', 
         'WALLBOARD_LOGO',
         'SHOW_PROBLEMS_ONLY',
+        'SHOW_PAUSED_DEVICES',
         'REFRESH_RATE',
         'CONFIG_CHECK_RATE',
         'ALLOW_QUERY_OVERRIDE',
@@ -143,6 +145,11 @@ foreach ($configPaths as $configPath) {
         // Load display options
         if (isset($parsed['SHOW_PROBLEMS_ONLY'])) {
             $CONFIG['showProblemsOnly'] = filter_var($parsed['SHOW_PROBLEMS_ONLY'], FILTER_VALIDATE_BOOLEAN);
+        }
+        
+        // Load show paused devices option
+        if (isset($parsed['SHOW_PAUSED_DEVICES'])) {
+            $CONFIG['showPausedDevices'] = filter_var($parsed['SHOW_PAUSED_DEVICES'], FILTER_VALIDATE_BOOLEAN);
         }
         
         // Load refresh rate (minimum 10 seconds to prevent API abuse)
@@ -229,6 +236,13 @@ $monitors = $data['data'] ?? [];
 if ($onlyProblems) {
     $monitors = array_values(array_filter($monitors, function ($m) {
         return strtolower((string)($m['status'] ?? 'unknown')) !== 'up';
+    }));
+}
+
+// Filter out paused devices if showPausedDevices is false
+if (!$CONFIG['showPausedDevices']) {
+    $monitors = array_values(array_filter($monitors, function ($m) {
+        return strtolower((string)($m['status'] ?? 'unknown')) !== 'paused';
     }));
 }
 
@@ -339,6 +353,7 @@ echo json_encode([
         'title' => $WALLBOARD_CONFIG['title'],
         'logo' => $WALLBOARD_CONFIG['logo'],
         'showProblemsOnly' => $CONFIG['showProblemsOnly'],
+        'showPausedDevices' => $CONFIG['showPausedDevices'],
         'refreshRate' => $CONFIG['refreshRate'],
         'configCheckRate' => $CONFIG['configCheckRate'],
         'allowQueryOverride' => $CONFIG['allowQueryOverride'],
