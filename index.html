@@ -448,7 +448,8 @@
         const status = (m.status || '').toLowerCase();
         let statusLabel = '';
         if (status === 'up') {
-          statusLabel = `Up since: ${epochToLocal(m.last_check)}`;
+          const duration = formatDuration(m.last_check);
+          statusLabel = `Up since: ${epochToLocal(m.last_check)}${duration ? ` (${duration})` : ''}`;
         } else if (status === 'down' || status === 'seems_down') {
           const duration = formatDuration(m.last_check);
           statusLabel = `Down since: ${epochToLocal(m.last_check)}${duration ? ` (${duration})` : ''}`;
