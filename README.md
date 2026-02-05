@@ -4,6 +4,7 @@ A real-time status wallboard for monitoring UptimeRobot services using their API
 
 ## Features
 
+- **Easy Setup with Installer** - Automatic configuration wizard for first-time setup
 - Real-time monitoring of all your UptimeRobot monitors
 - Visual status indicators (up, down, paused)
 - Filter view to show only problematic services
@@ -302,6 +303,37 @@ Settings are applied in this order (later overrides earlier):
 3. **Query string parameters** (if `ALLOW_QUERY_OVERRIDE=true`)
 
 ## Setup
+
+### Quick Start with Installer (Recommended for New Users)
+
+The easiest way to set up the wallboard is using the built-in installer:
+
+1. **Upload the application files** to your web server
+2. **Navigate to `installer.php`** in your browser (or simply open `index.html` and you'll be redirected automatically)
+3. **Fill in the configuration form** with your UptimeRobot API token and preferences
+4. **Click "Create Configuration"** - the installer will create a properly formatted config file with secure permissions
+
+![Installer Interface](https://github.com/user-attachments/assets/c7991e2e-adfb-4a99-bf03-a02869284954)
+
+![Installation Success](https://github.com/user-attachments/assets/08e69940-643d-4cec-9468-3ac0685faf55)
+
+**Benefits of using the installer:**
+- ✅ No manual file editing required
+- ✅ Automatic validation of all settings
+- ✅ Sets secure file permissions (600)
+- ✅ Prefers secure location outside webroot when possible
+- ✅ User-friendly error messages
+- ✅ Prevents overwriting existing configurations
+
+**How it works:**
+- On first access to `index.html`, if no config file exists, you'll be automatically redirected to the installer
+- The installer validates all inputs before creating the config file
+- Once created, the installer automatically redirects to the main wallboard
+- If you try to access the installer when a config already exists, it redirects to the wallboard
+
+### Manual Configuration (Alternative Method)
+
+If you prefer to create the configuration file manually, follow these steps:
 
 ### 1. Get Your UptimeRobot API Token
 
