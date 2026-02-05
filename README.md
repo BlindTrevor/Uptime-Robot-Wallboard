@@ -8,6 +8,7 @@ A real-time status wallboard for monitoring UptimeRobot services using their API
 - Visual status indicators (up, down, paused)
 - Filter view to show only problematic services
 - **Paused Device Control** - Choose to show or hide paused monitors with a dedicated counter
+- **Toggle Paused Button** - One-click button to show/hide paused devices on demand
 - Automatic refresh every 20 seconds
 - **Auto-refresh on config changes** - Front-end automatically reloads when configuration is updated
 - **Auto Fullscreen Mode** - Automatically enter fullscreen on load for kiosk displays
@@ -152,6 +153,27 @@ In summary: When `SHOW_PAUSED_DEVICES=false`, paused monitors are never shown re
 - Audit maintenance windows
 - Ensure monitors aren't accidentally left paused
 - Full visibility of all configured monitors
+
+### Toggle Paused Button
+
+A convenient **"Show Paused" / "Hide Paused"** button is available in the control panel for quick toggling of paused device visibility:
+
+**Button Location:**
+- Located between "Show Only Problems" and "Refresh Now" buttons
+- Part of the main control panel at the top of the wallboard
+
+**Behavior:**
+- **"Show Paused"** (default): Click to show paused monitors
+- **"Hide Paused"**: Click to hide paused monitors
+- Button text updates to reflect current action
+- Automatically refreshes display after toggle
+- Works in conjunction with config and query string settings
+
+**Use Cases:**
+- 🎯 **Quick Review**: Instantly see which monitors are paused without editing configs
+- 🎯 **Flexible Views**: Switch between views on demand
+- 🎯 **Easy Auditing**: Check paused monitors with a single click
+- 🎯 **Clean Display**: Hide paused monitors to focus on active services
 
 ## Auto Fullscreen Mode
 
