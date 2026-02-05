@@ -7,6 +7,7 @@ A real-time status wallboard for monitoring UptimeRobot services using their API
 - Real-time monitoring of all your UptimeRobot monitors
 - Visual status indicators (up, down, paused)
 - Filter view to show only problematic services
+- **Paused Device Control** - Choose to show or hide paused monitors with a dedicated counter
 - Automatic refresh every 20 seconds
 - **Auto-refresh on config changes** - Front-end automatically reloads when configuration is updated
 - **Auto Fullscreen Mode** - Automatically enter fullscreen on load for kiosk displays
@@ -60,6 +61,61 @@ Both themes have been designed with accessibility in mind:
 - High contrast ratios for text readability
 - Clear visual distinction between status indicators
 - Smooth transitions between themes
+
+## Paused Device Control
+
+The wallboard provides flexible control over how paused monitors are displayed, allowing administrators to customize the view based on their needs.
+
+### Default Behavior
+
+By default, **paused monitors are hidden** from the wallboard. This provides a clean view focused on monitors that are actively being checked. Monitors that are temporarily paused for maintenance or other reasons won't clutter the display.
+
+### Showing Paused Monitors
+
+When enabled, paused monitors will:
+- **Appear on the wallboard** with a "PAUSED" status indicator
+- **Be counted separately** with a dedicated paused device counter next to the "All Good" / "Issues" pill
+- **Be clearly identified** with a pause icon and warning color
+- **Be treated as issues** when filtering (shown in "Show Only Problems" view)
+- **NOT trigger** the red background that indicates service problems (only down/offline monitors do this)
+
+### Configuration
+
+Set the behavior in your `config.env` file:
+
+```bash
+# Show paused monitors on the wallboard (true/false)
+# Default: false (paused monitors are hidden)
+SHOW_PAUSED_DEVICES=false
+```
+
+To enable paused monitor visibility:
+
+```bash
+SHOW_PAUSED_DEVICES=true
+```
+
+### Visual Indicators
+
+When `SHOW_PAUSED_DEVICES=true` and there are paused monitors:
+- A **paused counter pill** appears in the header (e.g., "2 paused")
+- Paused monitors show with an **orange/yellow warning color**
+- The status displays **"PAUSED"** in uppercase
+- A **pause icon** (⏸) is shown next to the status
+
+### Use Cases
+
+**Hide Paused Monitors (Default):**
+- Clean dashboard focused on active monitoring
+- Hide monitors under planned maintenance
+- Reduce visual clutter on public displays
+- Keep focus on actual service availability
+
+**Show Paused Monitors:**
+- Review which monitors are currently paused
+- Audit maintenance windows
+- Ensure monitors aren't accidentally left paused
+- Full visibility of all configured monitors
 
 ## Auto Fullscreen Mode
 
@@ -205,6 +261,7 @@ The application uses a single `config.env` file for all configuration, including
    WALLBOARD_TITLE=UptimeRobot – Current Status
    WALLBOARD_LOGO=
    SHOW_PROBLEMS_ONLY=false
+   SHOW_PAUSED_DEVICES=false
    REFRESH_RATE=20
    CONFIG_CHECK_RATE=5
    ALLOW_QUERY_OVERRIDE=true
@@ -226,6 +283,7 @@ The application uses a single `config.env` file for all configuration, including
    WALLBOARD_TITLE=UptimeRobot – Current Status
    WALLBOARD_LOGO=
    SHOW_PROBLEMS_ONLY=false
+   SHOW_PAUSED_DEVICES=false
    REFRESH_RATE=20
    CONFIG_CHECK_RATE=5
    ALLOW_QUERY_OVERRIDE=true
@@ -253,6 +311,7 @@ If you cannot store files outside the webroot:
    WALLBOARD_TITLE=My Company Status Dashboard
    WALLBOARD_LOGO=logo.png
    SHOW_PROBLEMS_ONLY=false
+   SHOW_PAUSED_DEVICES=false
    REFRESH_RATE=20
    CONFIG_CHECK_RATE=5
    ALLOW_QUERY_OVERRIDE=true
@@ -313,6 +372,7 @@ You can personalize the wallboard with various settings by editing the `config.e
    
    # Display options
    SHOW_PROBLEMS_ONLY=false      # Show only monitors with problems by default
+   SHOW_PAUSED_DEVICES=false     # Show paused monitors on wallboard (true/false, default: false)
    
    # Theme options
    THEME=dark                    # Theme: dark, light, or auto (follows system preference)
