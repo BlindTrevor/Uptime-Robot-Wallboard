@@ -542,14 +542,27 @@
       const url = ENDPOINT + (params.toString() ? ('?' + params.toString()) : '');
       const res = await fetch(url, { cache: 'no-store' });
       const text = await res.text(); // read once
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${text}`);
-      }
+      
+      // Try to parse JSON even on error responses
+      let parsedData;
       try {
-        return JSON.parse(text);
+        parsedData = JSON.parse(text);
       } catch (e) {
-        throw new Error(`Invalid JSON: ${e.message}\nBody: ${text.slice(0, 400)}${text.length > 400 ? '…' : ''}`);
+        // If JSON parsing fails, throw with the raw text
+        const errorDetail = e && e.message ? e.message : 'Unknown parsing error';
+        throw new Error(`Invalid JSON: ${errorDetail}\nBody: ${text.slice(0, 400)}${text.length > 400 ? '…' : ''}`);
       }
+      
+      // If HTTP error but we have parsed JSON, return wrapper with status
+      // Use wrapper to avoid mutating API response object
+      if (!res.ok) {
+        return {
+          ...parsedData,
+          _httpStatus: res.status
+        };
+      }
+      
+      return parsedData;
     }
 
     // Render
@@ -743,7 +756,18 @@
       const err = document.getElementById('error');
       try {
         const data = await loadData();
-        if (!data.ok) throw new Error(data.error || 'Unknown error');
+        if (!data.ok) {
+          // Check if error is about missing config
+          const errorMsg = data.error || 'Unknown error';
+          if (errorMsg.includes('Missing UPTIMEROBOT_API_TOKEN') || errorMsg.includes('config.env')) {
+            // Redirect to installer
+            window.location.href = 'installer.php';
+            return;
+          }
+          // Include HTTP status in error message if available
+          const statusMsg = data._httpStatus ? `HTTP ${data._httpStatus}: ` : '';
+          throw new Error(statusMsg + errorMsg);
+        }
         render(data);
       } catch (e) {
         err.textContent = 'Error: ' + e.message;

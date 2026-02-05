@@ -76,12 +76,45 @@ function parseEnvFile($filePath, $keys = []) {
     return $result;
 }
 
+// Function to find config.env by traversing up parent directories
+function findConfigPath() {
+    $currentDir = __DIR__;
+    $maxLevels = 10; // Safety limit to prevent infinite loops
+    
+    // Start with current directory
+    $testPaths = [
+        $currentDir . '/config.env'
+    ];
+    
+    // Add parent directories
+    $testPath = $currentDir;
+    for ($i = 0; $i < $maxLevels; $i++) {
+        $parentPath = dirname($testPath);
+        
+        // Stop if we've reached root or can't go further
+        if ($parentPath === $testPath || $parentPath === '/') {
+            break;
+        }
+        
+        $testPaths[] = $parentPath . '/config.env';
+        $testPath = $parentPath;
+    }
+    
+    // Check each path and return the first one that exists
+    // Use @ to suppress warnings from open_basedir restrictions
+    foreach ($testPaths as $path) {
+        if (@file_exists($path)) {
+            return $path;
+        }
+    }
+    
+    return null;
+}
+
 // Load all configuration from unified config.env file
-// Checks outside webroot first (most secure), then fallback to current directory
-$configPaths = [
-    __DIR__ . '/../config.env',  // Outside webroot (recommended)
-    __DIR__ . '/config.env',     // Current directory (fallback)
-];
+// Searches parent directories until config is found
+$configPath = findConfigPath();
+$configPaths = $configPath ? [$configPath] : [];
 
 $TOKEN = '';
 $WALLBOARD_CONFIG = [
