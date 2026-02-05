@@ -14,24 +14,50 @@ ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/uptime_errors.log');
 
-// Check for config.env file in both locations
-$configPaths = [
-    __DIR__ . '/../config.env',  // Outside webroot (recommended)
-    __DIR__ . '/config.env',     // Current directory (fallback)
-];
-
-$configVersion = 0;
-$configFound = false;
-
-foreach ($configPaths as $configPath) {
-    if (file_exists($configPath)) {
-        $configFound = true;
-        // Use file modification time as version indicator
-        $mtime = @filemtime($configPath);
-        if ($mtime !== false) {
-            $configVersion = $mtime;
+// Function to find config.env by traversing up parent directories
+function findConfigPath() {
+    $currentDir = __DIR__;
+    $maxLevels = 10; // Safety limit to prevent infinite loops
+    
+    // Start with current directory
+    $testPaths = [
+        $currentDir . '/config.env'
+    ];
+    
+    // Add parent directories
+    $testPath = $currentDir;
+    for ($i = 0; $i < $maxLevels; $i++) {
+        $parentPath = dirname($testPath);
+        
+        // Stop if we've reached root or can't go further
+        if ($parentPath === $testPath || $parentPath === '/') {
+            break;
         }
-        break;
+        
+        $testPaths[] = $parentPath . '/config.env';
+        $testPath = $parentPath;
+    }
+    
+    // Check each path and return the first one that exists
+    foreach ($testPaths as $path) {
+        if (file_exists($path)) {
+            return $path;
+        }
+    }
+    
+    return null;
+}
+
+// Find config.env by searching parent directories
+$configPath = findConfigPath();
+$configFound = ($configPath !== null);
+$configVersion = 0;
+
+if ($configFound) {
+    // Use file modification time as version indicator
+    $mtime = @filemtime($configPath);
+    if ($mtime !== false) {
+        $configVersion = $mtime;
     }
 }
 

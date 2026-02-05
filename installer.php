@@ -7,22 +7,43 @@ declare(strict_types=1);
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
-// Check for config.env file in both locations
-$configPaths = [
-    __DIR__ . '/../config.env',  // Outside webroot (recommended)
-    __DIR__ . '/config.env',     // Current directory (fallback)
-];
-
-$configExists = false;
-$existingConfigPath = '';
-
-foreach ($configPaths as $configPath) {
-    if (file_exists($configPath)) {
-        $configExists = true;
-        $existingConfigPath = $configPath;
-        break;
+// Function to find existing config.env by traversing up parent directories
+function findExistingConfigPath() {
+    $currentDir = __DIR__;
+    $maxLevels = 10; // Safety limit to prevent infinite loops
+    
+    // Start with current directory
+    $testPaths = [
+        $currentDir . '/config.env'
+    ];
+    
+    // Add parent directories
+    $testPath = $currentDir;
+    for ($i = 0; $i < $maxLevels; $i++) {
+        $parentPath = dirname($testPath);
+        
+        // Stop if we've reached root or can't go further
+        if ($parentPath === $testPath || $parentPath === '/') {
+            break;
+        }
+        
+        $testPaths[] = $parentPath . '/config.env';
+        $testPath = $parentPath;
     }
+    
+    // Check each path and return the first one that exists
+    foreach ($testPaths as $path) {
+        if (file_exists($path)) {
+            return $path;
+        }
+    }
+    
+    return null;
 }
+
+// Check if config already exists
+$existingConfigPath = findExistingConfigPath();
+$configExists = ($existingConfigPath !== null);
 
 // If config exists, redirect to main application
 if ($configExists) {
