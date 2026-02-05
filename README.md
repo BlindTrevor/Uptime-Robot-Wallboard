@@ -76,7 +76,7 @@ When enabled, paused monitors will:
 - **Appear on the wallboard** with a "PAUSED" status indicator
 - **Be counted separately** with a dedicated paused device counter next to the "All Good" / "Issues" pill
 - **Be clearly identified** with a pause icon and warning color
-- **Be treated as issues** when filtering (shown in "Show Only Problems" view)
+- **Interact with "Show Only Problems" filter**: When you click "Show Only Problems" button, paused monitors will be included if `SHOW_PAUSED_DEVICES=true`, or excluded if `SHOW_PAUSED_DEVICES=false`
 - **NOT trigger** the red background that indicates service problems (only down/offline monitors do this)
 
 ### Configuration
@@ -102,6 +102,19 @@ When `SHOW_PAUSED_DEVICES=true` and there are paused monitors:
 - Paused monitors show with an **orange/yellow warning color**
 - The status displays **"PAUSED"** in uppercase
 - A **pause icon** (⏸) is shown next to the status
+
+### Interaction with "Show Only Problems" Filter
+
+The `SHOW_PAUSED_DEVICES` setting controls whether paused monitors appear at all, while the "Show Only Problems" button filters the display:
+
+| SHOW_PAUSED_DEVICES | "Show Only Problems" Button | Result |
+|---------------------|----------------------------|--------|
+| `false` (default) | Off (Show All) | Only UP monitors shown |
+| `false` (default) | On | Only DOWN/offline monitors shown |
+| `true` | Off (Show All) | All monitors shown (UP, DOWN, PAUSED) |
+| `true` | On | DOWN/offline AND PAUSED monitors shown |
+
+In summary: When `SHOW_PAUSED_DEVICES=false`, paused monitors are never shown regardless of other filters. When `SHOW_PAUSED_DEVICES=true`, paused monitors follow the same filtering rules as other non-UP monitors.
 
 ### Use Cases
 
