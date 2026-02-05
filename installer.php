@@ -30,18 +30,17 @@ if ($configExists) {
     exit;
 }
 
-// Default config path (inside webroot as fallback)
-$defaultConfigPath = __DIR__ . '/config.env';
+// Config path options
+$currentDirPath = __DIR__ . '/config.env';     // Current directory (default)
+$parentDirPath = __DIR__ . '/../config.env';   // Parent directory (more secure)
 
-// Check if we can write to parent directory (preferred location)
-$parentConfigPath = __DIR__ . '/../config.env';
-$canWriteToParent = is_writable(dirname($parentConfigPath));
-
-$targetConfigPath = $canWriteToParent ? $parentConfigPath : $defaultConfigPath;
+// Check if we can write to parent directory
+$canWriteToParent = is_writable(dirname($parentDirPath));
 
 // Handle form submission
 $errors = [];
 $success = false;
+$targetConfigPath = $currentDirPath; // Default to current directory
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $apiToken = trim($_POST['api_token'] ?? '');
@@ -54,6 +53,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $allowQueryOverride = isset($_POST['allow_query_override']) ? 'true' : 'false';
     $theme = $_POST['theme'] ?? 'dark';
     $autoFullscreen = isset($_POST['auto_fullscreen']) ? 'true' : 'false';
+    $configLocation = $_POST['config_location'] ?? 'current';
+    
+    // Determine target path based on user selection
+    if ($configLocation === 'parent') {
+        if ($canWriteToParent) {
+            $targetConfigPath = $parentDirPath;
+        } else {
+            $errors[] = 'Cannot write to parent directory. Please check permissions or select current directory.';
+        }
+    } else {
+        $targetConfigPath = $currentDirPath;
+    }
     
     // Validate required fields
     if (empty($apiToken)) {
@@ -203,20 +214,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-color: var(--accent);
         }
         
-        input[type="checkbox"] {
+        input[type="checkbox"],
+        input[type="radio"] {
             width: 1.25rem;
             height: 1.25rem;
             cursor: pointer;
         }
         
-        .checkbox-group {
+        .checkbox-group,
+        .radio-group {
             display: flex;
             align-items: center;
             gap: 0.75rem;
         }
         
-        .checkbox-group label {
+        .checkbox-group label,
+        .radio-group label {
             margin: 0;
+        }
+        
+        .radio-options {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .radio-option {
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .radio-option:hover {
+            border-color: var(--accent);
+        }
+        
+        .radio-option.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .radio-option input[type="radio"]:checked + .radio-content {
+            color: var(--ok);
+        }
+        
+        .radio-option input[type="radio"]:checked ~ label::before {
+            background: var(--ok);
+        }
+        
+        .radio-content {
+            flex: 1;
+        }
+        
+        .radio-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .radio-description {
+            font-size: 0.85rem;
+            color: var(--subtle);
+            line-height: 1.4;
+        }
+        
+        .security-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
+        }
+        
+        .badge-recommended {
+            background: rgba(58, 210, 159, 0.2);
+            color: var(--ok);
+        }
+        
+        .badge-default {
+            background: rgba(58, 86, 156, 0.2);
+            color: var(--accent);
         }
         
         button {
@@ -328,6 +408,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     <div class="form-group">
                         <label>
+                            Config File Location
+                            <div class="label-description">Choose where to save your configuration file</div>
+                        </label>
+                        <div class="radio-options">
+                            <label class="radio-option">
+                                <div class="radio-group">
+                                    <input type="radio" name="config_location" value="current" <?php echo (!isset($_POST['config_location']) || $_POST['config_location'] === 'current') ? 'checked' : ''; ?>>
+                                    <div class="radio-content">
+                                        <div class="radio-title">
+                                            Current Directory (Inside Webroot)
+                                            <span class="security-badge badge-default">DEFAULT</span>
+                                        </div>
+                                        <div class="radio-description">
+                                            Save to: <code><?php echo htmlspecialchars($currentDirPath); ?></code><br>
+                                            Easier to manage but less secure. Protected by .htaccess rules.
+                                        </div>
+                                    </div>
+                                </div>
+                            </label>
+                            
+                            <label class="radio-option <?php echo !$canWriteToParent ? 'disabled' : ''; ?>">
+                                <div class="radio-group">
+                                    <input type="radio" name="config_location" value="parent" <?php echo $canWriteToParent ? '' : 'disabled'; ?> <?php echo isset($_POST['config_location']) && $_POST['config_location'] === 'parent' ? 'checked' : ''; ?>>
+                                    <div class="radio-content">
+                                        <div class="radio-title">
+                                            Parent Directory (Outside Webroot)
+                                            <span class="security-badge badge-recommended">RECOMMENDED</span>
+                                        </div>
+                                        <div class="radio-description">
+                                            Save to: <code><?php echo htmlspecialchars($parentDirPath); ?></code><br>
+                                            <strong>Better Security:</strong> Config file cannot be accessed via web browser even if .htaccess fails. 
+                                            This is the most secure option and follows industry best practices.
+                                            <?php if (!$canWriteToParent): ?>
+                                                <br><span style="color: var(--bad);">⚠ Not available: Cannot write to parent directory. Check permissions.</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
                             Wallboard Title
                             <div class="label-description">Custom title for your wallboard (optional)</div>
                         </label>
@@ -397,15 +521,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     <button type="submit">Create Configuration</button>
                 </form>
-            <?php endif; ?>
-        </div>
-        
-        <div style="color: var(--subtle); text-align: center; font-size: 0.9rem;">
-            <p>Config file will be saved to: <strong><?php echo htmlspecialchars($targetConfigPath); ?></strong></p>
-            <?php if ($canWriteToParent): ?>
-                <p style="color: var(--ok);">✓ Can write outside webroot (recommended for security)</p>
-            <?php else: ?>
-                <p style="color: var(--bad);">⚠ Writing to webroot (consider moving config outside webroot for better security)</p>
             <?php endif; ?>
         </div>
     </div>
