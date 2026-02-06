@@ -16,7 +16,7 @@ $configExists = ($existingConfigPath !== null);
 
 // If config exists, redirect to main application
 if ($configExists) {
-    header('Location: index.html');
+    header('Location: index.php');
     exit;
 }
 
@@ -465,7 +465,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <p>Your config file has been created at:</p>
                     <p><strong><?php echo htmlspecialchars($targetConfigPath); ?></strong></p>
                     <p>You can now use your wallboard.</p>
-                    <p><a href="index.html" style="color: var(--ok); font-weight: bold;">→ Go to Wallboard</a></p>
+                    <p><a href="index.php" style="color: var(--ok); font-weight: bold;">→ Go to Wallboard</a></p>
                 </div>
             <?php else: ?>
                 <?php if (!empty($errors)): ?>
