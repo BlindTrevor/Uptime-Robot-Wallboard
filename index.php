@@ -703,10 +703,32 @@
 
     /**
      * Generate a deterministic, accessible color for a tag
+     * Uses configured colors if available, otherwise generates from tag name
      * @param {string} tag - Tag name
      * @returns {object} Color object with background, text, and border colors
      */
     function getTagColor(tag) {
+      // Check if we have tag color configuration
+      const tagColors = config.tagColors;
+      
+      // First, check for specific tag mapping
+      if (tagColors && tagColors.tags && tagColors.tags[tag]) {
+        return convertColorToHSL(tagColors.tags[tag]);
+      }
+      
+      // If acceptable colors are configured, pick one deterministically
+      if (tagColors && tagColors.acceptable && tagColors.acceptable.length > 0) {
+        // Use hash to pick a color from the acceptable list
+        let hash = 0;
+        for (let i = 0; i < tag.length; i++) {
+          hash = (tag.charCodeAt(i) + ((hash << 5) - hash)) | 0;
+        }
+        const index = Math.abs(hash) % tagColors.acceptable.length;
+        const selectedColor = tagColors.acceptable[index];
+        return convertColorToHSL(selectedColor);
+      }
+      
+      // Fallback: generate color from tag name (original behavior)
       // Simple hash function for deterministic colors
       // Using bitwise OR with 0 to keep result within 32-bit integer bounds
       let hash = 0;
@@ -723,6 +745,63 @@
       const bgColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
       const textColor = `hsl(${hue}, ${saturation}%, 95%)`; // Light text
       const borderColor = `hsl(${hue}, ${saturation}%, ${lightness + 10}%)`;
+      
+      return { bgColor, textColor, borderColor };
+    }
+    
+    /**
+     * Convert a color (hex, CSS name, or HSL) to HSL-based color object
+     * @param {string} color - Color value (hex, CSS name, or HSL string)
+     * @returns {object} Color object with background, text, and border colors
+     */
+    function convertColorToHSL(color) {
+      // Create a temporary element to get computed color
+      const temp = document.createElement('div');
+      temp.style.color = color;
+      document.body.appendChild(temp);
+      const computedColor = window.getComputedStyle(temp).color;
+      document.body.removeChild(temp);
+      
+      // Parse RGB from computed color (format: "rgb(r, g, b)")
+      const rgbMatch = computedColor.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+      if (!rgbMatch) {
+        // Fallback to a default color if parsing fails
+        return {
+          bgColor: color,
+          textColor: '#ffffff',
+          borderColor: color
+        };
+      }
+      
+      const r = parseInt(rgbMatch[1]) / 255;
+      const g = parseInt(rgbMatch[2]) / 255;
+      const b = parseInt(rgbMatch[3]) / 255;
+      
+      // Convert RGB to HSL
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+      
+      if (max === min) {
+        h = s = 0; // achromatic
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+          case g: h = ((b - r) / d + 2) / 6; break;
+          case b: h = ((r - g) / d + 4) / 6; break;
+        }
+      }
+      
+      h = Math.round(h * 360);
+      s = Math.round(s * 100);
+      l = Math.round(l * 100);
+      
+      // Use the calculated HSL values to create consistent theme-appropriate colors
+      const bgColor = `hsl(${h}, ${s}%, ${l}%)`;
+      const textColor = `hsl(${h}, ${s}%, ${l > 50 ? 10 : 95}%)`; // Dark text for light colors, light text for dark colors
+      const borderColor = `hsl(${h}, ${s}%, ${Math.min(l + 10, 100)}%)`;
       
       return { bgColor, textColor, borderColor };
     }

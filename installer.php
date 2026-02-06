@@ -102,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $theme = $_POST['theme'] ?? 'dark';
     $autoFullscreen = isset($_POST['auto_fullscreen']) ? 'true' : 'false';
     $configLocation = $_POST['config_location'] ?? $defaultConfigLocation;
+    $tagColors = trim($_POST['tag_colors'] ?? '');
     
     // Handle logo file upload
     if (isset($_FILES['logo_file']) && $_FILES['logo_file']['error'] === UPLOAD_ERR_OK) {
@@ -171,6 +172,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Invalid theme selected.';
     }
     
+    // Validate tag colors (optional - only if provided)
+    if (!empty($tagColors)) {
+        $tagColorsData = @json_decode($tagColors, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $errors[] = 'Tag colors must be valid JSON format.';
+        }
+    }
+    
     // If no errors, create the config file
     if (empty($errors)) {
         $configContent = "# Wallboard Configuration\n";
@@ -194,7 +203,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $configContent .= "# Theme Configuration\n";
         $configContent .= "THEME=$theme\n\n";
         $configContent .= "# Auto Fullscreen Mode\n";
-        $configContent .= "AUTO_FULLSCREEN=$autoFullscreen\n";
+        $configContent .= "AUTO_FULLSCREEN=$autoFullscreen\n\n";
+        $configContent .= "# Tag Color Configuration (optional)\n";
+        $configContent .= "TAG_COLORS=$tagColors\n";
         
         // Try to write the config file
         $writeResult = @file_put_contents($targetConfigPath, $configContent);
@@ -616,6 +627,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="checkbox-group">
                             <input type="checkbox" name="show_tags" id="show_tags" <?php echo ($_SERVER['REQUEST_METHOD'] !== 'POST') || isset($_POST['show_tags']) ? 'checked' : ''; ?>>
                             <label for="show_tags">Show tags on monitor cards</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            Tag Colors Configuration (optional)
+                            <div class="label-description">JSON configuration for tag colors. Leave empty for automatic colors.</div>
+                        </label>
+                        <input type="text" name="tag_colors" id="tag_colors" value="<?php echo htmlspecialchars($_POST['tag_colors'] ?? ''); ?>" placeholder='{"acceptable":["#FF0000","#00FF00","blue"],"tags":{"critical":"red"}}'>
+                        <div class="label-description" style="margin-top: 0.5rem;">
+                            Example: <code>{"acceptable":["#FF0000","#00FF00","blue","orange"],"tags":{"critical":"red","warning":"yellow"}}</code>
                         </div>
                     </div>
                     
