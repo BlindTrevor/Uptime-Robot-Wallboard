@@ -72,7 +72,7 @@ If you prefer manual setup:
    chown www-data:www-data config.env
    ```
 
-4. Access `index.html` in your browser
+4. Access `index.php` in your browser
 
 ## 📖 Configuration Options
 
@@ -91,6 +91,7 @@ Edit `config.env` to customize your wallboard:
 | `THEME` | Theme: `dark`, `light`, or `auto` | `dark` |
 | `AUTO_FULLSCREEN` | Auto-enter fullscreen on load | `false` |
 | `ALLOW_QUERY_OVERRIDE` | Allow URL parameter overrides | `true` |
+| `TAG_COLORS` | Custom tag color configuration (JSON format) | (empty) |
 
 ## 🎯 Usage
 
@@ -231,6 +232,32 @@ When tags are selected, only monitors with those tags are displayed. The selecte
 - **Multi-Environment** - Separate views for different environments or regions
 - **Team Workflows** - Filter by team ownership, criticality, or service type
 - **Visual Clarity** - Color-coded tags make it easy to scan and identify services at a glance
+
+### Custom Tag Colors
+
+You can customize tag colors using the `TAG_COLORS` configuration option in `config.env`. This accepts a JSON object with two optional configurations:
+
+**1. Define acceptable color palette:**
+```bash
+TAG_COLORS={"acceptable":["#FF0000","#00FF00","blue","orange"]}
+```
+
+**2. Map specific tags to specific colors:**
+```bash
+TAG_COLORS={"tags":{"production":"red","staging":"yellow","development":"#3ad29f"}}
+```
+
+**3. Combine both approaches:**
+```bash
+TAG_COLORS={"acceptable":["#FF0000","#00FF00","blue"],"tags":{"critical":"red","warning":"yellow","info":"#abf7b1"}}
+```
+
+Supported color formats include:
+- Hex codes: `#FF0000`, `#abf7b1`
+- CSS color names: `red`, `blue`, `orange`, `green`
+- RGB/HSL formats: `rgb(255,0,0)`, `hsl(120,100%,50%)`
+
+If not specified, colors are automatically generated from tag names using a deterministic algorithm for consistent coloring across page reloads.
 
 ## 🖥️ Kiosk Mode
 
