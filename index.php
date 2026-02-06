@@ -542,6 +542,9 @@
         if (typeof serverConfig.showTags === 'boolean') {
           config.showTags = serverConfig.showTags;
         }
+        if (serverConfig.tagColors) {
+          config.tagColors = serverConfig.tagColors;
+        }
       }
       
       // Apply query string overrides if allowed
