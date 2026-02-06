@@ -85,6 +85,7 @@ Edit `config.env` to customize your wallboard:
 | `WALLBOARD_LOGO` | Path to logo image or URL | (empty) |
 | `SHOW_PROBLEMS_ONLY` | Show only monitors with issues | `false` |
 | `SHOW_PAUSED_DEVICES` | Display paused monitors | `false` |
+| `SHOW_TAGS` | Display tags on monitor cards | `true` |
 | `REFRESH_RATE` | Data refresh interval (seconds) | `20` |
 | `CONFIG_CHECK_RATE` | Config file check interval (seconds) | `5` |
 | `THEME` | Theme: `dark`, `light`, or `auto` | `dark` |
@@ -114,14 +115,15 @@ https://your-domain.com/status/?showProblemsOnly=true&refreshRate=30
 # Use light theme and auto-fullscreen for kiosk
 https://your-domain.com/status/?theme=light&autoFullscreen=true
 
-# Show paused devices
-https://your-domain.com/status/?showPausedDevices=true
+# Show paused devices and hide tags
+https://your-domain.com/status/?showPausedDevices=true&showTags=false
 ```
 
 ### Control Buttons
 
 - **Show Only Problems** - Toggle between all monitors and problem-only view
 - **Show/Hide Paused** - Quickly toggle paused monitor visibility
+- **Show/Hide Tags** - Toggle tag visibility on monitor cards
 - **Show/Hide Filter** - Toggle the tag filter section visibility
 - **Theme Toggle** - Switch between dark and light themes
 - **Fullscreen** - Enter/exit fullscreen mode
@@ -296,6 +298,7 @@ All configuration options can be overridden via URL (when `ALLOW_QUERY_OVERRIDE=
 ```
 ?showProblemsOnly=true          # Show only problematic monitors
 ?showPausedDevices=true         # Show/hide paused monitors
+?showTags=false                 # Show/hide tags on monitor cards
 ?refreshRate=30                 # Set refresh interval (seconds)
 ?theme=light                    # Set theme (dark/light/auto)
 ?autoFullscreen=true            # Auto-enter fullscreen
