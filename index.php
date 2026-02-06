@@ -237,6 +237,7 @@
   <div class="controls">
     <button id="toggle-problems">Show Only Problems</button>
     <button id="toggle-paused">Show Paused</button>
+    <button id="toggle-filter" style="display: none;"><i class="fas fa-eye"></i> Show Filter</button>
     <button id="refresh-btn">Refresh Now</button>
     <button id="theme-toggle"><i class="fas fa-sun"></i> Light Mode</button>
     <button id="fullscreen-toggle"><i class="fas fa-expand"></i> Fullscreen</button>
@@ -539,6 +540,7 @@
     let showPausedSetByQuery = false; // Track if query string set showPaused
     let selectedTags = new Set(); // Selected tags for filtering
     let allTags = new Set(); // All available tags
+    let filterVisible = false; // Track filter section visibility
     
     // Initialize onlyProblems from query string early (before first refresh)
     // This ensures the first data load has the correct filter applied
@@ -756,13 +758,24 @@
     function renderTagFilter(tags) {
       const filterSection = document.getElementById('tag-filter-section');
       const filterList = document.getElementById('tag-filter-list');
+      const toggleButton = document.getElementById('toggle-filter');
       
       if (!tags.length) {
         filterSection.style.display = 'none';
+        toggleButton.style.display = 'none';
         return;
       }
       
-      filterSection.style.display = 'block';
+      // Show the toggle button if there are tags
+      toggleButton.style.display = 'inline-block';
+      
+      // Respect the manual visibility state
+      if (filterVisible) {
+        filterSection.style.display = 'block';
+      } else {
+        filterSection.style.display = 'none';
+      }
+      
       filterList.innerHTML = tags.map(tag => {
         const colors = getTagColor(tag);
         const isSelected = selectedTags.has(tag);
@@ -771,6 +784,24 @@
         const escapedDataTag = escapeHtml(tag);
         return `<span class="tag-filter-pill ${selectedClass}" data-tag="${escapedDataTag}" style="background-color: ${colors.bgColor}; color: ${colors.textColor}; border-color: ${colors.borderColor};">${escapedTag}</span>`;
       }).join('');
+    }
+
+    /**
+     * Toggle the visibility of the tag filter section
+     */
+    function toggleFilterVisibility() {
+      const filterSection = document.getElementById('tag-filter-section');
+      const toggleButton = document.getElementById('toggle-filter');
+      
+      filterVisible = !filterVisible;
+      
+      if (filterVisible) {
+        filterSection.style.display = 'block';
+        toggleButton.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Filter';
+      } else {
+        filterSection.style.display = 'none';
+        toggleButton.innerHTML = '<i class="fas fa-eye"></i> Show Filter';
+      }
     }
 
     function isProblem(m) {
@@ -1058,6 +1089,7 @@
       updateButtonText('toggle-paused', showPaused, 'Hide Paused', 'Show Paused');
       refresh();
     });
+    document.getElementById('toggle-filter').addEventListener('click', toggleFilterVisibility);
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
     document.getElementById('fullscreen-toggle').addEventListener('click', toggleFullscreen);
     document.getElementById('fullscreen-prompt-btn').addEventListener('click', () => {
