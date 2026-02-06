@@ -72,6 +72,19 @@
     .pill.ok { background: #163327; color: #8af0c9; border-color: #184836; }
     .pill.paused { background: #3b2a1a; color: var(--warn); border-color: #5e4123; }
     
+    /* Down tags display */
+    #down-tags {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    #down-tags .tag-pill {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      margin: 2px;
+    }
+    
     /* Tag pills */
     .tag-pill {
       display: inline-flex;
@@ -231,6 +244,7 @@
     <div class="meta row">
       <span id="last-updated">Last updated: —</span>
       <span id="problem-pill" class="pill" style="display:none"></span>
+      <span id="down-tags" style="display:none"></span>
     </div>
   </header>
 
@@ -734,6 +748,28 @@
     }
 
     /**
+     * Extract unique tags from down/problematic monitors only
+     * @param {Array} monitors - Array of monitor objects
+     * @returns {Array} Sorted array of unique tag names from down monitors
+     */
+    function extractDownTags(monitors) {
+      const tagsSet = new Set();
+      monitors.forEach(monitor => {
+        const status = (monitor.status || '').toLowerCase();
+        // Only include tags from monitors that are down (not up and not paused)
+        if (status !== 'up' && status !== 'paused' && Array.isArray(monitor.tags)) {
+          monitor.tags.forEach(tag => {
+            const tagName = typeof tag === 'object' && tag !== null ? (tag.name || '') : tag;
+            if (tagName) {
+              tagsSet.add(tagName);
+            }
+          });
+        }
+      });
+      return Array.from(tagsSet).sort();
+    }
+
+    /**
      * Check if a monitor has any of the selected tags
      * @param {object} monitor - Monitor object
      * @param {Set} selectedTags - Set of selected tag names
@@ -862,6 +898,7 @@
       const err = document.getElementById('error');
       const last = document.getElementById('last-updated');
       const pill = document.getElementById('problem-pill');
+      const downTags = document.getElementById('down-tags');
       const footer = document.getElementById('footer');
       const title = document.getElementById('title');
       const logo = document.getElementById('logo');
@@ -960,6 +997,23 @@
       // Update paused pill display
       const totalPausedCount = data.paused_count || pausedCount; // Use backend count if available
       updatePausedPill(totalPausedCount, pausedCount, config.showPausedDevices, pill);
+
+      // Display tags for down items
+      if (problemCount > 0) {
+        const downTagNames = extractDownTags(mons);
+        if (downTagNames.length > 0) {
+          downTags.style.display = 'inline-flex';
+          downTags.innerHTML = downTagNames.map(tag => {
+            const colors = getTagColor(tag);
+            const escapedTag = escapeHtml(tag);
+            return `<span class="tag-pill" style="background-color: ${colors.bgColor}; color: ${colors.textColor}; border-color: ${colors.borderColor};">${escapedTag}</span>`;
+          }).join('');
+        } else {
+          downTags.style.display = 'none';
+        }
+      } else {
+        downTags.style.display = 'none';
+      }
 
       // Update body background based on offline status
       if (problemCount > 0) {
