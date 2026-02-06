@@ -795,12 +795,22 @@
       
       filterVisible = !filterVisible;
       
+      // Clear button content
+      toggleButton.textContent = '';
+      
+      // Create icon element
+      const icon = document.createElement('i');
+      
       if (filterVisible) {
         filterSection.style.display = 'block';
-        toggleButton.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Filter';
+        icon.className = 'fas fa-eye-slash';
+        toggleButton.appendChild(icon);
+        toggleButton.appendChild(document.createTextNode(' Hide Filter'));
       } else {
         filterSection.style.display = 'none';
-        toggleButton.innerHTML = '<i class="fas fa-eye"></i> Show Filter';
+        icon.className = 'fas fa-eye';
+        toggleButton.appendChild(icon);
+        toggleButton.appendChild(document.createTextNode(' Show Filter'));
       }
     }
 
