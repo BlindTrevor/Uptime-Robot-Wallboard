@@ -95,6 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $logo = trim($_POST['logo'] ?? '');
     $showProblemsOnly = isset($_POST['show_problems_only']) ? 'true' : 'false';
     $showPausedDevices = isset($_POST['show_paused_devices']) ? 'true' : 'false';
+    $showTags = isset($_POST['show_tags']) ? 'true' : 'false';
     $refreshRate = trim($_POST['refresh_rate'] ?? '20');
     $configCheckRate = trim($_POST['config_check_rate'] ?? '5');
     $allowQueryOverride = isset($_POST['allow_query_override']) ? 'true' : 'false';
@@ -183,7 +184,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $configContent .= "WALLBOARD_LOGO=$logo\n\n";
         $configContent .= "# Display Options\n";
         $configContent .= "SHOW_PROBLEMS_ONLY=$showProblemsOnly\n";
-        $configContent .= "SHOW_PAUSED_DEVICES=$showPausedDevices\n\n";
+        $configContent .= "SHOW_PAUSED_DEVICES=$showPausedDevices\n";
+        $configContent .= "SHOW_TAGS=$showTags\n\n";
         $configContent .= "# Refresh Intervals (in seconds)\n";
         $configContent .= "REFRESH_RATE=$refreshRate\n";
         $configContent .= "CONFIG_CHECK_RATE=$configCheckRate\n\n";
@@ -607,6 +609,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="checkbox-group">
                             <input type="checkbox" name="show_paused_devices" id="show_paused_devices" <?php echo isset($_POST['show_paused_devices']) ? 'checked' : ''; ?>>
                             <label for="show_paused_devices">Show paused monitors</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" name="show_tags" id="show_tags" <?php echo ($_SERVER['REQUEST_METHOD'] !== 'POST') || isset($_POST['show_tags']) ? 'checked' : ''; ?>>
+                            <label for="show_tags">Show tags on monitor cards</label>
                         </div>
                     </div>
                     
