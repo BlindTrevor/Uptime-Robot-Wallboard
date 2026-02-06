@@ -157,6 +157,12 @@
       flex-wrap: wrap;
       margin-top: 6px;
     }
+    .tags-container.hidden {
+      display: none;
+    }
+    #down-tags.hidden {
+      display: none !important;
+    }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
     .card.offline { background: var(--card-offline); border-color: var(--border-offline); }
@@ -252,6 +258,7 @@
     <button id="toggle-problems">Show Only Problems</button>
     <button id="toggle-paused">Show Paused</button>
     <button id="toggle-filter" style="display: none;"><i class="fas fa-eye"></i> Show Filter</button>
+    <button id="toggle-tags">Hide Tags</button>
     <button id="refresh-btn">Refresh Now</button>
     <button id="theme-toggle"><i class="fas fa-sun"></i> Light Mode</button>
     <button id="fullscreen-toggle"><i class="fas fa-expand"></i> Fullscreen</button>
@@ -297,6 +304,7 @@
       allowQueryOverride: true,
       theme: 'dark', // 'dark', 'light', or 'auto'
       autoFullscreen: false,
+      showTags: true,
     };
 
     // --- Theme Management ---
@@ -501,6 +509,11 @@
         queryConfig.showPausedDevices = params.get('showPausedDevices') === 'true';
       }
       
+      // Parse showTags
+      if (params.has('showTags')) {
+        queryConfig.showTags = params.get('showTags') === 'true';
+      }
+      
       return queryConfig;
     }
     
@@ -529,6 +542,9 @@
         if (typeof serverConfig.autoFullscreen === 'boolean') {
           config.autoFullscreen = serverConfig.autoFullscreen;
         }
+        if (typeof serverConfig.showTags === 'boolean') {
+          config.showTags = serverConfig.showTags;
+        }
       }
       
       // Apply query string overrides if allowed
@@ -545,6 +561,7 @@
     // State
     let onlyProblems = false;
     let showPaused = false; // Toggle for showing paused devices
+    let showTags = true; // Toggle for showing tags
     let lastStatuses = new Map(); // id -> previous status (for change detection)
     let currentConfigVersion = null; // Track config file version
     let refreshInterval = null;
@@ -552,6 +569,7 @@
     let initialConfigApplied = false; // Flag to prevent race conditions on initial load
     let onlyProblemsSetByQuery = false; // Track if query string set onlyProblems
     let showPausedSetByQuery = false; // Track if query string set showPaused
+    let showTagsSetByQuery = false; // Track if query string set showTags
     let selectedTags = new Set(); // Selected tags for filtering
     let allTags = new Set(); // All available tags
     let filterVisible = false; // Track filter section visibility
@@ -567,6 +585,10 @@
       if (config.allowQueryOverride && typeof queryConfig.showPausedDevices === 'boolean') {
         showPaused = queryConfig.showPausedDevices;
         showPausedSetByQuery = true;
+      }
+      if (config.allowQueryOverride && typeof queryConfig.showTags === 'boolean') {
+        showTags = queryConfig.showTags;
+        showTagsSetByQuery = true;
       }
     })();
 
@@ -850,6 +872,26 @@
       }
     }
 
+    /**
+     * Update the visibility of all tag elements based on showTags state
+     */
+    function updateTagVisibility() {
+      const tagsContainers = document.querySelectorAll('.tags-container');
+      const downTags = document.getElementById('down-tags');
+      
+      if (showTags) {
+        tagsContainers.forEach(container => container.classList.remove('hidden'));
+        if (downTags) {
+          downTags.classList.remove('hidden');
+        }
+      } else {
+        tagsContainers.forEach(container => container.classList.add('hidden'));
+        if (downTags) {
+          downTags.classList.add('hidden');
+        }
+      }
+    }
+
     function isProblem(m) {
       const s = (m.status || '').toLowerCase();
       // Monitors with status !== 'up' are problems
@@ -918,8 +960,13 @@
           if (!showPausedSetByQuery) {
             showPaused = config.showPausedDevices;
           }
+          // Only override showTags if query string didn't set it
+          if (!showTagsSetByQuery) {
+            showTags = config.showTags;
+          }
           updateButtonText('toggle-problems', onlyProblems, 'Show All', 'Show Only Problems');
           updateButtonText('toggle-paused', showPaused, 'Hide Paused', 'Show Paused');
+          updateButtonText('toggle-tags', showTags, 'Hide Tags', 'Show Tags');
         }
         
         if (data.config.title) {
@@ -1075,6 +1122,9 @@
       if (changes.length) {
         console.log('State changes:', changes);
       }
+      
+      // Update tag visibility based on current state
+      updateTagVisibility();
     }
 
     async function refresh() {
@@ -1152,6 +1202,11 @@
       showPaused = !showPaused;
       updateButtonText('toggle-paused', showPaused, 'Hide Paused', 'Show Paused');
       refresh();
+    });
+    document.getElementById('toggle-tags').addEventListener('click', () => {
+      showTags = !showTags;
+      updateButtonText('toggle-tags', showTags, 'Hide Tags', 'Show Tags');
+      updateTagVisibility();
     });
     document.getElementById('toggle-filter').addEventListener('click', toggleFilterVisibility);
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
