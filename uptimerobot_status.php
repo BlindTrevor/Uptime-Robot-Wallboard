@@ -62,6 +62,7 @@ $CONFIG = [
     'allowQueryOverride' => true,
     'theme' => 'dark',
     'autoFullscreen' => false,
+    'showTags' => true,
 ];
 
 if ($configPath !== null) {
@@ -75,7 +76,8 @@ if ($configPath !== null) {
         'CONFIG_CHECK_RATE',
         'ALLOW_QUERY_OVERRIDE',
         'THEME',
-        'AUTO_FULLSCREEN'
+        'AUTO_FULLSCREEN',
+        'SHOW_TAGS'
     ]);
     
     // Load API token
@@ -142,6 +144,11 @@ if ($configPath !== null) {
     // Load auto fullscreen setting
     if (isset($parsed['AUTO_FULLSCREEN'])) {
         $CONFIG['autoFullscreen'] = filter_var($parsed['AUTO_FULLSCREEN'], FILTER_VALIDATE_BOOLEAN);
+    }
+    
+    // Load show tags setting
+    if (isset($parsed['SHOW_TAGS'])) {
+        $CONFIG['showTags'] = filter_var($parsed['SHOW_TAGS'], FILTER_VALIDATE_BOOLEAN);
     }
 }
 
@@ -337,5 +344,6 @@ echo json_encode([
         'configCheckRate' => $CONFIG['configCheckRate'],
         'allowQueryOverride' => $CONFIG['allowQueryOverride'],
         'theme' => $CONFIG['theme'],
+        'showTags' => $CONFIG['showTags'],
     ],
 ], JSON_UNESCAPED_SLASHES);
