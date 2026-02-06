@@ -631,20 +631,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     
                     <div class="form-group">
-                        <label for="tag_colors">
+                        <label>
                             Tag Colors Configuration (optional)
-                            <div class="label-description" id="tag-colors-description">JSON configuration for tag colors. Leave empty for automatic colors.</div>
+                            <div class="label-description" id="tag-colors-description">Configure colors for tags. Leave empty for automatic colors.</div>
                         </label>
-                        <input 
-                            type="text" 
-                            name="tag_colors" 
-                            id="tag_colors" 
-                            value="<?php echo htmlspecialchars($_POST['tag_colors'] ?? ''); ?>" 
-                            placeholder='{"acceptable":["#FF0000","#00FF00","blue"],"tags":{"critical":"red"}}'
-                            aria-describedby="tag-colors-description tag-colors-example"
-                        >
-                        <div class="label-description" id="tag-colors-example" style="margin-top: 0.5rem;">
-                            Example: <code>{"acceptable":["#FF0000","#00FF00","blue","orange"],"tags":{"critical":"red","warning":"yellow"}}</code>
+                        
+                        <!-- Hidden input to store final JSON -->
+                        <input type="hidden" name="tag_colors" id="tag_colors_json" value="<?php echo htmlspecialchars($_POST['tag_colors'] ?? ''); ?>">
+                        
+                        <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-top: 0.5rem;">
+                            <div style="margin-bottom: 1.5rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                    <strong style="color: var(--text);">Acceptable Colors</strong>
+                                    <button type="button" onclick="addAcceptableColor()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background: var(--accent); color: var(--text); border: none; border-radius: 4px; cursor: pointer;">+ Add Color</button>
+                                </div>
+                                <div class="label-description" style="margin-bottom: 0.75rem;">Colors to randomly assign to tags (hex codes or CSS names)</div>
+                                <div id="acceptable-colors-list"></div>
+                            </div>
+                            
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                    <strong style="color: var(--text);">Specific Tag Colors</strong>
+                                    <button type="button" onclick="addTagMapping()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background: var(--accent); color: var(--text); border: none; border-radius: 4px; cursor: pointer;">+ Add Mapping</button>
+                                </div>
+                                <div class="label-description" style="margin-bottom: 0.75rem;">Map specific tag names to specific colors</div>
+                                <div id="tag-mappings-list"></div>
+                            </div>
                         </div>
                     </div>
                     
@@ -682,6 +694,151 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             filenameDisplay.textContent = '';
                             logoInput.placeholder = 'logo.png or https://example.com/logo.png';
                         }
+                    });
+                    
+                    // Tag Colors Configuration UI
+                    let acceptableColors = [];
+                    let tagMappings = {};
+                    
+                    // Add a new acceptable color input
+                    function addAcceptableColor(value = '') {
+                        const id = 'acceptable-' + Date.now();
+                        const container = document.getElementById('acceptable-colors-list');
+                        const div = document.createElement('div');
+                        div.id = id;
+                        div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;';
+                        div.innerHTML = `
+                            <input type="text" 
+                                   value="${value}" 
+                                   placeholder="#FF0000 or red" 
+                                   style="flex: 1; padding: 0.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.9rem;"
+                                   onchange="updateTagColorsJSON()">
+                            <button type="button" 
+                                    onclick="removeAcceptableColor('${id}')" 
+                                    style="padding: 0.5rem 0.75rem; background: rgba(255, 107, 107, 0.2); color: var(--bad); border: 1px solid var(--bad); border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                                Remove
+                            </button>
+                        `;
+                        container.appendChild(div);
+                        updateTagColorsJSON();
+                    }
+                    
+                    // Remove an acceptable color
+                    function removeAcceptableColor(id) {
+                        const element = document.getElementById(id);
+                        if (element) {
+                            element.remove();
+                            updateTagColorsJSON();
+                        }
+                    }
+                    
+                    // Add a new tag mapping
+                    function addTagMapping(tagName = '', color = '') {
+                        const id = 'mapping-' + Date.now();
+                        const container = document.getElementById('tag-mappings-list');
+                        const div = document.createElement('div');
+                        div.id = id;
+                        div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;';
+                        div.innerHTML = `
+                            <input type="text" 
+                                   value="${tagName}" 
+                                   placeholder="Tag name (e.g., critical)" 
+                                   style="flex: 1; padding: 0.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.9rem;"
+                                   onchange="updateTagColorsJSON()">
+                            <input type="text" 
+                                   value="${color}" 
+                                   placeholder="#FF0000 or red" 
+                                   style="flex: 1; padding: 0.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.9rem;"
+                                   onchange="updateTagColorsJSON()">
+                            <button type="button" 
+                                    onclick="removeTagMapping('${id}')" 
+                                    style="padding: 0.5rem 0.75rem; background: rgba(255, 107, 107, 0.2); color: var(--bad); border: 1px solid var(--bad); border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
+                                Remove
+                            </button>
+                        `;
+                        container.appendChild(div);
+                        updateTagColorsJSON();
+                    }
+                    
+                    // Remove a tag mapping
+                    function removeTagMapping(id) {
+                        const element = document.getElementById(id);
+                        if (element) {
+                            element.remove();
+                            updateTagColorsJSON();
+                        }
+                    }
+                    
+                    // Update the hidden JSON input field
+                    function updateTagColorsJSON() {
+                        const config = {};
+                        
+                        // Collect acceptable colors
+                        const acceptableInputs = document.querySelectorAll('#acceptable-colors-list input[type="text"]');
+                        const acceptable = [];
+                        acceptableInputs.forEach(input => {
+                            const value = input.value.trim();
+                            if (value) acceptable.push(value);
+                        });
+                        if (acceptable.length > 0) {
+                            config.acceptable = acceptable;
+                        }
+                        
+                        // Collect tag mappings
+                        const mappingDivs = document.querySelectorAll('#tag-mappings-list > div');
+                        const tags = {};
+                        mappingDivs.forEach(div => {
+                            const inputs = div.querySelectorAll('input[type="text"]');
+                            if (inputs.length === 2) {
+                                const tagName = inputs[0].value.trim();
+                                const color = inputs[1].value.trim();
+                                if (tagName && color) {
+                                    tags[tagName] = color;
+                                }
+                            }
+                        });
+                        if (Object.keys(tags).length > 0) {
+                            config.tags = tags;
+                        }
+                        
+                        // Update hidden input
+                        const jsonInput = document.getElementById('tag_colors_json');
+                        if (Object.keys(config).length > 0) {
+                            jsonInput.value = JSON.stringify(config);
+                        } else {
+                            jsonInput.value = '';
+                        }
+                    }
+                    
+                    // Initialize from existing JSON (for error cases where form is resubmitted)
+                    function initializeTagColors() {
+                        const jsonInput = document.getElementById('tag_colors_json');
+                        const existingValue = jsonInput.value;
+                        
+                        if (existingValue) {
+                            try {
+                                const config = JSON.parse(existingValue);
+                                
+                                // Load acceptable colors
+                                if (config.acceptable && Array.isArray(config.acceptable)) {
+                                    config.acceptable.forEach(color => addAcceptableColor(color));
+                                }
+                                
+                                // Load tag mappings
+                                if (config.tags && typeof config.tags === 'object') {
+                                    Object.entries(config.tags).forEach(([tag, color]) => {
+                                        addTagMapping(tag, color);
+                                    });
+                                }
+                            } catch (e) {
+                                console.error('Failed to parse existing tag colors JSON:', e);
+                            }
+                        }
+                    }
+                    
+                    // Initialize on page load
+                    document.addEventListener('DOMContentLoaded', function() {
+                        initializeTagColors();
                     });
                 </script>
             <?php endif; ?>
