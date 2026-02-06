@@ -162,6 +162,9 @@ if ($configPath !== null) {
         if (is_array($tagColorsData)) {
             $validTagColors = [];
             
+            // Color validation regex: allows hex codes, CSS color names, and rgb/hsl formats
+            $colorValidationPattern = '/^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|rgba?\(.*\)|hsla?\(.*\))$/';
+            
             // Validate acceptable colors array
             if (isset($tagColorsData['acceptable']) && is_array($tagColorsData['acceptable'])) {
                 $acceptableColors = [];
@@ -170,7 +173,7 @@ if ($configPath !== null) {
                         // Sanitize color value - allow hex codes, color names, and rgb/hsl
                         $sanitizedColor = trim($color);
                         // Basic validation: must start with # (hex) or be alphanumeric/rgb/hsl
-                        if (preg_match('/^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|rgba?\(.*\)|hsla?\(.*\))$/', $sanitizedColor)) {
+                        if (preg_match($colorValidationPattern, $sanitizedColor)) {
                             $acceptableColors[] = $sanitizedColor;
                         }
                     }
@@ -188,7 +191,7 @@ if ($configPath !== null) {
                         $sanitizedTagName = trim($tagName);
                         $sanitizedColor = trim($color);
                         // Basic validation for color
-                        if (preg_match('/^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|rgba?\(.*\)|hsla?\(.*\))$/', $sanitizedColor)) {
+                        if (preg_match($colorValidationPattern, $sanitizedColor)) {
                             $tagMapping[$sanitizedTagName] = $sanitizedColor;
                         }
                     }

@@ -751,31 +751,44 @@
     
     /**
      * Convert a color (hex, CSS name, or HSL) to HSL-based color object
+     * Uses canvas for efficient color parsing without DOM manipulation
      * @param {string} color - Color value (hex, CSS name, or HSL string)
      * @returns {object} Color object with background, text, and border colors
      */
     function convertColorToHSL(color) {
-      // Create a temporary element to get computed color
-      const temp = document.createElement('div');
-      temp.style.color = color;
-      document.body.appendChild(temp);
-      const computedColor = window.getComputedStyle(temp).color;
-      document.body.removeChild(temp);
+      // Use canvas context for efficient color parsing
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 1;
+      const ctx = canvas.getContext('2d');
       
-      // Parse RGB from computed color (format: "rgb(r, g, b)")
-      const rgbMatch = computedColor.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
-      if (!rgbMatch) {
-        // Fallback to a default color if parsing fails
-        return {
-          bgColor: color,
-          textColor: '#ffffff',
-          borderColor: color
-        };
+      // Set the color and read it back as rgba
+      ctx.fillStyle = color;
+      const computedColor = ctx.fillStyle;
+      
+      // Parse RGB from computed color (format: "#rrggbb" or "rgba(r, g, b, a)")
+      let r, g, b;
+      
+      if (computedColor.startsWith('#')) {
+        // Hex format
+        const hex = computedColor.slice(1);
+        r = parseInt(hex.substr(0, 2), 16) / 255;
+        g = parseInt(hex.substr(2, 2), 16) / 255;
+        b = parseInt(hex.substr(4, 2), 16) / 255;
+      } else {
+        // rgba format
+        const rgbMatch = computedColor.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (!rgbMatch) {
+          // Fallback to a default color if parsing fails
+          return {
+            bgColor: color,
+            textColor: '#ffffff',
+            borderColor: color
+          };
+        }
+        r = parseInt(rgbMatch[1]) / 255;
+        g = parseInt(rgbMatch[2]) / 255;
+        b = parseInt(rgbMatch[3]) / 255;
       }
-      
-      const r = parseInt(rgbMatch[1]) / 255;
-      const g = parseInt(rgbMatch[2]) / 255;
-      const b = parseInt(rgbMatch[3]) / 255;
       
       // Convert RGB to HSL
       const max = Math.max(r, g, b);

@@ -631,12 +631,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     
                     <div class="form-group">
-                        <label>
+                        <label for="tag_colors">
                             Tag Colors Configuration (optional)
-                            <div class="label-description">JSON configuration for tag colors. Leave empty for automatic colors.</div>
+                            <div class="label-description" id="tag-colors-description">JSON configuration for tag colors. Leave empty for automatic colors.</div>
                         </label>
-                        <input type="text" name="tag_colors" id="tag_colors" value="<?php echo htmlspecialchars($_POST['tag_colors'] ?? ''); ?>" placeholder='{"acceptable":["#FF0000","#00FF00","blue"],"tags":{"critical":"red"}}'>
-                        <div class="label-description" style="margin-top: 0.5rem;">
+                        <input 
+                            type="text" 
+                            name="tag_colors" 
+                            id="tag_colors" 
+                            value="<?php echo htmlspecialchars($_POST['tag_colors'] ?? ''); ?>" 
+                            placeholder='{"acceptable":["#FF0000","#00FF00","blue"],"tags":{"critical":"red"}}'
+                            aria-describedby="tag-colors-description tag-colors-example"
+                        >
+                        <div class="label-description" id="tag-colors-example" style="margin-top: 0.5rem;">
                             Example: <code>{"acceptable":["#FF0000","#00FF00","blue","orange"],"tags":{"critical":"red","warning":"yellow"}}</code>
                         </div>
                     </div>
