@@ -564,6 +564,17 @@
     const toClass = s => (s || 'unknown').toLowerCase().replace(/\s+/g, '_');
 
     /**
+     * Escape HTML special characters to prevent XSS
+     * @param {string} str - String to escape
+     * @returns {string} Escaped string
+     */
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    /**
      * Update or create paused pill element
      * @param {number} totalCount - Total count of paused monitors
      * @param {number} visibleCount - Count of visible paused monitors
@@ -662,9 +673,10 @@
      */
     function getTagColor(tag) {
       // Simple hash function for deterministic colors
+      // Using bitwise OR with 0 to keep result within 32-bit integer bounds
       let hash = 0;
       for (let i = 0; i < tag.length; i++) {
-        hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+        hash = (tag.charCodeAt(i) + ((hash << 5) - hash)) | 0;
       }
       
       // Generate HSL color with fixed saturation and lightness for accessibility
@@ -694,7 +706,8 @@
       
       return tagNames.map(tag => {
         const colors = getTagColor(tag);
-        return `<span class="tag-pill" style="background-color: ${colors.bgColor}; color: ${colors.textColor}; border-color: ${colors.borderColor};">${tag}</span>`;
+        const escapedTag = escapeHtml(tag);
+        return `<span class="tag-pill" style="background-color: ${colors.bgColor}; color: ${colors.textColor}; border-color: ${colors.borderColor};">${escapedTag}</span>`;
       }).join('');
     }
 
@@ -754,7 +767,9 @@
         const colors = getTagColor(tag);
         const isSelected = selectedTags.has(tag);
         const selectedClass = isSelected ? 'selected' : '';
-        return `<span class="tag-filter-pill ${selectedClass}" data-tag="${tag}" style="background-color: ${colors.bgColor}; color: ${colors.textColor}; border-color: ${colors.borderColor};">${tag}</span>`;
+        const escapedTag = escapeHtml(tag);
+        const escapedDataTag = escapeHtml(tag);
+        return `<span class="tag-filter-pill ${selectedClass}" data-tag="${escapedDataTag}" style="background-color: ${colors.bgColor}; color: ${colors.textColor}; border-color: ${colors.borderColor};">${escapedTag}</span>`;
       }).join('');
     }
 
