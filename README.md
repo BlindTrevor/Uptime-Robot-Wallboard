@@ -7,7 +7,7 @@
 
 A real-time status wallboard for monitoring your UptimeRobot services. Display service health, uptime status, and alerts on a clean, customizable dashboard perfect for NOC displays, office monitors, or personal dashboards.
 
-![Status Wallboard](https://github.com/user-attachments/assets/dccafa9b-ad72-40fd-80ee-630e3270773a)
+![Status Wallboard](https://github.com/user-attachments/assets/9dc7fbde-3e3e-471d-8cd0-2f2fc2296fa4)
 
 ## ✨ Key Features
 
@@ -15,6 +15,7 @@ A real-time status wallboard for monitoring your UptimeRobot services. Display s
 - 📊 **Real-time Monitoring** - Automatic refresh with live status updates
 - 🎨 **Dark/Light Themes** - Toggle between themes with system preference support
 - 🔍 **Smart Filtering** - Show all monitors or only those with issues
+- 🏷️ **Tag Filtering** - Filter monitors by tags with colored pills and multi-select
 - ⏸️ **Paused Device Control** - Show/hide paused monitors with one click
 - 🖥️ **Fullscreen Mode** - Auto-fullscreen support for kiosk displays
 - 🎯 **Customizable** - Add your logo and custom title
@@ -121,6 +122,7 @@ https://your-domain.com/status/?showPausedDevices=true
 
 - **Show Only Problems** - Toggle between all monitors and problem-only view
 - **Show/Hide Paused** - Quickly toggle paused monitor visibility
+- **Show/Hide Filter** - Toggle the tag filter section visibility
 - **Theme Toggle** - Switch between dark and light themes
 - **Fullscreen** - Enter/exit fullscreen mode
 - **Refresh Now** - Manually trigger data refresh
@@ -188,6 +190,45 @@ Switch themes using:
 - The theme toggle button in the UI
 - `?theme=dark`, `?theme=light`, or `?theme=auto` URL parameter
 - `THEME` setting in `config.env`
+
+## 🏷️ Tag Filtering
+
+Filter your monitors by tags for better organization and focused monitoring. Each monitor displays its assigned tags as colored pills, making it easy to visually identify and categorize services.
+
+### Features
+
+- **Colored Tag Pills** - Each tag displays with a unique, deterministic color for easy visual identification
+- **Multi-Tag Filtering** - Select one or more tags to filter monitors (OR logic - shows monitors with ANY selected tag)
+- **Collapsible Filter** - Toggle filter visibility with "Show Filter" / "Hide Filter" button
+- **Clear Filters** - One-click to reset all tag selections
+- **Real-time Updates** - Instant filtering as you select/deselect tags
+
+### Filter Section
+
+![Tag Filter Section](https://github.com/user-attachments/assets/c1ec9ab2-d3ad-45c4-9329-892301bb2818)
+
+Click "Show Filter" to reveal all available tags. Click any tag to filter monitors:
+
+### Filtered View
+
+![Filtered by Production Tag](https://github.com/user-attachments/assets/041aa20a-ca42-4377-8287-0a2a03de19a6)
+
+When tags are selected, only monitors with those tags are displayed. The selected tags appear highlighted with increased opacity and a shadow effect.
+
+### How to Use
+
+1. **View Tags** - All monitors display their tags as colored pills at the bottom of each card
+2. **Show Filter** - Click the "Show Filter" button in the controls to reveal the tag filter section
+3. **Select Tags** - Click one or more tags to filter monitors. Selected tags are highlighted
+4. **Clear Filter** - Click "Clear Filter" to remove all selections and show all monitors
+5. **Hide Filter** - Click "Hide Filter" to collapse the filter section
+
+### Benefits
+
+- **Quick Organization** - Instantly filter to Production, Staging, API, Database, or any custom tags
+- **Multi-Environment** - Separate views for different environments or regions
+- **Team Workflows** - Filter by team ownership, criticality, or service type
+- **Visual Clarity** - Color-coded tags make it easy to scan and identify services at a glance
 
 ## 🖥️ Kiosk Mode
 

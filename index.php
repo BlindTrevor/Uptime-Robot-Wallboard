@@ -71,6 +71,79 @@
     .pill.warn { background: #3b2a1a; color: var(--warn); border-color: #5e4123; }
     .pill.ok { background: #163327; color: #8af0c9; border-color: #184836; }
     .pill.paused { background: #3b2a1a; color: var(--warn); border-color: #5e4123; }
+    
+    /* Tag pills */
+    .tag-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      margin: 2px 4px 2px 0;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid;
+      transition: all 0.2s ease;
+    }
+    
+    /* Tag filter section */
+    .tag-filter-section {
+      margin: 0.8rem 0;
+      padding: 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .tag-filter-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .tag-filter-title {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+    .tag-filter-clear {
+      background: var(--bad);
+      color: white;
+      border: none;
+      padding: 4px 12px;
+      font-size: 0.8rem;
+    }
+    .tag-filter-clear:hover {
+      opacity: 0.8;
+    }
+    .tag-filter-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tag-filter-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 2px solid;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      opacity: 0.6;
+    }
+    .tag-filter-pill:hover {
+      opacity: 0.8;
+      transform: translateY(-1px);
+    }
+    .tag-filter-pill.selected {
+      opacity: 1;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    .tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
     .card.offline { background: var(--card-offline); border-color: var(--border-offline); }
@@ -164,9 +237,18 @@
   <div class="controls">
     <button id="toggle-problems">Show Only Problems</button>
     <button id="toggle-paused">Show Paused</button>
+    <button id="toggle-filter" style="display: none;"><i class="fas fa-eye"></i> Show Filter</button>
     <button id="refresh-btn">Refresh Now</button>
     <button id="theme-toggle"><i class="fas fa-sun"></i> Light Mode</button>
     <button id="fullscreen-toggle"><i class="fas fa-expand"></i> Fullscreen</button>
+  </div>
+
+  <div id="tag-filter-section" class="tag-filter-section" style="display: none;">
+    <div class="tag-filter-header">
+      <span class="tag-filter-title"><i class="fas fa-filter"></i> Filter by Tags</span>
+      <button id="clear-tag-filter" class="tag-filter-clear">Clear Filter</button>
+    </div>
+    <div id="tag-filter-list" class="tag-filter-list"></div>
   </div>
 
   <div id="error" class="err"></div>
@@ -456,6 +538,9 @@
     let initialConfigApplied = false; // Flag to prevent race conditions on initial load
     let onlyProblemsSetByQuery = false; // Track if query string set onlyProblems
     let showPausedSetByQuery = false; // Track if query string set showPaused
+    let selectedTags = new Set(); // Selected tags for filtering
+    let allTags = new Set(); // All available tags
+    let filterVisible = false; // Track filter section visibility
     
     // Initialize onlyProblems from query string early (before first refresh)
     // This ensures the first data load has the correct filter applied
@@ -479,6 +564,17 @@
       return isNaN(d.getTime()) ? '—' : d.toLocaleString();
     }
     const toClass = s => (s || 'unknown').toLowerCase().replace(/\s+/g, '_');
+
+    /**
+     * Escape HTML special characters to prevent XSS
+     * @param {string} str - String to escape
+     * @returns {string} Escaped string
+     */
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
 
     /**
      * Update or create paused pill element
@@ -570,6 +666,152 @@
         .map(t => typeof t === 'object' && t !== null ? (t.name || '') : t)
         .filter(Boolean)
         .join(', ');
+    }
+
+    /**
+     * Generate a deterministic, accessible color for a tag
+     * @param {string} tag - Tag name
+     * @returns {object} Color object with background, text, and border colors
+     */
+    function getTagColor(tag) {
+      // Simple hash function for deterministic colors
+      // Using bitwise OR with 0 to keep result within 32-bit integer bounds
+      let hash = 0;
+      for (let i = 0; i < tag.length; i++) {
+        hash = (tag.charCodeAt(i) + ((hash << 5) - hash)) | 0;
+      }
+      
+      // Generate HSL color with fixed saturation and lightness for accessibility
+      const hue = Math.abs(hash) % 360;
+      const saturation = 65; // Good saturation for visibility
+      const lightness = 45; // Balanced lightness
+      
+      // For dark theme
+      const bgColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+      const textColor = `hsl(${hue}, ${saturation}%, 95%)`; // Light text
+      const borderColor = `hsl(${hue}, ${saturation}%, ${lightness + 10}%)`;
+      
+      return { bgColor, textColor, borderColor };
+    }
+
+    /**
+     * Format tags as colored HTML pills
+     * @param {Array} tags - Array of tag objects or strings
+     * @returns {string} HTML string of tag pills
+     */
+    function formatTagPills(tags) {
+      if (!Array.isArray(tags) || !tags.length) return '';
+      
+      const tagNames = tags
+        .map(t => typeof t === 'object' && t !== null ? (t.name || '') : t)
+        .filter(Boolean);
+      
+      return tagNames.map(tag => {
+        const colors = getTagColor(tag);
+        const escapedTag = escapeHtml(tag);
+        return `<span class="tag-pill" style="background-color: ${colors.bgColor}; color: ${colors.textColor}; border-color: ${colors.borderColor};">${escapedTag}</span>`;
+      }).join('');
+    }
+
+    /**
+     * Extract all unique tags from monitors
+     * @param {Array} monitors - Array of monitor objects
+     * @returns {Array} Sorted array of unique tag names
+     */
+    function extractAllTags(monitors) {
+      const tagsSet = new Set();
+      monitors.forEach(monitor => {
+        if (Array.isArray(monitor.tags)) {
+          monitor.tags.forEach(tag => {
+            const tagName = typeof tag === 'object' && tag !== null ? (tag.name || '') : tag;
+            if (tagName) {
+              tagsSet.add(tagName);
+            }
+          });
+        }
+      });
+      return Array.from(tagsSet).sort();
+    }
+
+    /**
+     * Check if a monitor has any of the selected tags
+     * @param {object} monitor - Monitor object
+     * @param {Set} selectedTags - Set of selected tag names
+     * @returns {boolean} True if monitor has any selected tag
+     */
+    function monitorHasSelectedTag(monitor, selectedTags) {
+      if (!selectedTags.size) return true; // No filter active
+      
+      if (!Array.isArray(monitor.tags) || !monitor.tags.length) return false;
+      
+      const monitorTagNames = monitor.tags
+        .map(t => typeof t === 'object' && t !== null ? (t.name || '') : t)
+        .filter(Boolean);
+      
+      return monitorTagNames.some(tag => selectedTags.has(tag));
+    }
+
+    /**
+     * Render the tag filter section
+     * @param {Array} tags - Array of all available tags
+     */
+    function renderTagFilter(tags) {
+      const filterSection = document.getElementById('tag-filter-section');
+      const filterList = document.getElementById('tag-filter-list');
+      const toggleButton = document.getElementById('toggle-filter');
+      
+      if (!tags.length) {
+        filterSection.style.display = 'none';
+        toggleButton.style.display = 'none';
+        return;
+      }
+      
+      // Show the toggle button if there are tags
+      toggleButton.style.display = 'inline-block';
+      
+      // Respect the manual visibility state
+      if (filterVisible) {
+        filterSection.style.display = 'block';
+      } else {
+        filterSection.style.display = 'none';
+      }
+      
+      filterList.innerHTML = tags.map(tag => {
+        const colors = getTagColor(tag);
+        const isSelected = selectedTags.has(tag);
+        const selectedClass = isSelected ? 'selected' : '';
+        const escapedTag = escapeHtml(tag);
+        const escapedDataTag = escapeHtml(tag);
+        return `<span class="tag-filter-pill ${selectedClass}" data-tag="${escapedDataTag}" style="background-color: ${colors.bgColor}; color: ${colors.textColor}; border-color: ${colors.borderColor};">${escapedTag}</span>`;
+      }).join('');
+    }
+
+    /**
+     * Toggle the visibility of the tag filter section
+     */
+    function toggleFilterVisibility() {
+      const filterSection = document.getElementById('tag-filter-section');
+      const toggleButton = document.getElementById('toggle-filter');
+      
+      filterVisible = !filterVisible;
+      
+      // Clear button content
+      toggleButton.textContent = '';
+      
+      // Create icon element
+      const icon = document.createElement('i');
+      
+      if (filterVisible) {
+        filterSection.style.display = 'block';
+        icon.className = 'fas fa-eye-slash';
+        toggleButton.appendChild(icon);
+        toggleButton.appendChild(document.createTextNode(' Hide Filter'));
+      } else {
+        filterSection.style.display = 'none';
+        icon.className = 'fas fa-eye';
+        toggleButton.appendChild(icon);
+        toggleButton.appendChild(document.createTextNode(' Show Filter'));
+      }
     }
 
     function isProblem(m) {
@@ -679,6 +921,18 @@
 
       let mons = Array.isArray(data.monitors) ? data.monitors.slice() : [];
 
+      // Extract all tags from monitors
+      const allTagsList = extractAllTags(mons);
+      allTags = new Set(allTagsList);
+      
+      // Render tag filter section
+      renderTagFilter(allTagsList);
+      
+      // Apply tag filtering if tags are selected
+      if (selectedTags.size > 0) {
+        mons = mons.filter(m => monitorHasSelectedTag(m, selectedTags));
+      }
+
       // Sort: problems first, then by name
       mons.sort((a, b) => {
         const ap = isProblem(a), bp = isProblem(b);
@@ -720,7 +974,7 @@
         const statusIcon = getStatusIcon(m.status);
         const isOffline = isProblem(m);
         const cardClass = isOffline ? 'card offline' : 'card';
-        const tags = formatTags(m.tags);
+        const tagPills = formatTagPills(m.tags);
 
         // Determine the status label based on current status
         const status = (m.status || '').toLowerCase();
@@ -742,7 +996,7 @@
             <div class="name">${m.friendly_name || '—'}</div>
             <div class="${cls}">${statusIcon}${(m.status || 'UNKNOWN').toUpperCase()}</div>
             <div class="kv">${statusLabel}</div>
-            ${tags ? `<div class="small">Tags: ${tags}</div>` : ''}
+            ${tagPills ? `<div class="tags-container">${tagPills}</div>` : ''}
           </div>
         `;
       }).join('');
@@ -845,6 +1099,7 @@
       updateButtonText('toggle-paused', showPaused, 'Hide Paused', 'Show Paused');
       refresh();
     });
+    document.getElementById('toggle-filter').addEventListener('click', toggleFilterVisibility);
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
     document.getElementById('fullscreen-toggle').addEventListener('click', toggleFullscreen);
     document.getElementById('fullscreen-prompt-btn').addEventListener('click', () => {
@@ -857,6 +1112,36 @@
           alert('Unable to enter fullscreen mode. Please try using the Fullscreen button in the controls.');
           hideFullscreenPrompt();
         });
+    });
+
+    // Tag filter events - using event delegation
+    document.getElementById('tag-filter-list').addEventListener('click', (e) => {
+      const pill = e.target.closest('.tag-filter-pill');
+      if (!pill) return;
+      
+      const tag = pill.getAttribute('data-tag');
+      if (!tag) return;
+      
+      // Toggle tag selection
+      if (selectedTags.has(tag)) {
+        selectedTags.delete(tag);
+        pill.classList.remove('selected');
+      } else {
+        selectedTags.add(tag);
+        pill.classList.add('selected');
+      }
+      
+      // Re-render with current data
+      refresh();
+    });
+
+    document.getElementById('clear-tag-filter').addEventListener('click', () => {
+      selectedTags.clear();
+      // Remove selected class from all pills
+      document.querySelectorAll('.tag-filter-pill').forEach(pill => {
+        pill.classList.remove('selected');
+      });
+      refresh();
     });
 
     // Auto fullscreen on load if enabled
