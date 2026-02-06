@@ -160,9 +160,6 @@
     .tags-container.hidden {
       display: none;
     }
-    #down-tags.hidden {
-      display: none !important;
-    }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
     .card.offline { background: var(--card-offline); border-color: var(--border-offline); }
@@ -883,11 +880,15 @@
         tagsContainers.forEach(container => container.classList.remove('hidden'));
         if (downTags) {
           downTags.classList.remove('hidden');
+          // Remove inline display override to allow natural display value
+          // The render function will set the correct display value
         }
       } else {
         tagsContainers.forEach(container => container.classList.add('hidden'));
         if (downTags) {
           downTags.classList.add('hidden');
+          // Override inline display with none
+          downTags.style.display = 'none';
         }
       }
     }
@@ -1048,7 +1049,7 @@
       // Display tags for down items
       if (problemCount > 0) {
         const downTagNames = extractDownTags(mons);
-        if (downTagNames.length > 0) {
+        if (downTagNames.length > 0 && showTags) {
           downTags.style.display = 'inline-flex';
           downTags.innerHTML = downTagNames.map(tag => {
             const colors = getTagColor(tag);
