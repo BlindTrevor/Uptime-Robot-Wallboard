@@ -77,7 +77,8 @@ if ($configPath !== null) {
         'ALLOW_QUERY_OVERRIDE',
         'THEME',
         'AUTO_FULLSCREEN',
-        'SHOW_TAGS'
+        'SHOW_TAGS',
+        'TAG_COLORS'
     ]);
     
     // Load API token
@@ -149,6 +150,62 @@ if ($configPath !== null) {
     // Load show tags setting
     if (isset($parsed['SHOW_TAGS'])) {
         $CONFIG['showTags'] = filter_var($parsed['SHOW_TAGS'], FILTER_VALIDATE_BOOLEAN);
+    }
+    
+    // Load tag colors configuration
+    if (isset($parsed['TAG_COLORS']) && !empty($parsed['TAG_COLORS'])) {
+        $tagColorsJson = $parsed['TAG_COLORS'];
+        // Attempt to decode JSON
+        $tagColorsData = @json_decode($tagColorsJson, true);
+        
+        // Validate the decoded data structure
+        if (is_array($tagColorsData)) {
+            $validTagColors = [];
+            
+            // Color validation regex: allows hex codes, CSS color names, and rgb/hsl formats
+            $colorValidationPattern = '/^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+|rgba?\(.*\)|hsla?\(.*\))$/';
+            
+            // Validate acceptable colors array
+            if (isset($tagColorsData['acceptable']) && is_array($tagColorsData['acceptable'])) {
+                $acceptableColors = [];
+                foreach ($tagColorsData['acceptable'] as $color) {
+                    if (is_string($color) && !empty($color)) {
+                        // Sanitize color value - allow hex codes, color names, and rgb/hsl
+                        $sanitizedColor = trim($color);
+                        // Basic validation: must start with # (hex) or be alphanumeric/rgb/hsl
+                        if (preg_match($colorValidationPattern, $sanitizedColor)) {
+                            $acceptableColors[] = $sanitizedColor;
+                        }
+                    }
+                }
+                if (!empty($acceptableColors)) {
+                    $validTagColors['acceptable'] = $acceptableColors;
+                }
+            }
+            
+            // Validate tag-specific colors mapping
+            if (isset($tagColorsData['tags']) && is_array($tagColorsData['tags'])) {
+                $tagMapping = [];
+                foreach ($tagColorsData['tags'] as $tagName => $color) {
+                    if (is_string($tagName) && is_string($color) && !empty($tagName) && !empty($color)) {
+                        $sanitizedTagName = trim($tagName);
+                        $sanitizedColor = trim($color);
+                        // Basic validation for color
+                        if (preg_match($colorValidationPattern, $sanitizedColor)) {
+                            $tagMapping[$sanitizedTagName] = $sanitizedColor;
+                        }
+                    }
+                }
+                if (!empty($tagMapping)) {
+                    $validTagColors['tags'] = $tagMapping;
+                }
+            }
+            
+            // Only set if we have valid configuration
+            if (!empty($validTagColors)) {
+                $CONFIG['tagColors'] = $validTagColors;
+            }
+        }
     }
 }
 
@@ -345,5 +402,6 @@ echo json_encode([
         'allowQueryOverride' => $CONFIG['allowQueryOverride'],
         'theme' => $CONFIG['theme'],
         'showTags' => $CONFIG['showTags'],
+        'tagColors' => $CONFIG['tagColors'] ?? null,
     ],
 ], JSON_UNESCAPED_SLASHES);

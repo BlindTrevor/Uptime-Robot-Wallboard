@@ -102,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $theme = $_POST['theme'] ?? 'dark';
     $autoFullscreen = isset($_POST['auto_fullscreen']) ? 'true' : 'false';
     $configLocation = $_POST['config_location'] ?? $defaultConfigLocation;
+    $tagColors = trim($_POST['tag_colors'] ?? '');
     
     // Handle logo file upload
     if (isset($_FILES['logo_file']) && $_FILES['logo_file']['error'] === UPLOAD_ERR_OK) {
@@ -171,6 +172,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Invalid theme selected.';
     }
     
+    // Validate tag colors (optional - only if provided)
+    if (!empty($tagColors)) {
+        $tagColorsData = @json_decode($tagColors, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $errors[] = 'Tag colors must be valid JSON format.';
+        }
+    }
+    
     // If no errors, create the config file
     if (empty($errors)) {
         $configContent = "# Wallboard Configuration\n";
@@ -194,7 +203,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $configContent .= "# Theme Configuration\n";
         $configContent .= "THEME=$theme\n\n";
         $configContent .= "# Auto Fullscreen Mode\n";
-        $configContent .= "AUTO_FULLSCREEN=$autoFullscreen\n";
+        $configContent .= "AUTO_FULLSCREEN=$autoFullscreen\n\n";
+        $configContent .= "# Tag Color Configuration (optional)\n";
+        $configContent .= "TAG_COLORS=$tagColors\n";
         
         // Try to write the config file
         $writeResult = @file_put_contents($targetConfigPath, $configContent);
@@ -620,6 +631,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     
                     <div class="form-group">
+                        <label>
+                            Tag Colors Configuration (optional)
+                            <div class="label-description" id="tag-colors-description">Configure colors for tags. Leave empty for automatic colors.</div>
+                        </label>
+                        
+                        <!-- Hidden input to store final JSON -->
+                        <input type="hidden" name="tag_colors" id="tag_colors_json" value="<?php echo htmlspecialchars($_POST['tag_colors'] ?? ''); ?>">
+                        
+                        <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-top: 0.5rem;">
+                            <div style="margin-bottom: 1.5rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                    <strong style="color: var(--text);">Acceptable Colors</strong>
+                                    <button type="button" onclick="addAcceptableColor()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background: var(--accent); color: var(--text); border: none; border-radius: 4px; cursor: pointer;">+ Add Color</button>
+                                </div>
+                                <div class="label-description" style="margin-bottom: 0.75rem;">Colors to randomly assign to tags (hex codes or CSS names)</div>
+                                <div id="acceptable-colors-list"></div>
+                            </div>
+                            
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                    <strong style="color: var(--text);">Specific Tag Colors</strong>
+                                    <button type="button" onclick="addTagMapping()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background: var(--accent); color: var(--text); border: none; border-radius: 4px; cursor: pointer;">+ Add Mapping</button>
+                                </div>
+                                <div class="label-description" style="margin-bottom: 0.75rem;">Map specific tag names to specific colors</div>
+                                <div id="tag-mappings-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
                         <div class="checkbox-group">
                             <input type="checkbox" name="allow_query_override" id="allow_query_override" <?php echo ($_SERVER['REQUEST_METHOD'] !== 'POST') || isset($_POST['allow_query_override']) ? 'checked' : ''; ?>>
                             <label for="allow_query_override">Allow URL query parameters to override settings</label>
@@ -653,6 +694,173 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             filenameDisplay.textContent = '';
                             logoInput.placeholder = 'logo.png or https://example.com/logo.png';
                         }
+                    });
+                    
+                    // Tag Colors Configuration UI
+                    let colorIdCounter = 0;
+                    
+                    // HTML escape helper function
+                    function escapeHtml(text) {
+                        const div = document.createElement('div');
+                        div.textContent = text;
+                        return div.innerHTML;
+                    }
+                    
+                    // Add a new acceptable color input
+                    function addAcceptableColor(value = '') {
+                        const id = 'acceptable-' + Date.now() + '-' + (colorIdCounter++);
+                        const container = document.getElementById('acceptable-colors-list');
+                        const div = document.createElement('div');
+                        div.id = id;
+                        div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;';
+                        
+                        // Create input element safely
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = value;
+                        input.placeholder = '#FF0000 or red';
+                        input.style.cssText = 'flex: 1; padding: 0.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.9rem;';
+                        input.onchange = updateTagColorsJSON;
+                        
+                        // Create remove button safely
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.textContent = 'Remove';
+                        button.style.cssText = 'padding: 0.5rem 0.75rem; background: rgba(255, 107, 107, 0.2); color: var(--bad); border: 1px solid var(--bad); border-radius: 4px; cursor: pointer; font-size: 0.85rem;';
+                        button.onclick = function() { removeAcceptableColor(id); };
+                        
+                        div.appendChild(input);
+                        div.appendChild(button);
+                        container.appendChild(div);
+                        updateTagColorsJSON();
+                    }
+                    
+                    // Remove an acceptable color
+                    function removeAcceptableColor(id) {
+                        const element = document.getElementById(id);
+                        if (element) {
+                            element.remove();
+                            updateTagColorsJSON();
+                        }
+                    }
+                    
+                    // Add a new tag mapping
+                    function addTagMapping(tagName = '', color = '') {
+                        const id = 'mapping-' + Date.now() + '-' + (colorIdCounter++);
+                        const container = document.getElementById('tag-mappings-list');
+                        const div = document.createElement('div');
+                        div.id = id;
+                        div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;';
+                        
+                        // Create tag name input safely
+                        const tagInput = document.createElement('input');
+                        tagInput.type = 'text';
+                        tagInput.value = tagName;
+                        tagInput.placeholder = 'Tag name (e.g., critical)';
+                        tagInput.style.cssText = 'flex: 1; padding: 0.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.9rem;';
+                        tagInput.onchange = updateTagColorsJSON;
+                        
+                        // Create color input safely
+                        const colorInput = document.createElement('input');
+                        colorInput.type = 'text';
+                        colorInput.value = color;
+                        colorInput.placeholder = '#FF0000 or red';
+                        colorInput.style.cssText = 'flex: 1; padding: 0.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.9rem;';
+                        colorInput.onchange = updateTagColorsJSON;
+                        
+                        // Create remove button safely
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.textContent = 'Remove';
+                        button.style.cssText = 'padding: 0.5rem 0.75rem; background: rgba(255, 107, 107, 0.2); color: var(--bad); border: 1px solid var(--bad); border-radius: 4px; cursor: pointer; font-size: 0.85rem;';
+                        button.onclick = function() { removeTagMapping(id); };
+                        
+                        div.appendChild(tagInput);
+                        div.appendChild(colorInput);
+                        div.appendChild(button);
+                        container.appendChild(div);
+                        updateTagColorsJSON();
+                    }
+                    
+                    // Remove a tag mapping
+                    function removeTagMapping(id) {
+                        const element = document.getElementById(id);
+                        if (element) {
+                            element.remove();
+                            updateTagColorsJSON();
+                        }
+                    }
+                    
+                    // Update the hidden JSON input field
+                    function updateTagColorsJSON() {
+                        const config = {};
+                        
+                        // Collect acceptable colors
+                        const acceptableInputs = document.querySelectorAll('#acceptable-colors-list input[type="text"]');
+                        const acceptable = [];
+                        acceptableInputs.forEach(input => {
+                            const value = input.value.trim();
+                            if (value) acceptable.push(value);
+                        });
+                        if (acceptable.length > 0) {
+                            config.acceptable = acceptable;
+                        }
+                        
+                        // Collect tag mappings
+                        const mappingDivs = document.querySelectorAll('#tag-mappings-list > div');
+                        const tags = {};
+                        mappingDivs.forEach(div => {
+                            const inputs = div.querySelectorAll('input[type="text"]');
+                            if (inputs.length === 2) {
+                                const tagName = inputs[0].value.trim();
+                                const color = inputs[1].value.trim();
+                                if (tagName && color) {
+                                    tags[tagName] = color;
+                                }
+                            }
+                        });
+                        if (Object.keys(tags).length > 0) {
+                            config.tags = tags;
+                        }
+                        
+                        // Update hidden input
+                        const jsonInput = document.getElementById('tag_colors_json');
+                        if (Object.keys(config).length > 0) {
+                            jsonInput.value = JSON.stringify(config);
+                        } else {
+                            jsonInput.value = '';
+                        }
+                    }
+                    
+                    // Initialize from existing JSON (for error cases where form is resubmitted)
+                    function initializeTagColors() {
+                        const jsonInput = document.getElementById('tag_colors_json');
+                        const existingValue = jsonInput.value;
+                        
+                        if (existingValue) {
+                            try {
+                                const config = JSON.parse(existingValue);
+                                
+                                // Load acceptable colors
+                                if (config.acceptable && Array.isArray(config.acceptable)) {
+                                    config.acceptable.forEach(color => addAcceptableColor(color));
+                                }
+                                
+                                // Load tag mappings
+                                if (config.tags && typeof config.tags === 'object') {
+                                    Object.entries(config.tags).forEach(([tag, color]) => {
+                                        addTagMapping(tag, color);
+                                    });
+                                }
+                            } catch (e) {
+                                console.error('Failed to parse existing tag colors JSON:', e);
+                            }
+                        }
+                    }
+                    
+                    // Initialize on page load
+                    document.addEventListener('DOMContentLoaded', function() {
+                        initializeTagColors();
                     });
                 </script>
             <?php endif; ?>
