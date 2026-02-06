@@ -697,28 +697,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     });
                     
                     // Tag Colors Configuration UI
-                    let acceptableColors = [];
-                    let tagMappings = {};
+                    let colorIdCounter = 0;
+                    
+                    // HTML escape helper function
+                    function escapeHtml(text) {
+                        const div = document.createElement('div');
+                        div.textContent = text;
+                        return div.innerHTML;
+                    }
                     
                     // Add a new acceptable color input
                     function addAcceptableColor(value = '') {
-                        const id = 'acceptable-' + Date.now();
+                        const id = 'acceptable-' + Date.now() + '-' + (colorIdCounter++);
                         const container = document.getElementById('acceptable-colors-list');
                         const div = document.createElement('div');
                         div.id = id;
                         div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;';
-                        div.innerHTML = `
-                            <input type="text" 
-                                   value="${value}" 
-                                   placeholder="#FF0000 or red" 
-                                   style="flex: 1; padding: 0.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.9rem;"
-                                   onchange="updateTagColorsJSON()">
-                            <button type="button" 
-                                    onclick="removeAcceptableColor('${id}')" 
-                                    style="padding: 0.5rem 0.75rem; background: rgba(255, 107, 107, 0.2); color: var(--bad); border: 1px solid var(--bad); border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
-                                Remove
-                            </button>
-                        `;
+                        
+                        // Create input element safely
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = value;
+                        input.placeholder = '#FF0000 or red';
+                        input.style.cssText = 'flex: 1; padding: 0.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.9rem;';
+                        input.onchange = updateTagColorsJSON;
+                        
+                        // Create remove button safely
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.textContent = 'Remove';
+                        button.style.cssText = 'padding: 0.5rem 0.75rem; background: rgba(255, 107, 107, 0.2); color: var(--bad); border: 1px solid var(--bad); border-radius: 4px; cursor: pointer; font-size: 0.85rem;';
+                        button.onclick = function() { removeAcceptableColor(id); };
+                        
+                        div.appendChild(input);
+                        div.appendChild(button);
                         container.appendChild(div);
                         updateTagColorsJSON();
                     }
@@ -734,28 +746,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // Add a new tag mapping
                     function addTagMapping(tagName = '', color = '') {
-                        const id = 'mapping-' + Date.now();
+                        const id = 'mapping-' + Date.now() + '-' + (colorIdCounter++);
                         const container = document.getElementById('tag-mappings-list');
                         const div = document.createElement('div');
                         div.id = id;
                         div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;';
-                        div.innerHTML = `
-                            <input type="text" 
-                                   value="${tagName}" 
-                                   placeholder="Tag name (e.g., critical)" 
-                                   style="flex: 1; padding: 0.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.9rem;"
-                                   onchange="updateTagColorsJSON()">
-                            <input type="text" 
-                                   value="${color}" 
-                                   placeholder="#FF0000 or red" 
-                                   style="flex: 1; padding: 0.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.9rem;"
-                                   onchange="updateTagColorsJSON()">
-                            <button type="button" 
-                                    onclick="removeTagMapping('${id}')" 
-                                    style="padding: 0.5rem 0.75rem; background: rgba(255, 107, 107, 0.2); color: var(--bad); border: 1px solid var(--bad); border-radius: 4px; cursor: pointer; font-size: 0.85rem;">
-                                Remove
-                            </button>
-                        `;
+                        
+                        // Create tag name input safely
+                        const tagInput = document.createElement('input');
+                        tagInput.type = 'text';
+                        tagInput.value = tagName;
+                        tagInput.placeholder = 'Tag name (e.g., critical)';
+                        tagInput.style.cssText = 'flex: 1; padding: 0.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.9rem;';
+                        tagInput.onchange = updateTagColorsJSON;
+                        
+                        // Create color input safely
+                        const colorInput = document.createElement('input');
+                        colorInput.type = 'text';
+                        colorInput.value = color;
+                        colorInput.placeholder = '#FF0000 or red';
+                        colorInput.style.cssText = 'flex: 1; padding: 0.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.9rem;';
+                        colorInput.onchange = updateTagColorsJSON;
+                        
+                        // Create remove button safely
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.textContent = 'Remove';
+                        button.style.cssText = 'padding: 0.5rem 0.75rem; background: rgba(255, 107, 107, 0.2); color: var(--bad); border: 1px solid var(--bad); border-radius: 4px; cursor: pointer; font-size: 0.85rem;';
+                        button.onclick = function() { removeTagMapping(id); };
+                        
+                        div.appendChild(tagInput);
+                        div.appendChild(colorInput);
+                        div.appendChild(button);
                         container.appendChild(div);
                         updateTagColorsJSON();
                     }
