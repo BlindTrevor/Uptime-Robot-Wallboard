@@ -1219,7 +1219,7 @@
           .slice(0, 5); // Show max 5 services
         
         // Build alert message
-        let message = `⚠️ ${problemCount} service${problemCount > 1 ? 's' : ''} offline: `;
+        let message = `${problemCount} service${problemCount > 1 ? 's' : ''} offline: `;
         if (offlineServices.length > 0) {
           message += offlineServices.join(', ');
           if (problemCount > 5) {
