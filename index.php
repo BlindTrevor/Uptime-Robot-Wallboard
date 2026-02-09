@@ -692,6 +692,12 @@
     let allTags = new Set(); // All available tags
     let filterVisible = false; // Track filter section visibility
     
+    // Rate limiting state
+    let refreshInProgress = false; // Prevent concurrent API requests
+    let refreshDebounceTimer = null; // Timer for debouncing rapid refresh calls
+    let lastRefreshTime = 0; // Timestamp of last successful refresh
+    let apiCallCount = 0; // Counter for debugging API call frequency
+    
     // Initialize onlyProblems from query string early (before first refresh)
     // This ensures the first data load has the correct filter applied
     (function initializeOnlyProblems() {
@@ -1401,7 +1407,36 @@
       updateTagVisibility();
     }
 
+    // Debounced refresh function to prevent rapid successive API calls
+    // This wraps the actual refresh logic with debouncing and request coalescing
+    function debouncedRefresh() {
+      // Clear any pending debounce timer
+      if (refreshDebounceTimer) {
+        clearTimeout(refreshDebounceTimer);
+      }
+      
+      // Set new debounce timer (500ms)
+      // Multiple rapid calls will only result in one actual API call
+      refreshDebounceTimer = setTimeout(() => {
+        refresh();
+      }, 500);
+    }
+
     async function refresh() {
+      // Request coalescing: if a refresh is already in progress, skip this call
+      if (refreshInProgress) {
+        console.log('[API Rate Limit] Refresh already in progress, skipping duplicate request');
+        return;
+      }
+      
+      // Prevent concurrent requests
+      refreshInProgress = true;
+      apiCallCount++;
+      
+      const now = Date.now();
+      const timeSinceLastRefresh = now - lastRefreshTime;
+      console.log(`[API Call #${apiCallCount}] Time since last refresh: ${(timeSinceLastRefresh / 1000).toFixed(1)}s`);
+      
       const err = document.getElementById('error');
       try {
         const data = await loadData();
@@ -1418,8 +1453,12 @@
           throw new Error(statusMsg + errorMsg);
         }
         render(data);
+        lastRefreshTime = Date.now(); // Update timestamp on successful refresh
       } catch (e) {
         err.textContent = 'Error: ' + e.message;
+      } finally {
+        // Always reset the in-progress flag, even if error occurred
+        refreshInProgress = false;
       }
     }
 
@@ -1435,10 +1474,10 @@
             // First load, just store the version
             currentConfigVersion = data.version;
           } else if (currentConfigVersion !== data.version) {
-            // Config has changed! Refresh the wallboard
-            console.log('Config file changed, refreshing wallboard...');
+            // Config has changed! Use debounced refresh to avoid immediate API call
+            console.log('Config file changed, scheduling refresh...');
             currentConfigVersion = data.version;
-            await refresh();
+            debouncedRefresh();
           }
         }
       } catch (e) {
@@ -1466,16 +1505,24 @@
     }
 
     // Events
-    document.getElementById('refresh-btn').addEventListener('click', refresh);
+    document.getElementById('refresh-btn').addEventListener('click', () => {
+      // Manual refresh button should trigger immediate refresh (not debounced)
+      // Clear any pending debounce timer first to prevent conflicts
+      if (refreshDebounceTimer) {
+        clearTimeout(refreshDebounceTimer);
+        refreshDebounceTimer = null;
+      }
+      refresh();
+    });
     document.getElementById('toggle-problems').addEventListener('click', () => {
       onlyProblems = !onlyProblems;
       updateButtonText('toggle-problems', onlyProblems, 'Show All', 'Show Only Problems');
-      refresh();
+      debouncedRefresh();
     });
     document.getElementById('toggle-paused').addEventListener('click', () => {
       showPaused = !showPaused;
       updateButtonText('toggle-paused', showPaused, 'Hide Paused', 'Show Paused');
-      refresh();
+      debouncedRefresh();
     });
     document.getElementById('toggle-tags').addEventListener('click', () => {
       showTags = !showTags;
@@ -1515,7 +1562,7 @@
       }
       
       // Re-render with current data
-      refresh();
+      debouncedRefresh();
     });
 
     document.getElementById('clear-tag-filter').addEventListener('click', () => {
@@ -1524,7 +1571,7 @@
       document.querySelectorAll('.tag-filter-pill').forEach(pill => {
         pill.classList.remove('selected');
       });
-      refresh();
+      debouncedRefresh();
     });
 
     // Auto fullscreen on load if enabled
