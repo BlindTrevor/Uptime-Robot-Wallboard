@@ -1215,7 +1215,7 @@
       if (problemCount > 0 && alertBar && alertBarText) {
         // Get list of offline services
         const offlineServices = mons.filter(m => isProblem(m))
-          .map(m => m.friendly_name || 'Unknown Service')
+          .map(m => m.friendly_name || m.url || `Service #${m.id}`)
           .slice(0, 5); // Show max 5 services
         
         // Build alert message
