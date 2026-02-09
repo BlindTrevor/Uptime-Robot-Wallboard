@@ -22,6 +22,8 @@
       --bg-offline: #2a1515;
       --card-offline: #331a1a;
       --border-offline: #5e2323;
+      --warning-bg: #3b2a1a;
+      --warning-border: #5e4123;
     }
 
     /* Light theme */
@@ -68,9 +70,9 @@
       padding: 2px 10px; border-radius: 999px; font-size: 0.85rem;
       border: 1px solid var(--border);
     }
-    .pill.warn { background: #3b2a1a; color: var(--warn); border-color: #5e4123; }
+    .pill.warn { background: var(--warning-bg); color: var(--warn); border-color: var(--warning-border); }
     .pill.ok { background: #163327; color: #8af0c9; border-color: #184836; }
-    .pill.paused { background: #3b2a1a; color: var(--warn); border-color: #5e4123; }
+    .pill.paused { background: var(--warning-bg); color: var(--warn); border-color: var(--warning-border); }
     
     /* Down tags display */
     #down-tags {
@@ -173,7 +175,75 @@
     .kv { font-size: 0.86rem; color: var(--muted); margin-top: 6px; }
     .small { font-size: 0.78rem; color: var(--subtle); margin-top: 6px; }
     .err { color: var(--bad); margin: 0.4rem 0; white-space: pre-wrap; }
-    .footer { color: var(--subtle); margin-top: 0.5rem; font-size: 0.85rem; }
+    .footer { color: var(--subtle); margin-top: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+    
+    /* Rate limit display */
+    .rate-limit-info {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      cursor: help;
+      transition: all 0.2s ease;
+    }
+    .rate-limit-info:hover {
+      background: var(--border);
+      border-color: var(--accent);
+    }
+    .rate-limit-info i {
+      font-size: 0.9em;
+    }
+    .rate-limit-info.warning {
+      background: var(--warning-bg);
+      border-color: var(--warning-border);
+      color: var(--warn);
+      animation: pulse-warning 2s ease-in-out infinite;
+    }
+    @keyframes pulse-warning {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    /* Rate limit tooltip */
+    .rate-limit-tooltip {
+      position: relative;
+    }
+    .rate-limit-tooltip .tooltip-content {
+      visibility: hidden;
+      position: absolute;
+      bottom: 120%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--card);
+      border: 1px solid var(--accent);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+    }
+    .rate-limit-tooltip:hover .tooltip-content {
+      visibility: visible;
+      opacity: 1;
+    }
+    .rate-limit-tooltip .tooltip-content::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: var(--accent) transparent transparent transparent;
+    }
     
     /* Fullscreen prompt overlay */
     .fullscreen-prompt {
@@ -346,6 +416,7 @@
       theme: 'dark', // 'dark', 'light', or 'auto'
       autoFullscreen: false,
       showTags: true,
+      rateLimitWarningThreshold: 3,
     };
 
     // --- Theme Management ---
@@ -588,6 +659,9 @@
         }
         if (serverConfig.tagColors) {
           config.tagColors = serverConfig.tagColors;
+        }
+        if (typeof serverConfig.rateLimitWarningThreshold === 'number') {
+          config.rateLimitWarningThreshold = serverConfig.rateLimitWarningThreshold;
         }
       }
       
@@ -1266,12 +1340,48 @@
         `;
       }).join('');
 
-      // Footer (optionally show pagination meta if sent)
-      if (data.meta && (data.meta.next_cursor || data.meta.prev_cursor)) {
-        footer.textContent = `Page size: ${mons.length} — Cursor: next=${data.meta.next_cursor || '∅'}`;
-      } else {
-        footer.textContent = '';
+      // Footer - show rate limit info and optionally pagination meta
+      let footerContent = '';
+      
+      // Rate limit display
+      if (data.rateLimit) {
+        const { limit, remaining, reset } = data.rateLimit;
+        const threshold = config.rateLimitWarningThreshold || 3;
+        
+        if (remaining !== null && limit !== null) {
+          const isLowQuota = remaining <= threshold;
+          const warningClass = isLowQuota ? ' warning' : '';
+          const icon = isLowQuota ? 'fa-exclamation-triangle' : 'fa-tachometer-alt';
+          
+          // Format reset time if available
+          let resetTime = '';
+          if (reset) {
+            const resetDate = new Date(reset * 1000);
+            resetTime = resetDate.toLocaleTimeString();
+          }
+          
+          const tooltipText = `API Rate Limit: ${remaining}/${limit} requests remaining` + 
+            (resetTime ? ` (resets at ${resetTime})` : '') +
+            (isLowQuota ? ` - Consider increasing REFRESH_RATE in config.env` : '');
+          
+          footerContent += `
+            <div class="rate-limit-tooltip">
+              <span class="rate-limit-info${warningClass}" title="${tooltipText}" aria-label="${tooltipText}">
+                <i class="fas ${icon}" aria-hidden="true"></i>
+                <span>${remaining}/${limit} requests</span>
+              </span>
+              <div class="tooltip-content">${tooltipText}</div>
+            </div>
+          `;
+        }
       }
+      
+      // Pagination info (if any)
+      if (data.meta && (data.meta.next_cursor || data.meta.prev_cursor)) {
+        footerContent += `<span>Page size: ${mons.length} — Cursor: next=${data.meta.next_cursor || '∅'}</span>`;
+      }
+      
+      footer.innerHTML = footerContent;
 
       // Track status changes (you can add audio/visual cues here)
       const changes = [];

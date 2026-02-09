@@ -63,6 +63,7 @@ $CONFIG = [
     'theme' => 'dark',
     'autoFullscreen' => false,
     'showTags' => true,
+    'rateLimitWarningThreshold' => 3,
 ];
 
 if ($configPath !== null) {
@@ -78,7 +79,8 @@ if ($configPath !== null) {
         'THEME',
         'AUTO_FULLSCREEN',
         'SHOW_TAGS',
-        'TAG_COLORS'
+        'TAG_COLORS',
+        'RATE_LIMIT_WARNING_THRESHOLD'
     ]);
     
     // Load API token
@@ -207,6 +209,11 @@ if ($configPath !== null) {
             }
         }
     }
+    
+    // Load rate limit warning threshold (minimum 1)
+    if (isset($parsed['RATE_LIMIT_WARNING_THRESHOLD']) && is_numeric($parsed['RATE_LIMIT_WARNING_THRESHOLD'])) {
+        $CONFIG['rateLimitWarningThreshold'] = max(1, (int)$parsed['RATE_LIMIT_WARNING_THRESHOLD']);
+    }
 }
 
 // Backend filter: only_problems query parameter
@@ -235,10 +242,23 @@ if (!$TOKEN) {
 $API_BASE = 'https://api.uptimerobot.com/v3';
 $url = $API_BASE . '/monitors?page_size=100';
 
+// Variable to capture response headers
+$responseHeaders = [];
+
 $ch = curl_init();
 curl_setopt_array($ch, [
     CURLOPT_URL => $url,
     CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HEADER => false, // Don't include headers in the response body
+    CURLOPT_HEADERFUNCTION => function($curl, $headerLine) use (&$responseHeaders) {
+        $len = strlen($headerLine);
+        $headerParts = explode(':', $headerLine, 2);
+        if (count($headerParts) < 2) { // ignore invalid headers
+            return $len;
+        }
+        $responseHeaders[strtolower(trim($headerParts[0]))] = trim($headerParts[1]);
+        return $len;
+    },
     CURLOPT_HTTPHEADER => [
         'Accept: application/json',
         'Authorization: Bearer ' . $TOKEN,
@@ -249,6 +269,49 @@ $response = curl_exec($ch);
 $curlErr  = curl_error($ch);
 $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
+
+// Parse rate limit headers
+$rateLimit = [
+    'limit' => null,
+    'remaining' => null,
+    'reset' => null,
+];
+
+// Check for standard rate limit headers (case-insensitive)
+if (isset($responseHeaders['x-ratelimit-limit'])) {
+    $rateLimit['limit'] = (int)$responseHeaders['x-ratelimit-limit'];
+}
+if (isset($responseHeaders['x-ratelimit-remaining'])) {
+    $rateLimit['remaining'] = (int)$responseHeaders['x-ratelimit-remaining'];
+}
+if (isset($responseHeaders['x-ratelimit-reset'])) {
+    $rateLimit['reset'] = (int)$responseHeaders['x-ratelimit-reset'];
+}
+
+// Log rate limit information if quota is low or if 429 error occurred
+$shouldLogRateLimit = false;
+$rateLimitLogMessage = '';
+
+if ($httpCode === 429) {
+    $shouldLogRateLimit = true;
+    $rateLimitLogMessage = 'HTTP 429 Rate Limit Exceeded';
+} elseif ($rateLimit['remaining'] !== null && $rateLimit['remaining'] <= $CONFIG['rateLimitWarningThreshold']) {
+    $shouldLogRateLimit = true;
+    $rateLimitLogMessage = 'Rate Limit Warning - Low Quota';
+}
+
+if ($shouldLogRateLimit) {
+    $logEntry = sprintf(
+        "[%s] %s - Limit: %s, Remaining: %s, Reset: %s (HTTP %d)\n",
+        date('Y-m-d H:i:s'),
+        $rateLimitLogMessage,
+        $rateLimit['limit'] !== null ? $rateLimit['limit'] : 'unknown',
+        $rateLimit['remaining'] !== null ? $rateLimit['remaining'] : 'unknown',
+        $rateLimit['reset'] !== null ? date('Y-m-d H:i:s', $rateLimit['reset']) : 'unknown',
+        $httpCode
+    );
+    error_log($logEntry, 3, __DIR__ . '/uptime_errors.log');
+}
 
 if ($curlErr) {
     http_response_code(502);
@@ -392,6 +455,7 @@ echo json_encode([
     'paused_count' => $pausedCount,
     'monitors' => $transformed,
     'meta' => $data['meta'] ?? new stdClass(),
+    'rateLimit' => $rateLimit,
     'config' => [
         'title' => $WALLBOARD_CONFIG['title'],
         'logo' => $WALLBOARD_CONFIG['logo'],
@@ -403,5 +467,6 @@ echo json_encode([
         'theme' => $CONFIG['theme'],
         'showTags' => $CONFIG['showTags'],
         'tagColors' => $CONFIG['tagColors'] ?? null,
+        'rateLimitWarningThreshold' => $CONFIG['rateLimitWarningThreshold'],
     ],
 ], JSON_UNESCAPED_SLASHES);
