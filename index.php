@@ -22,6 +22,8 @@
       --bg-offline: #2a1515;
       --card-offline: #331a1a;
       --border-offline: #5e2323;
+      --warning-bg: #3b2a1a;
+      --warning-border: #5e4123;
     }
 
     /* Light theme */
@@ -68,9 +70,9 @@
       padding: 2px 10px; border-radius: 999px; font-size: 0.85rem;
       border: 1px solid var(--border);
     }
-    .pill.warn { background: #3b2a1a; color: var(--warn); border-color: #5e4123; }
+    .pill.warn { background: var(--warning-bg); color: var(--warn); border-color: var(--warning-border); }
     .pill.ok { background: #163327; color: #8af0c9; border-color: #184836; }
-    .pill.paused { background: #3b2a1a; color: var(--warn); border-color: #5e4123; }
+    .pill.paused { background: var(--warning-bg); color: var(--warn); border-color: var(--warning-border); }
     
     /* Down tags display */
     #down-tags {
@@ -196,8 +198,8 @@
       font-size: 0.9em;
     }
     .rate-limit-info.warning {
-      background: #3b2a1a;
-      border-color: #5e4123;
+      background: var(--warning-bg);
+      border-color: var(--warning-border);
       color: var(--warn);
       animation: pulse-warning 2s ease-in-out infinite;
     }
@@ -1364,8 +1366,8 @@
           
           footerContent += `
             <div class="rate-limit-tooltip">
-              <span class="rate-limit-info${warningClass}" title="${tooltipText}">
-                <i class="fas ${icon}"></i>
+              <span class="rate-limit-info${warningClass}" title="${tooltipText}" aria-label="${tooltipText}">
+                <i class="fas ${icon}" aria-hidden="true"></i>
                 <span>${remaining}/${limit} requests</span>
               </span>
               <div class="tooltip-content">${tooltipText}</div>

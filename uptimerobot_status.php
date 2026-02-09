@@ -250,13 +250,13 @@ curl_setopt_array($ch, [
     CURLOPT_URL => $url,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HEADER => false, // Don't include headers in the response body
-    CURLOPT_HEADERFUNCTION => function($curl, $header) use (&$responseHeaders) {
-        $len = strlen($header);
-        $header = explode(':', $header, 2);
-        if (count($header) < 2) { // ignore invalid headers
+    CURLOPT_HEADERFUNCTION => function($curl, $headerLine) use (&$responseHeaders) {
+        $len = strlen($headerLine);
+        $headerParts = explode(':', $headerLine, 2);
+        if (count($headerParts) < 2) { // ignore invalid headers
             return $len;
         }
-        $responseHeaders[strtolower(trim($header[0]))] = trim($header[1]);
+        $responseHeaders[strtolower(trim($headerParts[0]))] = trim($headerParts[1]);
         return $len;
     },
     CURLOPT_HTTPHEADER => [
