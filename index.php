@@ -236,6 +236,44 @@
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(58, 86, 156, 0.4);
     }
+    
+    /* Red alert bar for offline services */
+    .alert-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #FF0000;
+      color: #ffffff;
+      padding: 12px 20px;
+      font-weight: 700;
+      font-size: 1rem;
+      text-align: center;
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
+      z-index: 9999;
+      display: none;
+      animation: slideUp 0.3s ease-out;
+    }
+    .alert-bar.visible {
+      display: block;
+    }
+    .alert-bar-icon {
+      margin-right: 8px;
+      font-size: 1.2em;
+    }
+    .alert-bar-text {
+      display: inline-block;
+    }
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
   </style>
 </head>
 <body>
@@ -285,6 +323,12 @@
         <i class="fas fa-expand"></i> Enter Fullscreen
       </button>
     </div>
+  </div>
+
+  <!-- Red alert bar for offline services -->
+  <div id="alert-bar" class="alert-bar">
+    <i class="fas fa-exclamation-triangle alert-bar-icon"></i>
+    <span class="alert-bar-text" id="alert-bar-text"></span>
   </div>
 
   <script>
@@ -1163,6 +1207,30 @@
         document.body.classList.add('has-offline');
       } else {
         document.body.classList.remove('has-offline');
+      }
+
+      // Update red alert bar for offline services
+      const alertBar = document.getElementById('alert-bar');
+      const alertBarText = document.getElementById('alert-bar-text');
+      if (problemCount > 0 && alertBar && alertBarText) {
+        // Get list of offline services
+        const offlineServices = mons.filter(m => isProblem(m))
+          .map(m => m.friendly_name || 'Unknown Service')
+          .slice(0, 5); // Show max 5 services
+        
+        // Build alert message
+        let message = `⚠️ ${problemCount} service${problemCount > 1 ? 's' : ''} offline: `;
+        if (offlineServices.length > 0) {
+          message += offlineServices.join(', ');
+          if (problemCount > 5) {
+            message += `, and ${problemCount - 5} more`;
+          }
+        }
+        
+        alertBarText.textContent = message;
+        alertBar.classList.add('visible');
+      } else if (alertBar) {
+        alertBar.classList.remove('visible');
       }
 
       // Build cards
