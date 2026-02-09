@@ -695,8 +695,9 @@
     // Rate limiting state
     let refreshInProgress = false; // Prevent concurrent API requests
     let refreshDebounceTimer = null; // Timer for debouncing rapid refresh calls
-    let lastRefreshTime = 0; // Timestamp of last successful refresh
+    let lastRefreshTime = Date.now(); // Timestamp of last successful refresh
     let apiCallCount = 0; // Counter for debugging API call frequency
+    let pendingRefreshAfterComplete = false; // Flag to trigger refresh after current request completes
     
     // Initialize onlyProblems from query string early (before first refresh)
     // This ensures the first data load has the correct filter applied
@@ -1410,6 +1411,13 @@
     // Debounced refresh function to prevent rapid successive API calls
     // This wraps the actual refresh logic with debouncing and request coalescing
     function debouncedRefresh() {
+      // If a refresh is currently in progress, mark that we need another refresh after it completes
+      if (refreshInProgress) {
+        pendingRefreshAfterComplete = true;
+        console.log('[API Rate Limit] Refresh in progress, scheduling refresh after completion');
+        return;
+      }
+      
       // Clear any pending debounce timer
       if (refreshDebounceTimer) {
         clearTimeout(refreshDebounceTimer);
@@ -1459,6 +1467,13 @@
       } finally {
         // Always reset the in-progress flag, even if error occurred
         refreshInProgress = false;
+        
+        // If a refresh was requested while we were in progress, trigger it now
+        if (pendingRefreshAfterComplete) {
+          pendingRefreshAfterComplete = false;
+          console.log('[API Rate Limit] Executing pending refresh request');
+          debouncedRefresh();
+        }
       }
     }
 
