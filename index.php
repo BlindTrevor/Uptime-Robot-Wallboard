@@ -326,8 +326,8 @@
   </div>
 
   <!-- Red alert bar for offline services -->
-  <div id="alert-bar" class="alert-bar">
-    <i class="fas fa-exclamation-triangle alert-bar-icon"></i>
+  <div id="alert-bar" class="alert-bar" role="alert" aria-live="assertive">
+    <i class="fas fa-exclamation-triangle alert-bar-icon" aria-hidden="true"></i>
     <span class="alert-bar-text" id="alert-bar-text"></span>
   </div>
 
