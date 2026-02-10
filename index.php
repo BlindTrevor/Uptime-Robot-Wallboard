@@ -360,6 +360,12 @@
       overflow-y: auto;
       display: flex;
       flex-direction: column;
+      /* Hide scrollbar while maintaining scroll functionality */
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+    }
+    .event-sidebar::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera */
     }
     .event-sidebar.visible {
       right: 0;
