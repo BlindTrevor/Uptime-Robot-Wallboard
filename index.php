@@ -1704,12 +1704,22 @@
           }
           // Include HTTP status in error message if available
           const statusMsg = data._httpStatus ? `HTTP ${data._httpStatus}: ` : '';
-          throw new Error(statusMsg + errorMsg);
+          const fullErrorMsg = statusMsg + errorMsg;
+          
+          // Log error to event viewer
+          await logSystemError(fullErrorMsg);
+          
+          throw new Error(fullErrorMsg);
         }
         render(data);
         lastRefreshTime = Date.now(); // Update timestamp on successful refresh
       } catch (e) {
         err.textContent = 'Error: ' + e.message;
+        
+        // Log error to event viewer if not already logged
+        if (!e.message.includes('installer')) {
+          await logSystemError(e.message);
+        }
       } finally {
         // Always reset the in-progress flag, even if error occurred
         refreshInProgress = false;
@@ -2037,6 +2047,22 @@
       } catch (e) {
         console.error('Error logging event:', e);
       }
+    }
+    
+    // Log system error to event viewer
+    async function logSystemError(errorMessage) {
+      if (!eventViewerEnabled) return;
+      
+      const event = {
+        monitorId: 0, // System error, not specific to a monitor
+        monitorName: 'System',
+        url: '',
+        eventType: 'error',
+        timestamp: new Date().toISOString(),
+        message: errorMessage
+      };
+      
+      await logEvent(event);
     }
     
     // Detect and log status changes
