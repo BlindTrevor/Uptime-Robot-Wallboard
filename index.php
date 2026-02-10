@@ -1886,7 +1886,7 @@
       // Render events
       content.innerHTML = events.map(event => {
         const icon = getEventIcon(event.eventType);
-        const timeAgo = formatTimeAgo(event.timestamp);
+        const compactDuration = formatCompactDuration(event.timestamp);
         const absoluteTime = new Date(event.timestamp).toLocaleString();
         const details = formatEventDetails(event);
         
@@ -1898,7 +1898,7 @@
               <span class="event-item-type ${event.eventType}">${event.eventType}</span>
             </div>
             ${details ? `<div class="event-item-details">${details}</div>` : ''}
-            <div class="event-item-time" title="${absoluteTime}">${timeAgo}</div>
+            <div class="event-item-time">${absoluteTime}${compactDuration ? ` (${compactDuration})` : ''}</div>
           </div>
         `;
       }).join('');
@@ -1994,6 +1994,29 @@
       
       const diffYears = Math.floor(diffMonths / 12);
       return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
+    }
+    
+    // Format compact duration from timestamp (like "1h 14m" on tiles)
+    function formatCompactDuration(timestamp) {
+      const now = Date.now();
+      const eventTime = new Date(timestamp).getTime();
+      const diffMs = now - eventTime;
+      const seconds = Math.floor(diffMs / 1000);
+      
+      if (seconds < 0) return '';
+      
+      const days = Math.floor(seconds / 86400);
+      const hours = Math.floor((seconds % 86400) / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      
+      const parts = [];
+      if (days > 0) parts.push(`${days}d`);
+      if (hours > 0) parts.push(`${hours}h`);
+      if (minutes > 0) parts.push(`${minutes}m`);
+      if (parts.length === 0) parts.push(`${secs}s`); // Only show seconds if no other units
+      
+      return parts.slice(0, 2).join(' '); // Show max 2 units
     }
     
     // Log event to backend
