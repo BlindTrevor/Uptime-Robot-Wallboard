@@ -320,7 +320,7 @@
       font-size: 1rem;
       text-align: center;
       box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
-      z-index: 9999;
+      z-index: 10001;
       display: none;
       animation: slideUp 0.3s ease-out;
     }
@@ -1467,8 +1467,10 @@
 
       let mons = Array.isArray(data.monitors) ? data.monitors.slice() : [];
       
-      // Detect status changes and log events (before filtering)
-      detectStatusChanges(mons);
+      // Detect status changes and log events using ALL monitors (including filtered ones)
+      // This ensures we capture paused and offline device events even when they're not displayed
+      const allMons = Array.isArray(data.all_monitors) ? data.all_monitors : mons;
+      detectStatusChanges(allMons);
 
       // Extract all tags from monitors
       const allTagsList = extractAllTags(mons);
