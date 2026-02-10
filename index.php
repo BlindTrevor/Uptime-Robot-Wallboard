@@ -1692,6 +1692,8 @@
       console.log(`[API Call #${apiCallCount}] Time since last refresh: ${(timeSinceLastRefresh / 1000).toFixed(1)}s`);
       
       const err = document.getElementById('error');
+      let errorAlreadyLogged = false; // Track if error was already logged
+      
       try {
         const data = await loadData();
         if (!data.ok) {
@@ -1708,6 +1710,7 @@
           
           // Log error to event viewer
           await logSystemError(fullErrorMsg);
+          errorAlreadyLogged = true;
           
           throw new Error(fullErrorMsg);
         }
@@ -1716,8 +1719,8 @@
       } catch (e) {
         err.textContent = 'Error: ' + e.message;
         
-        // Log error to event viewer if not already logged
-        if (!e.message.includes('installer')) {
+        // Log error to event viewer only if not already logged
+        if (!errorAlreadyLogged) {
           await logSystemError(e.message);
         }
       } finally {
