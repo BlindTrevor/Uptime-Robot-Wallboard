@@ -372,6 +372,9 @@ if (!is_array($data)) {
 
 $monitors = $data['data'] ?? [];
 
+// Keep original unfiltered list for event detection
+$allMonitors = $monitors;
+
 // Count paused devices before any filtering (for display when hidden)
 $pausedCount = count(array_filter($monitors, function ($m) {
     return strtolower((string)($m['status'] ?? 'unknown')) === 'paused';
@@ -392,7 +395,9 @@ if (!$CONFIG['showPausedDevices']) {
 
 // Normalize fields for your wallboard
 $nowUtc = (new DateTime('now', new DateTimeZone('UTC')))->format(DateTime::ATOM);
-$transformed = array_map(function ($m) {
+
+// Transformation function to normalize monitor data
+$transformMonitor = function ($m) {
     $status = strtolower((string)($m['status'] ?? 'unknown'));
 
     // API v3 doesn't provide explicit last_check/next_check timestamps
@@ -485,7 +490,10 @@ $transformed = array_map(function ($m) {
         // Tags are passed as-is; formatTags() in index.html handles object-to-name conversion
         'tags' => $m['tags'] ?? [],
     ];
-}, $monitors);
+};
+
+$transformed = array_map($transformMonitor, $monitors);
+$allMonitorsTransformed = array_map($transformMonitor, $allMonitors);
 
 echo json_encode([
     'ok' => true,
@@ -493,6 +501,7 @@ echo json_encode([
     'count' => count($transformed),
     'paused_count' => $pausedCount,
     'monitors' => $transformed,
+    'all_monitors' => $allMonitorsTransformed,
     'meta' => $data['meta'] ?? new stdClass(),
     'rateLimit' => $rateLimit,
     'config' => [

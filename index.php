@@ -320,7 +320,7 @@
       font-size: 1rem;
       text-align: center;
       box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.4);
-      z-index: 9999;
+      z-index: 10001;
       display: none;
       animation: slideUp 0.3s ease-out;
     }
@@ -1467,8 +1467,10 @@
 
       let mons = Array.isArray(data.monitors) ? data.monitors.slice() : [];
       
-      // Detect status changes and log events (before filtering)
-      detectStatusChanges(mons);
+      // Detect status changes and log events using ALL monitors (including filtered ones)
+      // This ensures we capture paused and offline device events even when they're not displayed
+      const allMons = Array.isArray(data.all_monitors) ? data.all_monitors : mons;
+      detectStatusChanges(allMons);
 
       // Extract all tags from monitors
       const allTagsList = extractAllTags(mons);
@@ -1690,6 +1692,8 @@
       console.log(`[API Call #${apiCallCount}] Time since last refresh: ${(timeSinceLastRefresh / 1000).toFixed(1)}s`);
       
       const err = document.getElementById('error');
+      let errorAlreadyLogged = false; // Track if error was already logged
+      
       try {
         const data = await loadData();
         if (!data.ok) {
@@ -1702,12 +1706,23 @@
           }
           // Include HTTP status in error message if available
           const statusMsg = data._httpStatus ? `HTTP ${data._httpStatus}: ` : '';
-          throw new Error(statusMsg + errorMsg);
+          const fullErrorMsg = statusMsg + errorMsg;
+          
+          // Log error to event viewer
+          await logSystemError(fullErrorMsg);
+          errorAlreadyLogged = true;
+          
+          throw new Error(fullErrorMsg);
         }
         render(data);
         lastRefreshTime = Date.now(); // Update timestamp on successful refresh
       } catch (e) {
         err.textContent = 'Error: ' + e.message;
+        
+        // Log error to event viewer only if not already logged
+        if (!errorAlreadyLogged) {
+          await logSystemError(e.message);
+        }
       } finally {
         // Always reset the in-progress flag, even if error occurred
         refreshInProgress = false;
@@ -1798,6 +1813,13 @@
       
       // Apply initial state
       setEventViewerVisibility(eventViewerVisible);
+      
+      // Load events immediately if visible, and set up auto-refresh
+      if (eventViewerVisible) {
+        loadEvents();
+        if (eventRefreshInterval) clearInterval(eventRefreshInterval);
+        eventRefreshInterval = setInterval(loadEvents, 30000);
+      }
     }
     
     // Toggle event viewer visibility
@@ -1877,7 +1899,8 @@
       // Render events
       content.innerHTML = events.map(event => {
         const icon = getEventIcon(event.eventType);
-        const time = new Date(event.timestamp).toLocaleString();
+        const compactDuration = formatCompactDuration(event.timestamp);
+        const absoluteTime = new Date(event.timestamp).toLocaleString();
         const details = formatEventDetails(event);
         
         return `
@@ -1888,7 +1911,7 @@
               <span class="event-item-type ${event.eventType}">${event.eventType}</span>
             </div>
             ${details ? `<div class="event-item-details">${details}</div>` : ''}
-            <div class="event-item-time">${time}</div>
+            <div class="event-item-time">${absoluteTime}${compactDuration ? ` (${compactDuration})` : ''}</div>
           </div>
         `;
       }).join('');
@@ -1960,6 +1983,55 @@
       return parts.length > 0 ? parts.join(' ') : '< 1m';
     }
     
+    // Format time as relative (e.g., "5 minutes ago")
+    function formatTimeAgo(timestamp) {
+      const now = Date.now();
+      const eventTime = new Date(timestamp).getTime();
+      const diffMs = now - eventTime;
+      const diffSeconds = Math.floor(diffMs / 1000);
+      
+      if (diffSeconds < 0) return 'just now';
+      if (diffSeconds < 60) return `${diffSeconds} second${diffSeconds !== 1 ? 's' : ''} ago`;
+      
+      const diffMinutes = Math.floor(diffSeconds / 60);
+      if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+      
+      const diffHours = Math.floor(diffMinutes / 60);
+      if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+      
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays < 30) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+      
+      const diffMonths = Math.floor(diffDays / 30);
+      if (diffMonths < 12) return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
+      
+      const diffYears = Math.floor(diffMonths / 12);
+      return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
+    }
+    
+    // Format compact duration from timestamp (like "1h 14m" on tiles)
+    function formatCompactDuration(timestamp) {
+      const now = Date.now();
+      const eventTime = new Date(timestamp).getTime();
+      const diffMs = now - eventTime;
+      
+      if (diffMs < 0) return ''; // Event is in the future
+      
+      const seconds = Math.floor(diffMs / 1000);
+      const days = Math.floor(seconds / 86400);
+      const hours = Math.floor((seconds % 86400) / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      
+      const parts = [];
+      if (days > 0) parts.push(`${days}d`);
+      if (hours > 0) parts.push(`${hours}h`);
+      if (minutes > 0) parts.push(`${minutes}m`);
+      if (parts.length === 0) parts.push(`${secs}s`); // Only show seconds if no other units
+      
+      return parts.slice(0, 2).join(' '); // Show max 2 units
+    }
+    
     // Log event to backend
     async function logEvent(event) {
       if (!eventViewerEnabled) return;
@@ -1978,6 +2050,22 @@
       } catch (e) {
         console.error('Error logging event:', e);
       }
+    }
+    
+    // Log system error to event viewer
+    async function logSystemError(errorMessage) {
+      if (!eventViewerEnabled) return;
+      
+      const event = {
+        monitorId: 0, // System error, not specific to a monitor
+        monitorName: 'System',
+        url: '',
+        eventType: 'error',
+        timestamp: new Date().toISOString(),
+        message: errorMessage
+      };
+      
+      await logEvent(event);
     }
     
     // Detect and log status changes
