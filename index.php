@@ -1800,6 +1800,13 @@
       
       // Apply initial state
       setEventViewerVisibility(eventViewerVisible);
+      
+      // Load events immediately if visible, and set up auto-refresh
+      if (eventViewerVisible) {
+        loadEvents();
+        if (eventRefreshInterval) clearInterval(eventRefreshInterval);
+        eventRefreshInterval = setInterval(loadEvents, 30000);
+      }
     }
     
     // Toggle event viewer visibility
@@ -1879,7 +1886,8 @@
       // Render events
       content.innerHTML = events.map(event => {
         const icon = getEventIcon(event.eventType);
-        const time = new Date(event.timestamp).toLocaleString();
+        const timeAgo = formatTimeAgo(event.timestamp);
+        const absoluteTime = new Date(event.timestamp).toLocaleString();
         const details = formatEventDetails(event);
         
         return `
@@ -1890,7 +1898,7 @@
               <span class="event-item-type ${event.eventType}">${event.eventType}</span>
             </div>
             ${details ? `<div class="event-item-details">${details}</div>` : ''}
-            <div class="event-item-time">${time}</div>
+            <div class="event-item-time" title="${absoluteTime}">${timeAgo}</div>
           </div>
         `;
       }).join('');
@@ -1960,6 +1968,32 @@
       if (minutes > 0) parts.push(`${minutes}m`);
       
       return parts.length > 0 ? parts.join(' ') : '< 1m';
+    }
+    
+    // Format time as relative (e.g., "5 minutes ago")
+    function formatTimeAgo(timestamp) {
+      const now = Date.now();
+      const eventTime = new Date(timestamp).getTime();
+      const diffMs = now - eventTime;
+      const diffSeconds = Math.floor(diffMs / 1000);
+      
+      if (diffSeconds < 0) return 'just now';
+      if (diffSeconds < 60) return `${diffSeconds} second${diffSeconds !== 1 ? 's' : ''} ago`;
+      
+      const diffMinutes = Math.floor(diffSeconds / 60);
+      if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+      
+      const diffHours = Math.floor(diffMinutes / 60);
+      if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+      
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays < 30) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+      
+      const diffMonths = Math.floor(diffDays / 30);
+      if (diffMonths < 12) return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
+      
+      const diffYears = Math.floor(diffMonths / 12);
+      return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
     }
     
     // Log event to backend
