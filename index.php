@@ -344,6 +344,182 @@
         opacity: 1;
       }
     }
+    
+    /* Event Viewer Sidebar */
+    .event-sidebar {
+      position: fixed;
+      top: 0;
+      right: -400px;
+      width: 400px;
+      height: 100vh;
+      background: var(--card);
+      border-left: 2px solid var(--border);
+      box-shadow: -4px 0 12px rgba(0, 0, 0, 0.3);
+      z-index: 10000;
+      transition: right 0.3s ease;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .event-sidebar.visible {
+      right: 0;
+    }
+    .event-sidebar-header {
+      position: sticky;
+      top: 0;
+      background: var(--card);
+      border-bottom: 2px solid var(--border);
+      padding: 16px;
+      z-index: 1;
+    }
+    .event-sidebar-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text);
+      margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .event-sidebar-close {
+      background: var(--border);
+      border: none;
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+    .event-sidebar-close:hover {
+      background: var(--accent);
+    }
+    .event-sidebar-content {
+      padding: 16px;
+      flex: 1;
+    }
+    .event-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      transition: all 0.2s ease;
+    }
+    .event-item:hover {
+      border-color: var(--accent);
+      transform: translateX(-2px);
+    }
+    .event-item-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .event-item-icon {
+      font-size: 1.2em;
+    }
+    .event-item-icon.up { color: var(--ok); }
+    .event-item-icon.down { color: var(--bad); }
+    .event-item-icon.paused { color: var(--warn); }
+    .event-item-icon.error { color: var(--bad); }
+    .event-item-icon.transient { color: var(--warn); }
+    .event-item-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .event-item-type {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+    }
+    .event-item-type.up {
+      background: #163327;
+      color: #8af0c9;
+      border: 1px solid #184836;
+    }
+    .event-item-type.down {
+      background: #2a1515;
+      color: #ff6b6b;
+      border: 1px solid #5e2323;
+    }
+    .event-item-type.paused {
+      background: var(--warning-bg);
+      color: var(--warn);
+      border: 1px solid var(--warning-border);
+    }
+    .event-item-type.error, .event-item-type.transient {
+      background: var(--warning-bg);
+      color: var(--warn);
+      border: 1px solid var(--warning-border);
+    }
+    .event-item-details {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .event-item-time {
+      font-size: 0.75rem;
+      color: var(--subtle);
+      margin-top: 4px;
+    }
+    .event-pagination {
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      background: var(--card);
+      position: sticky;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .event-pagination button {
+      padding: 6px 12px;
+      font-size: 0.85rem;
+    }
+    .event-pagination button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .event-pagination-info {
+      font-size: 0.8rem;
+      color: var(--subtle);
+    }
+    .event-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--subtle);
+      font-size: 0.9rem;
+    }
+    .event-empty i {
+      font-size: 3em;
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+    
+    /* Adjust main content when sidebar is visible */
+    body.event-sidebar-open {
+      margin-right: 400px;
+      transition: margin-right 0.3s ease;
+    }
+    
+    @media (max-width: 768px) {
+      .event-sidebar {
+        width: 100%;
+        right: -100%;
+      }
+      body.event-sidebar-open {
+        margin-right: 0;
+      }
+    }
   </style>
 </head>
 <body>
@@ -364,6 +540,7 @@
     <button id="toggle-paused">Show Paused</button>
     <button id="toggle-filter" style="display: none;"><i class="fas fa-eye"></i> Show Filter</button>
     <button id="toggle-tags">Hide Tags</button>
+    <button id="toggle-event-viewer" style="display: none;"><i class="fas fa-history"></i> Events</button>
     <button id="refresh-btn">Refresh Now</button>
     <button id="theme-toggle"><i class="fas fa-sun"></i> Light Mode</button>
     <button id="fullscreen-toggle"><i class="fas fa-expand"></i> Fullscreen</button>
@@ -401,10 +578,35 @@
     <span class="alert-bar-text" id="alert-bar-text"></span>
   </div>
 
+  <!-- Event Viewer Sidebar -->
+  <div id="event-sidebar" class="event-sidebar">
+    <div class="event-sidebar-header">
+      <div class="event-sidebar-title">
+        <span><i class="fas fa-history"></i> Event History</span>
+        <button id="event-sidebar-close" class="event-sidebar-close">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+    <div id="event-sidebar-content" class="event-sidebar-content">
+      <div class="event-empty">
+        <div><i class="fas fa-clock"></i></div>
+        <div>No events recorded yet</div>
+      </div>
+    </div>
+    <div id="event-pagination" class="event-pagination" style="display: none;">
+      <button id="event-prev-page" disabled><i class="fas fa-chevron-left"></i> Prev</button>
+      <span id="event-pagination-info" class="event-pagination-info">Page 1 of 1</span>
+      <button id="event-next-page" disabled>Next <i class="fas fa-chevron-right"></i></button>
+    </div>
+  </div>
+
   <script>
     // --- Configuration ---
     const ENDPOINT = '/status/uptimerobot_status.php'; // adjust if you host elsewhere
     const CONFIG_VERSION_ENDPOINT = '/status/config_version.php'; // endpoint to check config changes
+    const EVENT_LOGGER_ENDPOINT = '/status/event-logger.php';
+    const EVENT_VIEWER_ENDPOINT = '/status/event-viewer.php';
     
     // Default configuration (will be overridden by server config and/or query string)
     let config = {
@@ -417,6 +619,10 @@
       autoFullscreen: false,
       showTags: true,
       rateLimitWarningThreshold: 3,
+      eventViewerDefault: 'hidden',
+      eventLoggingMode: 'circular',
+      eventLoggingMaxEvents: 1000,
+      eventViewerItemsPerPage: 50,
     };
 
     // --- Theme Management ---
@@ -626,6 +832,14 @@
         queryConfig.showTags = params.get('showTags') === 'true';
       }
       
+      // Parse eventViewer
+      if (params.has('eventViewer')) {
+        const eventViewer = params.get('eventViewer');
+        if (['visible', 'hidden'].includes(eventViewer)) {
+          queryConfig.eventViewer = eventViewer;
+        }
+      }
+      
       return queryConfig;
     }
     
@@ -663,6 +877,18 @@
         if (typeof serverConfig.rateLimitWarningThreshold === 'number') {
           config.rateLimitWarningThreshold = serverConfig.rateLimitWarningThreshold;
         }
+        if (typeof serverConfig.eventViewerDefault === 'string' && ['visible', 'hidden', 'disabled'].includes(serverConfig.eventViewerDefault)) {
+          config.eventViewerDefault = serverConfig.eventViewerDefault;
+        }
+        if (typeof serverConfig.eventLoggingMode === 'string') {
+          config.eventLoggingMode = serverConfig.eventLoggingMode;
+        }
+        if (typeof serverConfig.eventLoggingMaxEvents === 'number') {
+          config.eventLoggingMaxEvents = serverConfig.eventLoggingMaxEvents;
+        }
+        if (typeof serverConfig.eventViewerItemsPerPage !== 'undefined') {
+          config.eventViewerItemsPerPage = serverConfig.eventViewerItemsPerPage;
+        }
       }
       
       // Apply query string overrides if allowed
@@ -692,6 +918,14 @@
     let allTags = new Set(); // All available tags
     let filterVisible = false; // Track filter section visibility
     
+    // Event viewer state
+    let eventViewerVisible = false;
+    let eventViewerEnabled = true; // Can be disabled via config
+    let eventViewerSetByQuery = false;
+    let eventCurrentPage = 1;
+    let eventTotalPages = 1;
+    let eventRefreshInterval = null;
+    
     // Rate limiting state
     let refreshInProgress = false; // Prevent concurrent API requests
     let refreshDebounceTimer = null; // Timer for debouncing rapid refresh calls
@@ -714,6 +948,10 @@
       if (config.allowQueryOverride && typeof queryConfig.showTags === 'boolean') {
         showTags = queryConfig.showTags;
         showTagsSetByQuery = true;
+      }
+      if (config.allowQueryOverride && typeof queryConfig.eventViewer === 'string') {
+        eventViewerSetByQuery = true;
+        // Will be processed after config is loaded
       }
     })();
 
@@ -1188,6 +1426,9 @@
           updateButtonText('toggle-problems', onlyProblems, 'Show All', 'Show Only Problems');
           updateButtonText('toggle-paused', showPaused, 'Hide Paused', 'Show Paused');
           updateButtonText('toggle-tags', showTags, 'Hide Tags', 'Show Tags');
+          
+          // Initialize event viewer on first config load
+          initializeEventViewer();
         }
         
         if (data.config.title) {
@@ -1225,6 +1466,9 @@
       last.textContent = `Last updated: ${new Date().toLocaleString()}`;
 
       let mons = Array.isArray(data.monitors) ? data.monitors.slice() : [];
+      
+      // Detect status changes and log events (before filtering)
+      detectStatusChanges(mons);
 
       // Extract all tags from monitors
       const allTagsList = extractAllTags(mons);
@@ -1513,10 +1757,263 @@
         clearInterval(configCheckInterval);
         configCheckInterval = null;
       }
+      if (eventRefreshInterval) {
+        clearInterval(eventRefreshInterval);
+        eventRefreshInterval = null;
+      }
       
       // Set new intervals based on config
       refreshInterval = setInterval(refresh, config.refreshRate * 1000);
       configCheckInterval = setInterval(checkConfigVersion, config.configCheckRate * 1000);
+      
+      // Refresh events every 30 seconds if viewer is visible
+      if (eventViewerVisible && eventViewerEnabled) {
+        eventRefreshInterval = setInterval(loadEvents, 30000);
+      }
+    }
+
+    // --- Event Viewer Functions ---
+    
+    // Initialize event viewer based on config
+    function initializeEventViewer() {
+      const toggleBtn = document.getElementById('toggle-event-viewer');
+      const queryConfig = parseQueryString();
+      
+      // Check if disabled
+      if (config.eventViewerDefault === 'disabled') {
+        eventViewerEnabled = false;
+        if (toggleBtn) toggleBtn.style.display = 'none';
+        return;
+      }
+      
+      eventViewerEnabled = true;
+      if (toggleBtn) toggleBtn.style.display = 'inline-block';
+      
+      // Determine initial visibility
+      if (eventViewerSetByQuery && config.allowQueryOverride && queryConfig.eventViewer) {
+        eventViewerVisible = queryConfig.eventViewer === 'visible';
+      } else {
+        eventViewerVisible = config.eventViewerDefault === 'visible';
+      }
+      
+      // Apply initial state
+      setEventViewerVisibility(eventViewerVisible);
+    }
+    
+    // Toggle event viewer visibility
+    function toggleEventViewer() {
+      if (!eventViewerEnabled) return;
+      eventViewerVisible = !eventViewerVisible;
+      setEventViewerVisibility(eventViewerVisible);
+      
+      // Start/stop auto-refresh based on visibility
+      if (eventViewerVisible) {
+        loadEvents();
+        if (eventRefreshInterval) clearInterval(eventRefreshInterval);
+        eventRefreshInterval = setInterval(loadEvents, 30000);
+      } else {
+        if (eventRefreshInterval) {
+          clearInterval(eventRefreshInterval);
+          eventRefreshInterval = null;
+        }
+      }
+    }
+    
+    // Set event viewer visibility
+    function setEventViewerVisibility(visible) {
+      const sidebar = document.getElementById('event-sidebar');
+      const toggleBtn = document.getElementById('toggle-event-viewer');
+      
+      if (visible) {
+        sidebar.classList.add('visible');
+        document.body.classList.add('event-sidebar-open');
+        if (toggleBtn) toggleBtn.innerHTML = '<i class="fas fa-history"></i> Hide Events';
+      } else {
+        sidebar.classList.remove('visible');
+        document.body.classList.remove('event-sidebar-open');
+        if (toggleBtn) toggleBtn.innerHTML = '<i class="fas fa-history"></i> Events';
+      }
+    }
+    
+    // Load events from API
+    async function loadEvents(page = null) {
+      if (!eventViewerEnabled) return;
+      
+      try {
+        const currentPage = page || eventCurrentPage;
+        const url = `${EVENT_VIEWER_ENDPOINT}?page=${currentPage}&perPage=${config.eventViewerItemsPerPage}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        
+        if (!res.ok) {
+          console.error('Failed to load events:', res.status);
+          return;
+        }
+        
+        const data = await res.json();
+        if (data.ok) {
+          renderEvents(data.events, data.pagination);
+        }
+      } catch (e) {
+        console.error('Error loading events:', e);
+      }
+    }
+    
+    // Render events in sidebar
+    function renderEvents(events, pagination) {
+      const content = document.getElementById('event-sidebar-content');
+      const paginationEl = document.getElementById('event-pagination');
+      
+      if (!events || events.length === 0) {
+        content.innerHTML = `
+          <div class="event-empty">
+            <div><i class="fas fa-clock"></i></div>
+            <div>No events recorded yet</div>
+          </div>
+        `;
+        paginationEl.style.display = 'none';
+        return;
+      }
+      
+      // Render events
+      content.innerHTML = events.map(event => {
+        const icon = getEventIcon(event.eventType);
+        const time = new Date(event.timestamp).toLocaleString();
+        const details = formatEventDetails(event);
+        
+        return `
+          <div class="event-item">
+            <div class="event-item-header">
+              <i class="event-item-icon ${event.eventType} ${icon}"></i>
+              <span class="event-item-name" title="${escapeHtml(event.monitorName)}">${escapeHtml(event.monitorName)}</span>
+              <span class="event-item-type ${event.eventType}">${event.eventType}</span>
+            </div>
+            ${details ? `<div class="event-item-details">${details}</div>` : ''}
+            <div class="event-item-time">${time}</div>
+          </div>
+        `;
+      }).join('');
+      
+      // Update pagination
+      if (pagination && pagination.totalPages > 1) {
+        eventCurrentPage = pagination.page;
+        eventTotalPages = pagination.totalPages;
+        
+        const prevBtn = document.getElementById('event-prev-page');
+        const nextBtn = document.getElementById('event-next-page');
+        const info = document.getElementById('event-pagination-info');
+        
+        prevBtn.disabled = pagination.page <= 1;
+        nextBtn.disabled = pagination.page >= pagination.totalPages;
+        info.textContent = `Page ${pagination.page} of ${pagination.totalPages}`;
+        
+        paginationEl.style.display = 'flex';
+      } else {
+        paginationEl.style.display = 'none';
+      }
+    }
+    
+    // Get icon for event type
+    function getEventIcon(eventType) {
+      const icons = {
+        up: 'fas fa-check-circle',
+        down: 'fas fa-times-circle',
+        paused: 'fas fa-pause-circle',
+        error: 'fas fa-exclamation-triangle',
+        transient: 'fas fa-exclamation-circle'
+      };
+      return icons[eventType] || 'fas fa-circle';
+    }
+    
+    // Format event details
+    function formatEventDetails(event) {
+      const parts = [];
+      
+      if (event.outageDuration) {
+        const duration = formatDurationFromSeconds(event.outageDuration);
+        parts.push(`Duration: ${duration}`);
+      }
+      
+      if (event.url) {
+        parts.push(`URL: ${escapeHtml(event.url)}`);
+      }
+      
+      if (event.message) {
+        parts.push(escapeHtml(event.message));
+      }
+      
+      return parts.join(' • ');
+    }
+    
+    // Format duration from seconds
+    function formatDurationFromSeconds(seconds) {
+      if (!seconds || seconds < 0) return '—';
+      
+      const days = Math.floor(seconds / 86400);
+      const hours = Math.floor((seconds % 86400) / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      
+      const parts = [];
+      if (days > 0) parts.push(`${days}d`);
+      if (hours > 0) parts.push(`${hours}h`);
+      if (minutes > 0) parts.push(`${minutes}m`);
+      
+      return parts.length > 0 ? parts.join(' ') : '< 1m';
+    }
+    
+    // Log event to backend
+    async function logEvent(event) {
+      if (!eventViewerEnabled) return;
+      
+      try {
+        const res = await fetch(EVENT_LOGGER_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(event),
+          cache: 'no-store'
+        });
+        
+        if (!res.ok) {
+          console.error('Failed to log event:', res.status);
+        }
+      } catch (e) {
+        console.error('Error logging event:', e);
+      }
+    }
+    
+    // Detect and log status changes
+    function detectStatusChanges(monitors) {
+      if (!monitors || !eventViewerEnabled) return;
+      
+      monitors.forEach(m => {
+        const currentStatus = (m.status || '').toLowerCase();
+        const previousStatus = lastStatuses.get(m.id);
+        
+        // Skip if this is the first time we're seeing this monitor
+        if (previousStatus === undefined) {
+          lastStatuses.set(m.id, currentStatus);
+          return;
+        }
+        
+        // Detect status change
+        if (previousStatus !== currentStatus) {
+          const event = {
+            monitorId: m.id,
+            monitorName: m.friendly_name || m.url || `Monitor #${m.id}`,
+            url: m.url || '',
+            eventType: currentStatus,
+            timestamp: new Date().toISOString(),
+            previousStatus: previousStatus
+          };
+          
+          // Note: Accurate outage duration would require tracking when the monitor went down,
+          // which we don't have from the API. The m.last_check field represents the most
+          // recent check time, not the downtime start. We'll let the event viewer calculate
+          // duration from event timestamps if needed.
+          
+          logEvent(event);
+          lastStatuses.set(m.id, currentStatus);
+        }
+      });
     }
 
     // Events
@@ -1545,6 +2042,25 @@
       updateTagVisibility();
     });
     document.getElementById('toggle-filter').addEventListener('click', toggleFilterVisibility);
+    document.getElementById('toggle-event-viewer').addEventListener('click', toggleEventViewer);
+    document.getElementById('event-sidebar-close').addEventListener('click', () => {
+      eventViewerVisible = false;
+      setEventViewerVisibility(false);
+      if (eventRefreshInterval) {
+        clearInterval(eventRefreshInterval);
+        eventRefreshInterval = null;
+      }
+    });
+    document.getElementById('event-prev-page').addEventListener('click', () => {
+      if (eventCurrentPage > 1) {
+        loadEvents(eventCurrentPage - 1);
+      }
+    });
+    document.getElementById('event-next-page').addEventListener('click', () => {
+      if (eventCurrentPage < eventTotalPages) {
+        loadEvents(eventCurrentPage + 1);
+      }
+    });
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
     document.getElementById('fullscreen-toggle').addEventListener('click', toggleFullscreen);
     document.getElementById('fullscreen-prompt-btn').addEventListener('click', () => {

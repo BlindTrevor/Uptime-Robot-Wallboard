@@ -103,6 +103,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $autoFullscreen = isset($_POST['auto_fullscreen']) ? 'true' : 'false';
     $configLocation = $_POST['config_location'] ?? $defaultConfigLocation;
     $tagColors = trim($_POST['tag_colors'] ?? '');
+    $eventViewerDefault = $_POST['event_viewer_default'] ?? 'hidden';
+    $eventLoggingMode = $_POST['event_logging_mode'] ?? 'circular';
+    $eventLoggingMaxEvents = trim($_POST['event_logging_max_events'] ?? '1000');
+    $eventViewerItemsPerPage = trim($_POST['event_viewer_items_per_page'] ?? '50');
     
     // Handle logo file upload
     if (isset($_FILES['logo_file']) && $_FILES['logo_file']['error'] === UPLOAD_ERR_OK) {
@@ -180,6 +184,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
+    // Validate event viewer settings
+    if (!in_array($eventViewerDefault, ['visible', 'hidden', 'disabled'], true)) {
+        $errors[] = 'Invalid event viewer default setting.';
+    }
+    
+    if (!in_array($eventLoggingMode, ['circular', 'forever'], true)) {
+        $errors[] = 'Invalid event logging mode.';
+    }
+    
+    if (!is_numeric($eventLoggingMaxEvents) || (int)$eventLoggingMaxEvents < 10) {
+        $errors[] = 'Event logging max events must be a number and at least 10.';
+    }
+    
+    if ($eventViewerItemsPerPage !== 'all' && (!is_numeric($eventViewerItemsPerPage) || (int)$eventViewerItemsPerPage < 10)) {
+        $errors[] = 'Event viewer items per page must be a number at least 10, or "all".';
+    }
+    
     // If no errors, create the config file
     if (empty($errors)) {
         $configContent = "# Wallboard Configuration\n";
@@ -205,7 +226,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $configContent .= "# Auto Fullscreen Mode\n";
         $configContent .= "AUTO_FULLSCREEN=$autoFullscreen\n\n";
         $configContent .= "# Tag Color Configuration (optional)\n";
-        $configContent .= "TAG_COLORS=$tagColors\n";
+        $configContent .= "TAG_COLORS=$tagColors\n\n";
+        $configContent .= "# Event Viewer Configuration\n";
+        $configContent .= "EVENT_VIEWER_DEFAULT=$eventViewerDefault\n";
+        $configContent .= "EVENT_LOGGING_MODE=$eventLoggingMode\n";
+        $configContent .= "EVENT_LOGGING_MAX_EVENTS=$eventLoggingMaxEvents\n";
+        $configContent .= "EVENT_VIEWER_ITEMS_PER_PAGE=$eventViewerItemsPerPage\n";
         
         // Try to write the config file
         $writeResult = @file_put_contents($targetConfigPath, $configContent);
@@ -672,6 +698,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <input type="checkbox" name="auto_fullscreen" id="auto_fullscreen" <?php echo isset($_POST['auto_fullscreen']) ? 'checked' : ''; ?>>
                             <label for="auto_fullscreen">Auto-enter fullscreen mode on load</label>
                         </div>
+                    </div>
+                    
+                    <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--text);">Event Viewer Settings</h3>
+                    
+                    <div class="form-group">
+                        <label>
+                            Event Viewer Default State
+                            <div class="label-description">Choose how the event viewer sidebar appears by default</div>
+                        </label>
+                        <select name="event_viewer_default">
+                            <option value="hidden" <?php echo (!isset($_POST['event_viewer_default']) || $_POST['event_viewer_default'] === 'hidden') ? 'selected' : ''; ?>>Hidden (can be toggled)</option>
+                            <option value="visible" <?php echo isset($_POST['event_viewer_default']) && $_POST['event_viewer_default'] === 'visible' ? 'selected' : ''; ?>>Visible</option>
+                            <option value="disabled" <?php echo isset($_POST['event_viewer_default']) && $_POST['event_viewer_default'] === 'disabled' ? 'selected' : ''; ?>>Disabled</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            Event Logging Mode
+                            <div class="label-description">Choose whether to keep all events or only recent ones</div>
+                        </label>
+                        <select name="event_logging_mode">
+                            <option value="circular" <?php echo (!isset($_POST['event_logging_mode']) || $_POST['event_logging_mode'] === 'circular') ? 'selected' : ''; ?>>Circular (keep recent events only)</option>
+                            <option value="forever" <?php echo isset($_POST['event_logging_mode']) && $_POST['event_logging_mode'] === 'forever' ? 'selected' : ''; ?>>Forever (never delete events)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            Maximum Events (Circular Mode)
+                            <div class="label-description">Maximum number of events to keep when using circular logging (minimum 10)</div>
+                        </label>
+                        <input type="number" name="event_logging_max_events" min="10" value="<?php echo htmlspecialchars($_POST['event_logging_max_events'] ?? '1000'); ?>">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            Events Per Page
+                            <div class="label-description">Number of events to display per page (minimum 10, or "all")</div>
+                        </label>
+                        <input type="text" name="event_viewer_items_per_page" value="<?php echo htmlspecialchars($_POST['event_viewer_items_per_page'] ?? '50'); ?>" placeholder="50 or all">
                     </div>
                     
                     <button type="submit">Create Configuration</button>

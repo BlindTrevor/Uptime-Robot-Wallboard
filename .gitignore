@@ -4,6 +4,9 @@ config.env
 # Error logs
 uptime_errors.log
 
+# Event logs (NDJSON)
+events.ndjson
+
 # IDE and editor files
 .vscode/
 .idea/
