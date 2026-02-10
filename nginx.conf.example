@@ -21,6 +21,12 @@ location ~ \.log$ {
     return 403;
 }
 
+# Deny access to NDJSON event files
+location ~ \.ndjson$ {
+    deny all;
+    return 403;
+}
+
 # Example: If your wallboard is in a subdirectory (e.g., /status/)
 # Adjust the location paths accordingly:
 #
@@ -30,6 +36,11 @@ location ~ \.log$ {
 # }
 #
 # location ~ ^/status/.*\.log$ {
+#     deny all;
+#     return 403;
+# }
+#
+# location ~ ^/status/.*\.ndjson$ {
 #     deny all;
 #     return 403;
 # }

@@ -7,3 +7,8 @@
 <Files "*.log">
     Require all denied
 </Files>
+
+# Deny access to NDJSON event files
+<Files "*.ndjson">
+    Require all denied
+</Files>

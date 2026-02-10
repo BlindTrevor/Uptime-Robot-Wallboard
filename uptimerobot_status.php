@@ -64,6 +64,10 @@ $CONFIG = [
     'autoFullscreen' => false,
     'showTags' => true,
     'rateLimitWarningThreshold' => 3,
+    'eventViewerDefault' => 'hidden',
+    'eventLoggingMode' => 'circular',
+    'eventLoggingMaxEvents' => 1000,
+    'eventViewerItemsPerPage' => 50,
 ];
 
 if ($configPath !== null) {
@@ -80,7 +84,11 @@ if ($configPath !== null) {
         'AUTO_FULLSCREEN',
         'SHOW_TAGS',
         'TAG_COLORS',
-        'RATE_LIMIT_WARNING_THRESHOLD'
+        'RATE_LIMIT_WARNING_THRESHOLD',
+        'EVENT_VIEWER_DEFAULT',
+        'EVENT_LOGGING_MODE',
+        'EVENT_LOGGING_MAX_EVENTS',
+        'EVENT_VIEWER_ITEMS_PER_PAGE'
     ]);
     
     // Load API token
@@ -213,6 +221,37 @@ if ($configPath !== null) {
     // Load rate limit warning threshold (minimum 1)
     if (isset($parsed['RATE_LIMIT_WARNING_THRESHOLD']) && is_numeric($parsed['RATE_LIMIT_WARNING_THRESHOLD'])) {
         $CONFIG['rateLimitWarningThreshold'] = max(1, (int)$parsed['RATE_LIMIT_WARNING_THRESHOLD']);
+    }
+    
+    // Load event viewer default state
+    if (isset($parsed['EVENT_VIEWER_DEFAULT'])) {
+        $viewerDefault = strtolower($parsed['EVENT_VIEWER_DEFAULT']);
+        if (in_array($viewerDefault, ['visible', 'hidden', 'disabled'], true)) {
+            $CONFIG['eventViewerDefault'] = $viewerDefault;
+        }
+    }
+    
+    // Load event logging mode
+    if (isset($parsed['EVENT_LOGGING_MODE'])) {
+        $loggingMode = strtolower($parsed['EVENT_LOGGING_MODE']);
+        if (in_array($loggingMode, ['circular', 'forever'], true)) {
+            $CONFIG['eventLoggingMode'] = $loggingMode;
+        }
+    }
+    
+    // Load event logging max events (minimum 10)
+    if (isset($parsed['EVENT_LOGGING_MAX_EVENTS']) && is_numeric($parsed['EVENT_LOGGING_MAX_EVENTS'])) {
+        $CONFIG['eventLoggingMaxEvents'] = max(10, (int)$parsed['EVENT_LOGGING_MAX_EVENTS']);
+    }
+    
+    // Load event viewer items per page
+    if (isset($parsed['EVENT_VIEWER_ITEMS_PER_PAGE'])) {
+        $itemsPerPage = strtolower(trim($parsed['EVENT_VIEWER_ITEMS_PER_PAGE']));
+        if ($itemsPerPage === 'all') {
+            $CONFIG['eventViewerItemsPerPage'] = 'all';
+        } elseif (is_numeric($itemsPerPage)) {
+            $CONFIG['eventViewerItemsPerPage'] = max(10, (int)$itemsPerPage);
+        }
     }
 }
 
@@ -468,5 +507,9 @@ echo json_encode([
         'showTags' => $CONFIG['showTags'],
         'tagColors' => $CONFIG['tagColors'] ?? null,
         'rateLimitWarningThreshold' => $CONFIG['rateLimitWarningThreshold'],
+        'eventViewerDefault' => $CONFIG['eventViewerDefault'],
+        'eventLoggingMode' => $CONFIG['eventLoggingMode'],
+        'eventLoggingMaxEvents' => $CONFIG['eventLoggingMaxEvents'],
+        'eventViewerItemsPerPage' => $CONFIG['eventViewerItemsPerPage'],
     ],
 ], JSON_UNESCAPED_SLASHES);
