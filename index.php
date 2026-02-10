@@ -2005,11 +2005,10 @@
             previousStatus: previousStatus
           };
           
-          // Add outage duration for up events
-          if (currentStatus === 'up' && m.last_check) {
-            const now = Math.floor(Date.now() / 1000);
-            event.outageDuration = now - m.last_check;
-          }
+          // Note: Accurate outage duration would require tracking when the monitor went down,
+          // which we don't have from the API. The m.last_check field represents the most
+          // recent check time, not the downtime start. We'll let the event viewer calculate
+          // duration from event timestamps if needed.
           
           logEvent(event);
           lastStatuses.set(m.id, currentStatus);
