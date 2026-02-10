@@ -470,6 +470,20 @@
       color: var(--subtle);
       margin-top: 4px;
     }
+    /* Recent event highlighting */
+    .event-item.recent {
+      background: linear-gradient(135deg, rgba(58, 210, 159, 0.08) 0%, rgba(58, 86, 156, 0.08) 100%);
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 12px rgba(58, 210, 159, 0.2);
+    }
+    [data-theme="light"] .event-item.recent {
+      background: linear-gradient(135deg, rgba(40, 167, 69, 0.08) 0%, rgba(74, 111, 165, 0.08) 100%);
+      border: 2px solid var(--accent);
+      box-shadow: 0 0 12px rgba(40, 167, 69, 0.15);
+    }
+    .event-item.recent:hover {
+      box-shadow: 0 0 16px rgba(58, 210, 159, 0.3);
+    }
     .event-pagination {
       padding: 16px;
       border-top: 1px solid var(--border);
@@ -623,6 +637,7 @@
       eventLoggingMode: 'circular',
       eventLoggingMaxEvents: 1000,
       eventViewerItemsPerPage: 50,
+      recentEventWindowMinutes: 60,
     };
 
     // --- Theme Management ---
@@ -888,6 +903,9 @@
         }
         if (typeof serverConfig.eventViewerItemsPerPage !== 'undefined') {
           config.eventViewerItemsPerPage = serverConfig.eventViewerItemsPerPage;
+        }
+        if (typeof serverConfig.recentEventWindowMinutes === 'number') {
+          config.recentEventWindowMinutes = serverConfig.recentEventWindowMinutes;
         }
       }
       
@@ -1903,8 +1921,15 @@
         const absoluteTime = new Date(event.timestamp).toLocaleString();
         const details = formatEventDetails(event);
         
+        // Check if event is recent (within configured time window)
+        const eventTime = new Date(event.timestamp).getTime();
+        const now = Date.now();
+        const windowMs = config.recentEventWindowMinutes * 60 * 1000;
+        const isRecent = (now - eventTime) <= windowMs;
+        const recentClass = isRecent ? ' recent' : '';
+        
         return `
-          <div class="event-item">
+          <div class="event-item${recentClass}">
             <div class="event-item-header">
               <i class="event-item-icon ${event.eventType} ${icon}"></i>
               <span class="event-item-name" title="${escapeHtml(event.monitorName)}">${escapeHtml(event.monitorName)}</span>

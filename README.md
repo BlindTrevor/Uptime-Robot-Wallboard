@@ -92,6 +92,7 @@ Edit `config.env` to customize your wallboard:
 | `AUTO_FULLSCREEN` | Auto-enter fullscreen on load | `false` |
 | `ALLOW_QUERY_OVERRIDE` | Allow URL parameter overrides | `true` |
 | `TAG_COLORS` | Custom tag color configuration (JSON format) | (empty) |
+| `RECENT_EVENT_WINDOW_MINUTES` | Time window (in minutes) for highlighting recent events | `60` |
 
 ## 🎯 Usage
 
@@ -258,6 +259,54 @@ Supported color formats include:
 - RGB/HSL formats: `rgb(255,0,0)`, `hsl(120,100%,50%)`
 
 If not specified, colors are automatically generated from tag names using a deterministic algorithm for consistent coloring across page reloads.
+
+## 📜 Event History & Recent Event Highlighting
+
+The wallboard includes an event history viewer that tracks all monitor status changes and system events. Recent events are automatically highlighted to improve visibility of recent activity.
+
+### Features
+
+- **Event Tracking** - Automatically logs all monitor state changes (up, down, paused)
+- **Recent Event Highlighting** - Events within the configured time window are displayed with a prominent color and visual effects
+- **Configurable Time Window** - Customize how long events are considered "recent" (default: 1 hour)
+- **Event Sidebar** - View comprehensive event history with pagination
+- **Circular Logging** - Optionally limit event history to a maximum number of events
+
+### Recent Event Highlighting
+
+Events that occurred within the configured time window are automatically highlighted with:
+- Distinctive gradient background
+- Prominent border color
+- Subtle glow effect
+- Enhanced hover state
+
+This makes it easy to spot recent activity at a glance, especially useful for:
+- Identifying ongoing issues
+- Tracking recent deployments or changes
+- Monitoring system stability over the last hour(s)
+
+### Configuration
+
+Control the recent event time window in `config.env`:
+
+```bash
+# Highlight events from the last 60 minutes (default)
+RECENT_EVENT_WINDOW_MINUTES=60
+
+# Or customize to your needs:
+# RECENT_EVENT_WINDOW_MINUTES=30   # 30 minutes
+# RECENT_EVENT_WINDOW_MINUTES=120  # 2 hours
+# RECENT_EVENT_WINDOW_MINUTES=1440 # 24 hours
+```
+
+If not configured, the default is 60 minutes (1 hour) to maintain backwards compatibility.
+
+### How to Use
+
+1. Click the **Events** button in the controls to open the event history sidebar
+2. Recent events (within your configured time window) will appear with prominent highlighting
+3. Older events appear with standard styling
+4. Use pagination controls to browse through historical events
 
 ## 🖥️ Kiosk Mode
 

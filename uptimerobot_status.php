@@ -68,6 +68,7 @@ $CONFIG = [
     'eventLoggingMode' => 'circular',
     'eventLoggingMaxEvents' => 1000,
     'eventViewerItemsPerPage' => 50,
+    'recentEventWindowMinutes' => 60,
 ];
 
 if ($configPath !== null) {
@@ -88,7 +89,8 @@ if ($configPath !== null) {
         'EVENT_VIEWER_DEFAULT',
         'EVENT_LOGGING_MODE',
         'EVENT_LOGGING_MAX_EVENTS',
-        'EVENT_VIEWER_ITEMS_PER_PAGE'
+        'EVENT_VIEWER_ITEMS_PER_PAGE',
+        'RECENT_EVENT_WINDOW_MINUTES'
     ]);
     
     // Load API token
@@ -252,6 +254,11 @@ if ($configPath !== null) {
         } elseif (is_numeric($itemsPerPage)) {
             $CONFIG['eventViewerItemsPerPage'] = max(10, (int)$itemsPerPage);
         }
+    }
+    
+    // Load recent event window minutes
+    if (isset($parsed['RECENT_EVENT_WINDOW_MINUTES']) && is_numeric($parsed['RECENT_EVENT_WINDOW_MINUTES'])) {
+        $CONFIG['recentEventWindowMinutes'] = max(1, (int)$parsed['RECENT_EVENT_WINDOW_MINUTES']);
     }
 }
 
