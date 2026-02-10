@@ -2001,10 +2001,10 @@
       const now = Date.now();
       const eventTime = new Date(timestamp).getTime();
       const diffMs = now - eventTime;
+      
+      if (diffMs < 0) return ''; // Event is in the future
+      
       const seconds = Math.floor(diffMs / 1000);
-      
-      if (seconds < 0) return '';
-      
       const days = Math.floor(seconds / 86400);
       const hours = Math.floor((seconds % 86400) / 3600);
       const minutes = Math.floor((seconds % 3600) / 60);
