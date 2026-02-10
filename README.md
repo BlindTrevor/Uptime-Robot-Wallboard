@@ -283,7 +283,7 @@ Events that occurred within the configured time window are automatically highlig
 This makes it easy to spot recent activity at a glance, especially useful for:
 - Identifying ongoing issues
 - Tracking recent deployments or changes
-- Monitoring system stability over the last hour(s)
+- Monitoring system stability over recent hours
 
 ### Configuration
 

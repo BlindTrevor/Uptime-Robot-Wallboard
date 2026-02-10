@@ -258,7 +258,8 @@ if ($configPath !== null) {
     
     // Load recent event window minutes
     if (isset($parsed['RECENT_EVENT_WINDOW_MINUTES']) && is_numeric($parsed['RECENT_EVENT_WINDOW_MINUTES'])) {
-        $CONFIG['recentEventWindowMinutes'] = max(1, (int)$parsed['RECENT_EVENT_WINDOW_MINUTES']);
+        $value = (int)$parsed['RECENT_EVENT_WINDOW_MINUTES'];
+        $CONFIG['recentEventWindowMinutes'] = max(1, $value);
     }
 }
 

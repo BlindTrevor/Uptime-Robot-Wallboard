@@ -622,6 +622,9 @@
     const EVENT_LOGGER_ENDPOINT = '/status/event-logger.php';
     const EVENT_VIEWER_ENDPOINT = '/status/event-viewer.php';
     
+    // Time conversion constant
+    const MS_PER_MINUTE = 60 * 1000;
+    
     // Default configuration (will be overridden by server config and/or query string)
     let config = {
       refreshRate: 20,
@@ -904,7 +907,7 @@
         if (typeof serverConfig.eventViewerItemsPerPage !== 'undefined') {
           config.eventViewerItemsPerPage = serverConfig.eventViewerItemsPerPage;
         }
-        if (typeof serverConfig.recentEventWindowMinutes === 'number') {
+        if (typeof serverConfig.recentEventWindowMinutes === 'number' && serverConfig.recentEventWindowMinutes > 0 && isFinite(serverConfig.recentEventWindowMinutes)) {
           config.recentEventWindowMinutes = serverConfig.recentEventWindowMinutes;
         }
       }
@@ -1924,7 +1927,7 @@
         // Check if event is recent (within configured time window)
         const eventTime = new Date(event.timestamp).getTime();
         const now = Date.now();
-        const windowMs = config.recentEventWindowMinutes * 60 * 1000;
+        const windowMs = config.recentEventWindowMinutes * MS_PER_MINUTE;
         const isRecent = (now - eventTime) <= windowMs;
         const recentClass = isRecent ? ' recent' : '';
         
