@@ -90,7 +90,8 @@ if ($configPath !== null) {
         'EVENT_LOGGING_MODE',
         'EVENT_LOGGING_MAX_EVENTS',
         'EVENT_VIEWER_ITEMS_PER_PAGE',
-        'RECENT_EVENT_WINDOW_MINUTES'
+        'RECENT_EVENT_WINDOW_MINUTES',
+        'EVENT_TYPE_FILTER_ENABLED'
     ]);
     
     // Load API token
@@ -260,6 +261,12 @@ if ($configPath !== null) {
     if (isset($parsed['RECENT_EVENT_WINDOW_MINUTES']) && is_numeric($parsed['RECENT_EVENT_WINDOW_MINUTES'])) {
         $value = (int)$parsed['RECENT_EVENT_WINDOW_MINUTES'];
         $CONFIG['recentEventWindowMinutes'] = max(1, $value);
+    }
+    
+    // Load event type filter enabled
+    if (isset($parsed['EVENT_TYPE_FILTER_ENABLED'])) {
+        $value = strtolower(trim($parsed['EVENT_TYPE_FILTER_ENABLED']));
+        $CONFIG['eventTypeFilterEnabled'] = ($value === 'true' || $value === '1');
     }
 }
 

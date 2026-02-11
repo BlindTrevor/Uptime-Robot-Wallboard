@@ -490,6 +490,63 @@
     .event-item.recent:hover {
       box-shadow: 0 0 16px rgba(58, 210, 159, 0.3);
     }
+    
+    /* Event Type Filter Pills */
+    .event-type-filters {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .event-type-filter-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 2px solid;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      user-select: none;
+    }
+    .event-type-filter-pill.down {
+      color: var(--bad);
+      border-color: var(--bad);
+      background: rgba(255, 107, 107, 0.1);
+    }
+    .event-type-filter-pill.up {
+      color: var(--ok);
+      border-color: var(--ok);
+      background: rgba(58, 210, 159, 0.1);
+    }
+    .event-type-filter-pill.paused {
+      color: var(--warn);
+      border-color: var(--warn);
+      background: rgba(255, 210, 122, 0.1);
+    }
+    .event-type-filter-pill.error {
+      color: var(--bad);
+      border-color: var(--bad);
+      background: rgba(255, 107, 107, 0.1);
+    }
+    .event-type-filter-pill:hover {
+      opacity: 0.8;
+      transform: translateY(-1px);
+    }
+    .event-type-filter-pill.inactive {
+      opacity: 0.3;
+      background: transparent;
+    }
+    .event-type-filter-pill.inactive:hover {
+      opacity: 0.5;
+    }
+    
     .event-pagination {
       padding: 16px;
       border-top: 1px solid var(--border);
@@ -607,6 +664,20 @@
           <i class="fas fa-times"></i>
         </button>
       </div>
+      <div id="event-type-filters" class="event-type-filters" style="display: none;">
+        <button class="event-type-filter-pill down" data-event-type="down">
+          <i class="fas fa-times-circle"></i> Down
+        </button>
+        <button class="event-type-filter-pill up" data-event-type="up">
+          <i class="fas fa-check-circle"></i> Up
+        </button>
+        <button class="event-type-filter-pill paused" data-event-type="paused">
+          <i class="fas fa-pause-circle"></i> Paused
+        </button>
+        <button class="event-type-filter-pill error" data-event-type="error">
+          <i class="fas fa-exclamation-triangle"></i> Error
+        </button>
+      </div>
     </div>
     <div id="event-sidebar-content" class="event-sidebar-content">
       <div class="event-empty">
@@ -647,6 +718,7 @@
       eventLoggingMaxEvents: 1000,
       eventViewerItemsPerPage: 50,
       recentEventWindowMinutes: 60,
+      eventTypeFilterEnabled: true,
     };
 
     // --- Theme Management ---
@@ -916,6 +988,9 @@
         if (typeof serverConfig.recentEventWindowMinutes === 'number' && serverConfig.recentEventWindowMinutes > 0 && isFinite(serverConfig.recentEventWindowMinutes)) {
           config.recentEventWindowMinutes = serverConfig.recentEventWindowMinutes;
         }
+        if (typeof serverConfig.eventTypeFilterEnabled === 'boolean') {
+          config.eventTypeFilterEnabled = serverConfig.eventTypeFilterEnabled;
+        }
       }
       
       // Apply query string overrides if allowed
@@ -952,6 +1027,14 @@
     let eventCurrentPage = 1;
     let eventTotalPages = 1;
     let eventRefreshInterval = null;
+    let eventTypeFilters = {
+      down: true,
+      up: true,
+      paused: true,
+      error: true
+    };
+    let allEvents = []; // Store all events for client-side filtering
+    let currentPagination = null; // Store current pagination info
     
     // Rate limiting state
     let refreshInProgress = false; // Prevent concurrent API requests
@@ -1831,6 +1914,12 @@
       eventViewerEnabled = true;
       if (toggleBtn) toggleBtn.style.display = 'inline-block';
       
+      // Show or hide event type filter pills based on config
+      const filterPillsEl = document.getElementById('event-type-filters');
+      if (filterPillsEl) {
+        filterPillsEl.style.display = config.eventTypeFilterEnabled ? 'flex' : 'none';
+      }
+      
       // Determine initial visibility
       if (eventViewerSetByQuery && config.allowQueryOverride && queryConfig.eventViewer) {
         eventViewerVisible = queryConfig.eventViewer === 'visible';
@@ -1900,7 +1989,9 @@
         
         const data = await res.json();
         if (data.ok) {
-          renderEvents(data.events, data.pagination);
+          allEvents = data.events;
+          currentPagination = data.pagination;
+          renderEvents();
         }
       } catch (e) {
         console.error('Error loading events:', e);
@@ -1908,11 +1999,11 @@
     }
     
     // Render events in sidebar
-    function renderEvents(events, pagination) {
+    function renderEvents() {
       const content = document.getElementById('event-sidebar-content');
       const paginationEl = document.getElementById('event-pagination');
       
-      if (!events || events.length === 0) {
+      if (!allEvents || allEvents.length === 0) {
         content.innerHTML = `
           <div class="event-empty">
             <div><i class="fas fa-clock"></i></div>
@@ -1923,8 +2014,27 @@
         return;
       }
       
-      // Render events
-      content.innerHTML = events.map(event => {
+      // Filter events based on active event types
+      const filteredEvents = allEvents.filter(event => {
+        // Normalize event type - handle 'transient' as 'error'
+        const eventType = event.eventType === 'transient' ? 'error' : event.eventType;
+        return eventTypeFilters[eventType] !== false;
+      });
+      
+      // Show message if no events match filter
+      if (filteredEvents.length === 0) {
+        content.innerHTML = `
+          <div class="event-empty">
+            <div><i class="fas fa-filter"></i></div>
+            <div>No events match the selected filters</div>
+          </div>
+        `;
+        paginationEl.style.display = 'none';
+        return;
+      }
+      
+      // Render filtered events
+      content.innerHTML = filteredEvents.map(event => {
         const icon = getEventIcon(event.eventType);
         const compactDuration = formatCompactDuration(event.timestamp);
         const absoluteTime = new Date(event.timestamp).toLocaleString();
@@ -1951,17 +2061,17 @@
       }).join('');
       
       // Update pagination
-      if (pagination && pagination.totalPages > 1) {
-        eventCurrentPage = pagination.page;
-        eventTotalPages = pagination.totalPages;
+      if (currentPagination && currentPagination.totalPages > 1) {
+        eventCurrentPage = currentPagination.page;
+        eventTotalPages = currentPagination.totalPages;
         
         const prevBtn = document.getElementById('event-prev-page');
         const nextBtn = document.getElementById('event-next-page');
         const info = document.getElementById('event-pagination-info');
         
-        prevBtn.disabled = pagination.page <= 1;
-        nextBtn.disabled = pagination.page >= pagination.totalPages;
-        info.textContent = `Page ${pagination.page} of ${pagination.totalPages}`;
+        prevBtn.disabled = currentPagination.page <= 1;
+        nextBtn.disabled = currentPagination.page >= currentPagination.totalPages;
+        info.textContent = `Page ${currentPagination.page} of ${currentPagination.totalPages}`;
         
         paginationEl.style.display = 'flex';
       } else {
@@ -2183,6 +2293,32 @@
         loadEvents(eventCurrentPage + 1);
       }
     });
+    
+    // Event type filter pills - using event delegation
+    const eventTypeFiltersEl = document.getElementById('event-type-filters');
+    if (eventTypeFiltersEl) {
+      eventTypeFiltersEl.addEventListener('click', (e) => {
+        const pill = e.target.closest('.event-type-filter-pill');
+        if (!pill) return;
+        
+        const eventType = pill.getAttribute('data-event-type');
+        if (!eventType) return;
+        
+        // Toggle the filter state
+        eventTypeFilters[eventType] = !eventTypeFilters[eventType];
+        
+        // Update pill appearance
+        if (eventTypeFilters[eventType]) {
+          pill.classList.remove('inactive');
+        } else {
+          pill.classList.add('inactive');
+        }
+        
+        // Re-render events with new filter
+        renderEvents();
+      });
+    }
+    
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
     document.getElementById('fullscreen-toggle').addEventListener('click', toggleFullscreen);
     document.getElementById('fullscreen-prompt-btn').addEventListener('click', () => {
