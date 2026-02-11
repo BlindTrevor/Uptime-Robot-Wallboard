@@ -90,7 +90,12 @@ if ($configPath !== null) {
         'EVENT_LOGGING_MODE',
         'EVENT_LOGGING_MAX_EVENTS',
         'EVENT_VIEWER_ITEMS_PER_PAGE',
-        'RECENT_EVENT_WINDOW_MINUTES'
+        'RECENT_EVENT_WINDOW_MINUTES',
+        'EVENT_TYPE_FILTER_ENABLED',
+        'EVENT_TYPE_FILTER_DEFAULT_DOWN',
+        'EVENT_TYPE_FILTER_DEFAULT_UP',
+        'EVENT_TYPE_FILTER_DEFAULT_PAUSED',
+        'EVENT_TYPE_FILTER_DEFAULT_ERROR'
     ]);
     
     // Load API token
@@ -260,6 +265,30 @@ if ($configPath !== null) {
     if (isset($parsed['RECENT_EVENT_WINDOW_MINUTES']) && is_numeric($parsed['RECENT_EVENT_WINDOW_MINUTES'])) {
         $value = (int)$parsed['RECENT_EVENT_WINDOW_MINUTES'];
         $CONFIG['recentEventWindowMinutes'] = max(1, $value);
+    }
+    
+    // Load event type filter enabled
+    if (isset($parsed['EVENT_TYPE_FILTER_ENABLED'])) {
+        $value = strtolower(trim($parsed['EVENT_TYPE_FILTER_ENABLED']));
+        $CONFIG['eventTypeFilterEnabled'] = ($value === 'true' || $value === '1');
+    }
+    
+    // Load event type filter default states
+    if (isset($parsed['EVENT_TYPE_FILTER_DEFAULT_DOWN'])) {
+        $value = strtolower(trim($parsed['EVENT_TYPE_FILTER_DEFAULT_DOWN']));
+        $CONFIG['eventTypeFilterDefaultDown'] = ($value === 'true' || $value === '1');
+    }
+    if (isset($parsed['EVENT_TYPE_FILTER_DEFAULT_UP'])) {
+        $value = strtolower(trim($parsed['EVENT_TYPE_FILTER_DEFAULT_UP']));
+        $CONFIG['eventTypeFilterDefaultUp'] = ($value === 'true' || $value === '1');
+    }
+    if (isset($parsed['EVENT_TYPE_FILTER_DEFAULT_PAUSED'])) {
+        $value = strtolower(trim($parsed['EVENT_TYPE_FILTER_DEFAULT_PAUSED']));
+        $CONFIG['eventTypeFilterDefaultPaused'] = ($value === 'true' || $value === '1');
+    }
+    if (isset($parsed['EVENT_TYPE_FILTER_DEFAULT_ERROR'])) {
+        $value = strtolower(trim($parsed['EVENT_TYPE_FILTER_DEFAULT_ERROR']));
+        $CONFIG['eventTypeFilterDefaultError'] = ($value === 'true' || $value === '1');
     }
 }
 
@@ -528,5 +557,11 @@ echo json_encode([
         'eventLoggingMode' => $CONFIG['eventLoggingMode'],
         'eventLoggingMaxEvents' => $CONFIG['eventLoggingMaxEvents'],
         'eventViewerItemsPerPage' => $CONFIG['eventViewerItemsPerPage'],
+        'recentEventWindowMinutes' => $CONFIG['recentEventWindowMinutes'] ?? 60,
+        'eventTypeFilterEnabled' => $CONFIG['eventTypeFilterEnabled'] ?? true,
+        'eventTypeFilterDefaultDown' => $CONFIG['eventTypeFilterDefaultDown'] ?? true,
+        'eventTypeFilterDefaultUp' => $CONFIG['eventTypeFilterDefaultUp'] ?? true,
+        'eventTypeFilterDefaultPaused' => $CONFIG['eventTypeFilterDefaultPaused'] ?? true,
+        'eventTypeFilterDefaultError' => $CONFIG['eventTypeFilterDefaultError'] ?? true,
     ],
 ], JSON_UNESCAPED_SLASHES);
