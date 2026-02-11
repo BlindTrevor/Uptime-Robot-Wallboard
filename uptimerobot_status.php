@@ -91,7 +91,11 @@ if ($configPath !== null) {
         'EVENT_LOGGING_MAX_EVENTS',
         'EVENT_VIEWER_ITEMS_PER_PAGE',
         'RECENT_EVENT_WINDOW_MINUTES',
-        'EVENT_TYPE_FILTER_ENABLED'
+        'EVENT_TYPE_FILTER_ENABLED',
+        'EVENT_TYPE_FILTER_DEFAULT_DOWN',
+        'EVENT_TYPE_FILTER_DEFAULT_UP',
+        'EVENT_TYPE_FILTER_DEFAULT_PAUSED',
+        'EVENT_TYPE_FILTER_DEFAULT_ERROR'
     ]);
     
     // Load API token
@@ -267,6 +271,24 @@ if ($configPath !== null) {
     if (isset($parsed['EVENT_TYPE_FILTER_ENABLED'])) {
         $value = strtolower(trim($parsed['EVENT_TYPE_FILTER_ENABLED']));
         $CONFIG['eventTypeFilterEnabled'] = ($value === 'true' || $value === '1');
+    }
+    
+    // Load event type filter default states
+    if (isset($parsed['EVENT_TYPE_FILTER_DEFAULT_DOWN'])) {
+        $value = strtolower(trim($parsed['EVENT_TYPE_FILTER_DEFAULT_DOWN']));
+        $CONFIG['eventTypeFilterDefaultDown'] = ($value === 'true' || $value === '1');
+    }
+    if (isset($parsed['EVENT_TYPE_FILTER_DEFAULT_UP'])) {
+        $value = strtolower(trim($parsed['EVENT_TYPE_FILTER_DEFAULT_UP']));
+        $CONFIG['eventTypeFilterDefaultUp'] = ($value === 'true' || $value === '1');
+    }
+    if (isset($parsed['EVENT_TYPE_FILTER_DEFAULT_PAUSED'])) {
+        $value = strtolower(trim($parsed['EVENT_TYPE_FILTER_DEFAULT_PAUSED']));
+        $CONFIG['eventTypeFilterDefaultPaused'] = ($value === 'true' || $value === '1');
+    }
+    if (isset($parsed['EVENT_TYPE_FILTER_DEFAULT_ERROR'])) {
+        $value = strtolower(trim($parsed['EVENT_TYPE_FILTER_DEFAULT_ERROR']));
+        $CONFIG['eventTypeFilterDefaultError'] = ($value === 'true' || $value === '1');
     }
 }
 

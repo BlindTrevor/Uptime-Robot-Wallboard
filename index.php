@@ -493,21 +493,22 @@
     
     /* Event Type Filter Pills */
     .event-type-filters {
-      padding: 12px 16px;
+      padding: 10px 16px;
       border-bottom: 1px solid var(--border);
       background: var(--bg);
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
       align-items: center;
+      justify-content: center;
     }
     .event-type-filter-pill {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding: 6px 12px;
+      gap: 3px;
+      padding: 4px 10px;
       border-radius: 999px;
-      font-size: 0.8rem;
+      font-size: 0.7rem;
       font-weight: 600;
       border: 2px solid;
       cursor: pointer;
@@ -719,6 +720,10 @@
       eventViewerItemsPerPage: 50,
       recentEventWindowMinutes: 60,
       eventTypeFilterEnabled: true,
+      eventTypeFilterDefaultDown: true,
+      eventTypeFilterDefaultUp: true,
+      eventTypeFilterDefaultPaused: true,
+      eventTypeFilterDefaultError: true,
     };
 
     // --- Theme Management ---
@@ -990,6 +995,18 @@
         }
         if (typeof serverConfig.eventTypeFilterEnabled === 'boolean') {
           config.eventTypeFilterEnabled = serverConfig.eventTypeFilterEnabled;
+        }
+        if (typeof serverConfig.eventTypeFilterDefaultDown === 'boolean') {
+          config.eventTypeFilterDefaultDown = serverConfig.eventTypeFilterDefaultDown;
+        }
+        if (typeof serverConfig.eventTypeFilterDefaultUp === 'boolean') {
+          config.eventTypeFilterDefaultUp = serverConfig.eventTypeFilterDefaultUp;
+        }
+        if (typeof serverConfig.eventTypeFilterDefaultPaused === 'boolean') {
+          config.eventTypeFilterDefaultPaused = serverConfig.eventTypeFilterDefaultPaused;
+        }
+        if (typeof serverConfig.eventTypeFilterDefaultError === 'boolean') {
+          config.eventTypeFilterDefaultError = serverConfig.eventTypeFilterDefaultError;
         }
       }
       
@@ -1914,10 +1931,27 @@
       eventViewerEnabled = true;
       if (toggleBtn) toggleBtn.style.display = 'inline-block';
       
+      // Initialize event type filters from config
+      eventTypeFilters.down = config.eventTypeFilterDefaultDown;
+      eventTypeFilters.up = config.eventTypeFilterDefaultUp;
+      eventTypeFilters.paused = config.eventTypeFilterDefaultPaused;
+      eventTypeFilters.error = config.eventTypeFilterDefaultError;
+      
       // Show or hide event type filter pills based on config
       const filterPillsEl = document.getElementById('event-type-filters');
       if (filterPillsEl) {
         filterPillsEl.style.display = config.eventTypeFilterEnabled ? 'flex' : 'none';
+        
+        // Apply initial inactive state to pills based on config
+        if (config.eventTypeFilterEnabled) {
+          const pills = filterPillsEl.querySelectorAll('.event-type-filter-pill');
+          pills.forEach(pill => {
+            const eventType = pill.getAttribute('data-event-type');
+            if (eventType && !eventTypeFilters[eventType]) {
+              pill.classList.add('inactive');
+            }
+          });
+        }
       }
       
       // Determine initial visibility
