@@ -557,5 +557,11 @@ echo json_encode([
         'eventLoggingMode' => $CONFIG['eventLoggingMode'],
         'eventLoggingMaxEvents' => $CONFIG['eventLoggingMaxEvents'],
         'eventViewerItemsPerPage' => $CONFIG['eventViewerItemsPerPage'],
+        'recentEventWindowMinutes' => $CONFIG['recentEventWindowMinutes'] ?? 60,
+        'eventTypeFilterEnabled' => $CONFIG['eventTypeFilterEnabled'] ?? true,
+        'eventTypeFilterDefaultDown' => $CONFIG['eventTypeFilterDefaultDown'] ?? true,
+        'eventTypeFilterDefaultUp' => $CONFIG['eventTypeFilterDefaultUp'] ?? true,
+        'eventTypeFilterDefaultPaused' => $CONFIG['eventTypeFilterDefaultPaused'] ?? true,
+        'eventTypeFilterDefaultError' => $CONFIG['eventTypeFilterDefaultError'] ?? true,
     ],
 ], JSON_UNESCAPED_SLASHES);
