@@ -2310,7 +2310,7 @@
     
     // Log event to backend
     async function logEvent(event) {
-      if (!eventViewerEnabled) return;
+      if (!eventViewerEnabled) return false;
       
       try {
         const res = await fetch(EVENT_LOGGER_ENDPOINT, {
@@ -2322,9 +2322,12 @@
         
         if (!res.ok) {
           console.error('Failed to log event:', res.status);
+          return false;
         }
+        return true;
       } catch (e) {
         console.error('Error logging event:', e);
+        return false;
       }
     }
     
@@ -2357,7 +2360,12 @@
         message: details ? `${actionName} - ${details}` : actionName
       };
       
-      await logEvent(event);
+      const success = await logEvent(event);
+      
+      // If event was logged successfully and event viewer is visible, refresh immediately
+      if (success && eventViewerVisible) {
+        loadEvents();
+      }
     }
     
     // Detect and log status changes
