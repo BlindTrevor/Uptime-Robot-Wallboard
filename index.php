@@ -74,6 +74,25 @@
     .pill.ok { background: #163327; color: #8af0c9; border-color: #184836; }
     .pill.paused { background: var(--warning-bg); color: var(--warn); border-color: var(--warning-border); }
     
+    /* Refresh status indicator */
+    .pill.refresh-on { 
+      background: #163327; 
+      color: #8af0c9; 
+      border-color: #184836;
+      font-size: 0.75rem;
+    }
+    .pill.refresh-off { 
+      background: var(--warning-bg); 
+      color: var(--warn); 
+      border-color: var(--warning-border);
+      font-size: 0.75rem;
+    }
+    .pill.refresh-on i { animation: spin 2s linear infinite; }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
     /* Down tags display */
     #down-tags {
       display: inline-flex;
@@ -608,6 +627,7 @@
     </div>
     <div class="meta row">
       <span id="last-updated">Last updated: —</span>
+      <span id="refresh-status" class="pill refresh-on"><i class="fas fa-sync"></i> Auto-refresh: ON</span>
       <span id="problem-pill" class="pill" style="display:none"></span>
       <span id="down-tags" style="display:none"></span>
     </div>
@@ -1028,6 +1048,9 @@
         Object.assign(config, queryConfig);
       }
       
+      // Update refresh status indicator after config is applied
+      updateRefreshStatusIndicator();
+      
       // Re-initialize theme after server configuration is applied
       // This respects the priority: cookie > query string > server config
       initializeTheme();
@@ -1093,6 +1116,12 @@
         eventViewerSetByQuery = true;
         // Will be processed after config is loaded
       }
+      // Apply norefresh setting early
+      if (config.allowQueryOverride && typeof queryConfig.norefresh === 'boolean') {
+        config.norefresh = queryConfig.norefresh;
+      }
+      // Update refresh status indicator after early config parsing
+      updateRefreshStatusIndicator();
     })();
 
     // Utilities
@@ -1792,6 +1821,20 @@
       
       // Update tag visibility based on current state
       updateTagVisibility();
+    }
+
+    // Update refresh status indicator
+    function updateRefreshStatusIndicator() {
+      const refreshStatus = document.getElementById('refresh-status');
+      if (!refreshStatus) return;
+      
+      if (config.norefresh) {
+        refreshStatus.className = 'pill refresh-off';
+        refreshStatus.innerHTML = '<i class="fas fa-pause"></i> Auto-refresh: OFF';
+      } else {
+        refreshStatus.className = 'pill refresh-on';
+        refreshStatus.innerHTML = '<i class="fas fa-sync"></i> Auto-refresh: ON';
+      }
     }
 
     // Re-render using last fetched data (for filter changes in norefresh mode)
