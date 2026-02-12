@@ -69,6 +69,28 @@ if (isset($_GET['perPage'])) {
     }
 }
 
+// Get event type filters (default: show all)
+$eventTypeFilters = [
+    'down' => true,
+    'up' => true,
+    'paused' => true,
+    'error' => true,
+];
+
+if (isset($_GET['filters'])) {
+    $filterParam = $_GET['filters'];
+    if (is_string($filterParam)) {
+        $filterDecoded = json_decode($filterParam, true);
+        if (is_array($filterDecoded)) {
+            foreach ($eventTypeFilters as $type => $default) {
+                if (isset($filterDecoded[$type])) {
+                    $eventTypeFilters[$type] = (bool)$filterDecoded[$type];
+                }
+            }
+        }
+    }
+}
+
 // Path to NDJSON file
 $eventsFile = __DIR__ . '/events.ndjson';
 
@@ -117,17 +139,33 @@ fclose($fp);
 // Reverse to show most recent first
 $events = array_reverse($events);
 
-$totalEvents = count($events);
+// Apply event type filters BEFORE pagination
+$filteredEvents = array_filter($events, function($event) use ($eventTypeFilters) {
+    if (!isset($event['eventType'])) {
+        return true;
+    }
+    
+    // Normalize event type - handle 'transient' as 'error'
+    $eventType = $event['eventType'] === 'transient' ? 'error' : $event['eventType'];
+    
+    // Check if this event type should be shown
+    return isset($eventTypeFilters[$eventType]) && $eventTypeFilters[$eventType] === true;
+});
 
-// Handle pagination
+// Re-index array after filtering
+$filteredEvents = array_values($filteredEvents);
+
+$totalEvents = count($filteredEvents);
+
+// Handle pagination on filtered events
 if ($perPage === 'all') {
-    $paginatedEvents = $events;
+    $paginatedEvents = $filteredEvents;
     $totalPages = 1;
 } else {
-    $totalPages = (int)ceil($totalEvents / $perPage);
+    $totalPages = $totalEvents > 0 ? (int)ceil($totalEvents / $perPage) : 1;
     $page = min($page, max(1, $totalPages)); // Clamp page to valid range
     $offset = ($page - 1) * $perPage;
-    $paginatedEvents = array_slice($events, $offset, $perPage);
+    $paginatedEvents = array_slice($filteredEvents, $offset, $perPage);
 }
 
 echo json_encode([
