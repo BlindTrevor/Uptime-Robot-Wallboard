@@ -1240,6 +1240,7 @@
 
     // Update all "time since" displays in the DOM
     function updateTimeDisplays() {
+      // Update monitor time displays (epoch in seconds)
       const timeElements = document.querySelectorAll('.time-since');
       timeElements.forEach(el => {
         const epochStr = el.getAttribute('data-epoch');
@@ -1249,6 +1250,24 @@
         if (!epoch || isNaN(epoch)) return; // Skip if not a valid number
         
         const newDuration = formatDuration(epoch);
+        // Only update if we got a valid duration (non-empty string)
+        if (newDuration) {
+          el.textContent = newDuration;
+        }
+      });
+      
+      // Update event time displays (timestamp in milliseconds)
+      const eventTimeElements = document.querySelectorAll('.event-time-ago');
+      eventTimeElements.forEach(el => {
+        const timestampStr = el.getAttribute('data-timestamp');
+        if (!timestampStr) return; // Skip if no timestamp attribute
+        
+        const timestamp = Number(timestampStr);
+        if (!timestamp || isNaN(timestamp)) return; // Skip if not a valid number
+        
+        // formatCompactDuration expects an ISO string or timestamp, so convert ms to ISO
+        const isoString = new Date(timestamp).toISOString();
+        const newDuration = formatCompactDuration(isoString);
         // Only update if we got a valid duration (non-empty string)
         if (newDuration) {
           el.textContent = newDuration;
@@ -2265,6 +2284,9 @@
         const isRecent = (now - eventTime) <= windowMs;
         const recentClass = isRecent ? ' recent' : '';
         
+        // Store timestamp for real-time updates (convert to milliseconds)
+        const timestampMs = eventTime;
+        
         return `
           <div class="event-item${recentClass}">
             <div class="event-item-header">
@@ -2273,7 +2295,7 @@
               <span class="event-item-type ${event.eventType}">${event.eventType}</span>
             </div>
             ${details ? `<div class="event-item-details">${details}</div>` : ''}
-            <div class="event-item-time">${absoluteTime}${compactDuration ? ` (${compactDuration})` : ''}</div>
+            <div class="event-item-time">${absoluteTime}${compactDuration ? ` (<span class="event-time-ago" data-timestamp="${timestampMs}">${compactDuration}</span>)` : ''}</div>
           </div>
         `;
       }).join('');
