@@ -1264,9 +1264,8 @@
         const timestamp = Number(timestampStr);
         if (!timestamp || isNaN(timestamp)) return; // Skip if not a valid number
         
-        // formatCompactDuration expects an ISO string or timestamp, so convert ms to ISO
-        const isoString = new Date(timestamp).toISOString();
-        const newDuration = formatCompactDuration(isoString);
+        // formatCompactDuration accepts timestamps directly (converts via Date internally)
+        const newDuration = formatCompactDuration(timestamp);
         if (newDuration) { // formatCompactDuration returns empty string for future events
           el.textContent = newDuration;
         }
