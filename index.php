@@ -703,6 +703,10 @@
     // Time conversion constant
     const MS_PER_MINUTE = 60 * 1000;
     
+    // Debounce delays (in milliseconds)
+    const REFRESH_DEBOUNCE_DELAY = 500; // Delay for API refresh debouncing
+    const RERENDER_DEBOUNCE_DELAY = 500; // Delay for re-render debouncing in norefresh mode
+    
     // Default configuration (will be overridden by server config and/or query string)
     let config = {
       refreshRate: 20,
@@ -1794,7 +1798,7 @@
       if (lastData) {
         render(lastData);
       } else {
-        console.log('[No Refresh Mode] No data available to re-render yet');
+        console.warn('[No Refresh Mode] No data available to re-render yet');
       }
     }
 
@@ -1808,11 +1812,11 @@
           clearTimeout(refreshDebounceTimer);
         }
         
-        // Set new debounce timer (500ms) for re-render
+        // Set new debounce timer for re-render
         refreshDebounceTimer = setTimeout(() => {
           console.log('[No Refresh Mode] Re-rendering with existing data');
           rerender();
-        }, 500);
+        }, RERENDER_DEBOUNCE_DELAY);
         return;
       }
       
@@ -1828,11 +1832,11 @@
         clearTimeout(refreshDebounceTimer);
       }
       
-      // Set new debounce timer (500ms)
+      // Set new debounce timer
       // Multiple rapid calls will only result in one actual API call
       refreshDebounceTimer = setTimeout(() => {
         refresh();
-      }, 500);
+      }, REFRESH_DEBOUNCE_DELAY);
     }
 
     async function refresh() {
