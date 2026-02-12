@@ -2050,6 +2050,7 @@
       eventTypeFilters.up = config.eventTypeFilterDefaultUp;
       eventTypeFilters.paused = config.eventTypeFilterDefaultPaused;
       eventTypeFilters.error = config.eventTypeFilterDefaultError;
+      eventTypeFilters.actions = config.eventTypeFilterDefaultActions;
       
       // Show or hide event type filter pills based on config
       const filterPillsEl = document.getElementById('event-type-filters');
