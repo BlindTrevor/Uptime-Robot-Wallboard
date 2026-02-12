@@ -24,6 +24,8 @@
       --border-offline: #5e2323;
       --warning-bg: #3b2a1a;
       --warning-border: #5e4123;
+      --response-graph-width: 80px;
+      --response-graph-spacing: 10px;
     }
 
     /* Light theme */
@@ -177,7 +179,7 @@
       display: flex;
       flex-wrap: wrap;
       margin-top: 6px;
-      padding-right: 90px; /* Make room for response time graph */
+      padding-right: calc(var(--response-graph-width) + var(--response-graph-spacing));
     }
     .tags-container.hidden {
       display: none;
@@ -189,7 +191,7 @@
       position: absolute;
       bottom: 8px;
       right: 8px;
-      width: 80px;
+      width: var(--response-graph-width);
       height: 30px;
       opacity: 0.7;
       transition: opacity 0.2s ease;
@@ -199,6 +201,15 @@
     }
     .name { font-weight: 700; font-size: 1.05rem; margin-bottom: 6px; }
     .status { margin-top: 8px; font-weight: 800; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px; }
+    .status i { font-size: 1.1em; }
+    .status.up { color: var(--ok); }
+    .status.seems_down, .status.down { color: var(--bad); }
+    .status.paused { color: var(--warn); }
+    .status.not_checked { color: var(--subtle); }
+    .kv { font-size: 0.86rem; color: var(--muted); margin-top: 6px; }
+    .small { font-size: 0.78rem; color: var(--subtle); margin-top: 6px; }
+    .err { color: var(--bad); margin: 0.4rem 0; white-space: pre-wrap; }
+    .footer { color: var(--subtle); margin-top: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
     .status i { font-size: 1.1em; }
     .status.up { color: var(--ok); }
     .status.seems_down, .status.down { color: var(--bad); }
@@ -1187,6 +1198,9 @@
     let refreshInProgress = false; // Prevent concurrent API requests
     let refreshDebounceTimer = null; // Timer for debouncing rapid refresh calls
     let lastRefreshTime = Date.now(); // Timestamp of last successful refresh
+    
+    // Response time graph constants
+    const RESPONSE_GRAPH_LOAD_DELAY_MS = 100; // Delay between graph API requests to avoid rate limits
     let apiCallCount = 0; // Counter for debugging API call frequency
     let pendingRefreshAfterComplete = false; // Flag to trigger refresh after current request completes
     
@@ -1694,7 +1708,7 @@
       ctx.clearRect(0, 0, width, height);
       
       // Extract values and find min/max for scaling
-      const values = timeSeries.map(point => point.value).filter(v => v != null && v >= 0);
+      const values = timeSeries.map(point => point.value).filter(v => v !== null && v >= 0);
       if (values.length === 0) return;
       
       const minValue = Math.min(...values);
@@ -1703,7 +1717,7 @@
       
       // Calculate points
       const points = timeSeries.map((point, index) => {
-        if (point.value == null || point.value < 0) return null;
+        if (point.value === null || point.value < 0) return null;
         // Handle single point or multiple points
         const x = timeSeries.length > 1 ? (index / (timeSeries.length - 1)) * width : width / 2;
         const y = height - ((point.value - minValue) / range) * height;
@@ -1781,10 +1795,10 @@
           // Add graph asynchronously (won't block)
           addResponseTimeGraph(card, parseInt(monitorId, 10));
           
-          // Add a small delay between requests (100ms) to spread the load
+          // Add a small delay between requests to spread the load
           // With caching, repeated requests will be fast
           if (i < cardsArray.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, RESPONSE_GRAPH_LOAD_DELAY_MS));
           }
         }
       }

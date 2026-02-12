@@ -7,6 +7,9 @@ uptime_errors.log
 # Event logs (NDJSON)
 events.ndjson
 
+# Cache directory
+cache/
+
 # IDE and editor files
 .vscode/
 .idea/

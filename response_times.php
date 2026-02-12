@@ -58,8 +58,8 @@ if (empty($monitorId) || !is_numeric($monitorId)) {
 }
 
 // Cache configuration
-$cacheDir = sys_get_temp_dir() . '/uptimerobot_cache';
-$cacheFile = $cacheDir . '/response_time_' . $monitorId . '.json';
+$cacheDir = __DIR__ . '/cache/response_times';
+$cacheFile = $cacheDir . '/monitor_' . $monitorId . '.json';
 $cacheDuration = 300; // 5 minutes cache
 
 // Create cache directory if it doesn't exist
