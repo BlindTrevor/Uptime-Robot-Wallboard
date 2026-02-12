@@ -1103,6 +1103,7 @@
     let eventCurrentPage = 1;
     let eventTotalPages = 1;
     let eventRefreshInterval = null;
+    let timeUpdateInterval = null; // Interval for updating "time since" displays
     let eventTypeFilters = {
       down: true,
       up: true,
@@ -1235,6 +1236,40 @@
       if (parts.length === 0) parts.push(`${secs}s`); // Only show seconds if no other units
       
       return parts.slice(0, 2).join(' '); // Show max 2 units
+    }
+
+    // Update all "time since" displays in the DOM
+    function updateTimeDisplays() {
+      // Update monitor time displays (epoch in seconds)
+      const timeElements = document.querySelectorAll('.time-since');
+      timeElements.forEach(el => {
+        const epochStr = el.getAttribute('data-epoch');
+        if (!epochStr) return; // Skip if no epoch attribute
+        
+        const epoch = Number(epochStr);
+        if (!epoch || isNaN(epoch)) return; // Skip if not a valid number
+        
+        const newDuration = formatDuration(epoch);
+        if (newDuration) { // formatDuration returns empty string for invalid/negative times
+          el.textContent = newDuration;
+        }
+      });
+      
+      // Update event time displays (timestamp in milliseconds)
+      const eventTimeElements = document.querySelectorAll('.event-time-ago');
+      eventTimeElements.forEach(el => {
+        const timestampStr = el.getAttribute('data-timestamp');
+        if (!timestampStr) return; // Skip if no timestamp attribute
+        
+        const timestamp = Number(timestampStr);
+        if (!timestamp || isNaN(timestamp)) return; // Skip if not a valid number
+        
+        // formatCompactDuration accepts timestamps directly (converts via Date internally)
+        const newDuration = formatCompactDuration(timestamp);
+        if (newDuration) { // formatCompactDuration returns empty string for future events
+          el.textContent = newDuration;
+        }
+      });
     }
 
     function getStatusIcon(status) {
@@ -1766,10 +1801,14 @@
         let statusLabel = '';
         if (status === 'up') {
           const duration = formatDuration(m.last_check);
-          statusLabel = `Up since: ${epochToLocal(m.last_check)}${duration ? ` (${duration})` : ''}`;
+          // Convert epoch to number for safety (prevents XSS from malicious API responses)
+          const epoch = Number(m.last_check) || 0;
+          statusLabel = `Up since: ${epochToLocal(m.last_check)}${duration ? ` (<span class="time-since" data-epoch="${epoch}">${duration}</span>)` : ''}`;
         } else if (status === 'down' || status === 'seems_down') {
           const duration = formatDuration(m.last_check);
-          statusLabel = `Down since: ${epochToLocal(m.last_check)}${duration ? ` (${duration})` : ''}`;
+          // Convert epoch to number for safety (prevents XSS from malicious API responses)
+          const epoch = Number(m.last_check) || 0;
+          statusLabel = `Down since: ${epochToLocal(m.last_check)}${duration ? ` (<span class="time-since" data-epoch="${epoch}">${duration}</span>)` : ''}`;
         } else if (status === 'paused') {
           statusLabel = ''; // No status time for paused monitors
         } else {
@@ -2059,9 +2098,17 @@
         clearInterval(eventRefreshInterval);
         eventRefreshInterval = null;
       }
+      if (timeUpdateInterval) {
+        clearInterval(timeUpdateInterval);
+        timeUpdateInterval = null;
+      }
       
       // Stop countdown when intervals are being updated
       stopCountdown();
+      
+      // Always set up time update interval (runs every minute regardless of autorefresh state)
+      // This ensures "time since" displays are always up-to-date
+      timeUpdateInterval = setInterval(updateTimeDisplays, 60000);
       
       // Skip setting up intervals if norefresh is enabled
       // This disables: periodic API refresh, config change detection, and event viewer refresh
@@ -2234,6 +2281,9 @@
         const isRecent = (now - eventTime) <= windowMs;
         const recentClass = isRecent ? ' recent' : '';
         
+        // Store timestamp in milliseconds for real-time updates
+        const timestampMs = eventTime;
+        
         return `
           <div class="event-item${recentClass}">
             <div class="event-item-header">
@@ -2242,7 +2292,7 @@
               <span class="event-item-type ${event.eventType}">${event.eventType}</span>
             </div>
             ${details ? `<div class="event-item-details">${details}</div>` : ''}
-            <div class="event-item-time">${absoluteTime}${compactDuration ? ` (${compactDuration})` : ''}</div>
+            <div class="event-item-time">${absoluteTime}${compactDuration ? ` (<span class="event-time-ago" data-timestamp="${timestampMs}">${compactDuration}</span>)` : ''}</div>
           </div>
         `;
       }).join('');
