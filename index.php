@@ -724,6 +724,7 @@
       eventTypeFilterDefaultUp: true,
       eventTypeFilterDefaultPaused: true,
       eventTypeFilterDefaultError: true,
+      norefresh: false,
     };
 
     // --- Theme Management ---
@@ -939,6 +940,12 @@
         if (['visible', 'hidden'].includes(eventViewer)) {
           queryConfig.eventViewer = eventViewer;
         }
+      }
+      
+      // Parse norefresh (case-insensitive, accepts 'true' or '1')
+      if (params.has('norefresh')) {
+        const value = params.get('norefresh').toLowerCase();
+        queryConfig.norefresh = (value === 'true' || value === '1');
       }
       
       return queryConfig;
@@ -1784,6 +1791,12 @@
     // Debounced refresh function to prevent rapid successive API calls
     // This wraps the actual refresh logic with debouncing and request coalescing
     function debouncedRefresh() {
+      // Skip automatic refresh if norefresh mode is enabled
+      if (config.norefresh) {
+        console.log('[No Refresh Mode] Skipping automatic refresh');
+        return;
+      }
+      
       // If a refresh is currently in progress, mark that we need another refresh after it completes
       if (refreshInProgress) {
         pendingRefreshAfterComplete = true;
@@ -1902,6 +1915,12 @@
       if (eventRefreshInterval) {
         clearInterval(eventRefreshInterval);
         eventRefreshInterval = null;
+      }
+      
+      // Skip setting up intervals if norefresh is enabled
+      if (config.norefresh) {
+        console.log('[No Refresh Mode] Automatic refresh disabled via querystring parameter');
+        return;
       }
       
       // Set new intervals based on config

@@ -379,7 +379,35 @@ All configuration options can be overridden via URL (when `ALLOW_QUERY_OVERRIDE=
 ?theme=light                    # Set theme (dark/light/auto)
 ?autoFullscreen=true            # Auto-enter fullscreen
 ?configCheckRate=10             # Config check interval
+?norefresh=true                 # Disable automatic refresh (accepts 'true' or '1')
 ```
+
+#### Disable Automatic Refresh
+
+Use the `?norefresh=true` parameter to disable all automatic API refreshes:
+
+```
+# Load data once without any automatic refreshes
+https://your-domain.com/status/?norefresh=true
+
+# Also accepts '1' as a value
+https://your-domain.com/status/?norefresh=1
+
+# Combine with other parameters
+https://your-domain.com/status/?norefresh=true&showProblemsOnly=true
+```
+
+When `norefresh` is enabled:
+- ✅ Initial API call loads data normally
+- ⛔ No scheduled refreshes occur (no API polling)
+- ⛔ Config change detection is disabled
+- ✅ Manual "Refresh Now" button still works
+
+**Use cases:**
+- Viewing status briefly without triggering API quota usage
+- Kiosk displays that don't need real-time updates
+- Demos or screenshots where static data is sufficient
+- Reducing server load when monitoring multiple tabs
 
 ### Auto-Refresh on Config Changes
 
