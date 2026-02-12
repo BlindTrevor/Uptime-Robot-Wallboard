@@ -1983,8 +1983,8 @@
         // Always reset the in-progress flag, even if error occurred
         refreshInProgress = false;
         
-        // Reset countdown timer after refresh completes
-        if (!config.norefresh && countdownInterval) {
+        // Reset countdown timer after refresh completes (if auto-refresh is enabled)
+        if (!config.norefresh) {
           startCountdown();
         }
         
