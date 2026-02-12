@@ -1242,8 +1242,11 @@
     function updateTimeDisplays() {
       const timeElements = document.querySelectorAll('.time-since');
       timeElements.forEach(el => {
-        const epoch = el.getAttribute('data-epoch');
-        if (!epoch) return; // Skip if no epoch attribute
+        const epochStr = el.getAttribute('data-epoch');
+        if (!epochStr) return; // Skip if no epoch attribute
+        
+        const epoch = Number(epochStr);
+        if (!epoch || isNaN(epoch)) return; // Skip if not a valid number
         
         const newDuration = formatDuration(epoch);
         // Only update if we got a valid duration (non-empty string)
@@ -1782,11 +1785,13 @@
         let statusLabel = '';
         if (status === 'up') {
           const duration = formatDuration(m.last_check);
-          const epoch = Number(m.last_check) || 0; // Ensure it's a number
+          // Convert epoch to number for safety (prevents XSS from malicious API responses)
+          const epoch = Number(m.last_check) || 0;
           statusLabel = `Up since: ${epochToLocal(m.last_check)}${duration ? ` (<span class="time-since" data-epoch="${epoch}">${duration}</span>)` : ''}`;
         } else if (status === 'down' || status === 'seems_down') {
           const duration = formatDuration(m.last_check);
-          const epoch = Number(m.last_check) || 0; // Ensure it's a number
+          // Convert epoch to number for safety (prevents XSS from malicious API responses)
+          const epoch = Number(m.last_check) || 0;
           statusLabel = `Down since: ${epochToLocal(m.last_check)}${duration ? ` (<span class="time-since" data-epoch="${epoch}">${duration}</span>)` : ''}`;
         } else if (status === 'paused') {
           statusLabel = ''; // No status time for paused monitors
