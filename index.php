@@ -2021,7 +2021,8 @@
       
       try {
         const currentPage = page || eventCurrentPage;
-        const url = `${EVENT_VIEWER_ENDPOINT}?page=${currentPage}&perPage=${config.eventViewerItemsPerPage}`;
+        const encodedFiltersParam = encodeURIComponent(JSON.stringify(eventTypeFilters));
+        const url = `${EVENT_VIEWER_ENDPOINT}?page=${currentPage}&perPage=${config.eventViewerItemsPerPage}&filters=${encodedFiltersParam}`;
         const res = await fetch(url, { cache: 'no-store' });
         
         if (!res.ok) {
@@ -2049,25 +2050,6 @@
         content.innerHTML = `
           <div class="event-empty">
             <div><i class="fas fa-clock"></i></div>
-            <div>No events recorded yet</div>
-          </div>
-        `;
-        paginationEl.style.display = 'none';
-        return;
-      }
-      
-      // Filter events based on active event types
-      const filteredEvents = allEvents.filter(event => {
-        // Normalize event type - handle 'transient' as 'error'
-        const eventType = event.eventType === 'transient' ? 'error' : event.eventType;
-        return eventTypeFilters[eventType] !== false;
-      });
-      
-      // Show message if no events match filter
-      if (filteredEvents.length === 0) {
-        content.innerHTML = `
-          <div class="event-empty">
-            <div><i class="fas fa-filter"></i></div>
             <div>No events match the selected filters</div>
           </div>
         `;
@@ -2075,8 +2057,8 @@
         return;
       }
       
-      // Render filtered events
-      content.innerHTML = filteredEvents.map(event => {
+      // Render events (already filtered by backend)
+      content.innerHTML = allEvents.map(event => {
         const icon = getEventIcon(event.eventType);
         const compactDuration = formatCompactDuration(event.timestamp);
         const absoluteTime = new Date(event.timestamp).toLocaleString();
@@ -2356,8 +2338,9 @@
           pill.classList.add('inactive');
         }
         
-        // Re-render events with new filter
-        renderEvents();
+        // Reload events from page 1 with new filters
+        eventCurrentPage = 1;
+        loadEvents(1);
       });
     }
     
