@@ -704,6 +704,7 @@
     const MS_PER_MINUTE = 60 * 1000;
     
     // Debounce delays (in milliseconds)
+    // These are separate constants to allow independent tuning in the future
     const REFRESH_DEBOUNCE_DELAY = 500; // Delay for API refresh debouncing
     const RERENDER_DEBOUNCE_DELAY = 500; // Delay for re-render debouncing in norefresh mode
     
@@ -1942,6 +1943,7 @@
       }
       
       // Skip setting up intervals if norefresh is enabled
+      // This disables: periodic API refresh, config change detection, and event viewer refresh
       if (config.norefresh) {
         console.log('[No Refresh Mode] Automatic refresh disabled via querystring parameter');
         return;
