@@ -1064,6 +1064,8 @@
     let currentConfigVersion = null; // Track config file version
     let refreshInterval = null;
     let configCheckInterval = null;
+    let countdownInterval = null; // Interval for countdown timer
+    let countdownSeconds = 0; // Current countdown value in seconds
     let initialConfigApplied = false; // Flag to prevent race conditions on initial load
     let onlyProblemsSetByQuery = false; // Track if query string set onlyProblems
     let showPausedSetByQuery = false; // Track if query string set showPaused
@@ -1833,8 +1835,41 @@
         refreshStatus.innerHTML = '<i class="fas fa-pause"></i> Auto-refresh: OFF';
       } else {
         refreshStatus.className = 'pill refresh-on';
-        refreshStatus.innerHTML = '<i class="fas fa-sync"></i> Auto-refresh: ON';
+        const countdownText = countdownSeconds > 0 ? ` (${countdownSeconds}s)` : '';
+        refreshStatus.innerHTML = `<i class="fas fa-sync"></i> Auto-refresh: ON${countdownText}`;
       }
+    }
+
+    // Start countdown timer
+    function startCountdown() {
+      // Clear any existing countdown interval
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+      
+      // Reset countdown to refresh rate
+      countdownSeconds = config.refreshRate;
+      updateRefreshStatusIndicator();
+      
+      // Start countdown interval (update every second)
+      countdownInterval = setInterval(() => {
+        countdownSeconds--;
+        if (countdownSeconds < 0) {
+          countdownSeconds = 0;
+        }
+        updateRefreshStatusIndicator();
+      }, 1000);
+    }
+    
+    // Stop countdown timer
+    function stopCountdown() {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+      countdownSeconds = 0;
+      updateRefreshStatusIndicator();
     }
 
     // Re-render using last fetched data (for filter changes in norefresh mode)
@@ -1943,6 +1978,11 @@
         // Always reset the in-progress flag, even if error occurred
         refreshInProgress = false;
         
+        // Reset countdown timer after refresh completes
+        if (!config.norefresh && countdownInterval) {
+          startCountdown();
+        }
+        
         // If a refresh was requested while we were in progress, trigger it now
         if (pendingRefreshAfterComplete) {
           pendingRefreshAfterComplete = false;
@@ -1993,6 +2033,9 @@
         eventRefreshInterval = null;
       }
       
+      // Stop countdown when intervals are being updated
+      stopCountdown();
+      
       // Skip setting up intervals if norefresh is enabled
       // This disables: periodic API refresh, config change detection, and event viewer refresh
       if (config.norefresh) {
@@ -2003,6 +2046,9 @@
       // Set new intervals based on config
       refreshInterval = setInterval(refresh, config.refreshRate * 1000);
       configCheckInterval = setInterval(checkConfigVersion, config.configCheckRate * 1000);
+      
+      // Start countdown timer for auto-refresh
+      startCountdown();
       
       // Refresh events every 30 seconds if viewer is visible
       if (eventViewerVisible && eventViewerEnabled) {
