@@ -1855,8 +1855,13 @@
       // Start countdown interval (update every second)
       countdownInterval = setInterval(() => {
         countdownSeconds--;
-        if (countdownSeconds < 0) {
+        if (countdownSeconds <= 0) {
           countdownSeconds = 0;
+          updateRefreshStatusIndicator();
+          // Stop the interval when countdown reaches 0 to avoid unnecessary updates
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+          return;
         }
         updateRefreshStatusIndicator();
       }, 1000);
