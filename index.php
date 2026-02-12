@@ -1793,16 +1793,26 @@
     function rerender() {
       if (lastData) {
         render(lastData);
+      } else {
+        console.log('[No Refresh Mode] No data available to re-render yet');
       }
     }
 
     // Debounced refresh function to prevent rapid successive API calls
     // This wraps the actual refresh logic with debouncing and request coalescing
     function debouncedRefresh() {
-      // In norefresh mode, just re-render with existing data instead of fetching
+      // In norefresh mode, debounce re-renders with existing data instead of fetching
       if (config.norefresh) {
-        console.log('[No Refresh Mode] Re-rendering with existing data');
-        rerender();
+        // Clear any pending debounce timer
+        if (refreshDebounceTimer) {
+          clearTimeout(refreshDebounceTimer);
+        }
+        
+        // Set new debounce timer (500ms) for re-render
+        refreshDebounceTimer = setTimeout(() => {
+          console.log('[No Refresh Mode] Re-rendering with existing data');
+          rerender();
+        }, 500);
         return;
       }
       
