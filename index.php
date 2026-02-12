@@ -177,6 +177,7 @@
       display: flex;
       flex-wrap: wrap;
       margin-top: 6px;
+      padding-right: 90px; /* Make room for response time graph */
     }
     .tags-container.hidden {
       display: none;
@@ -1703,15 +1704,19 @@
       // Calculate points
       const points = timeSeries.map((point, index) => {
         if (point.value == null || point.value < 0) return null;
-        const x = (index / (timeSeries.length - 1)) * width;
+        // Handle single point or multiple points
+        const x = timeSeries.length > 1 ? (index / (timeSeries.length - 1)) * width : width / 2;
         const y = height - ((point.value - minValue) / range) * height;
         return { x, y };
       }).filter(p => p !== null);
       
       if (points.length === 0) return;
       
+      // Get the --ok color from CSS variables (theme-aware)
+      const okColor = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#3ad29f';
+      
       // Draw the line graph in green
-      ctx.strokeStyle = '#3ad29f'; // Using the --ok color
+      ctx.strokeStyle = okColor;
       ctx.lineWidth = 1.5;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
