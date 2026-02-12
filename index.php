@@ -833,6 +833,7 @@
       const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
       applyTheme(newTheme);
       setCookie('theme', newTheme);
+      logActionEvent('Toggle theme', `Theme changed to ${newTheme} mode`);
     }
 
     // Listen for system theme changes when in auto mode
@@ -882,8 +883,10 @@
 
     function toggleFullscreen() {
       if (isFullscreen()) {
+        logActionEvent('Exit fullscreen', 'User exited fullscreen mode');
         exitFullscreen();
       } else {
+        logActionEvent('Enter fullscreen', 'User entered fullscreen mode');
         requestFullscreen();
       }
     }
@@ -2088,6 +2091,7 @@
       if (!eventViewerEnabled) return;
       eventViewerVisible = !eventViewerVisible;
       setEventViewerVisibility(eventViewerVisible);
+      logActionEvent('Toggle event viewer', `Event viewer ${eventViewerVisible ? 'opened' : 'closed'}`);
       
       // Start/stop auto-refresh based on visibility
       if (eventViewerVisible) {
@@ -2340,6 +2344,22 @@
       await logEvent(event);
     }
     
+    // Log user/page action to event viewer
+    async function logActionEvent(actionName, details = '') {
+      if (!eventViewerEnabled) return;
+      
+      const event = {
+        monitorId: 0, // Actions are system-level, not monitor-specific
+        monitorName: 'System',
+        url: '',
+        eventType: 'actions',
+        timestamp: new Date().toISOString(),
+        message: details || actionName
+      };
+      
+      await logEvent(event);
+    }
+    
     // Detect and log status changes
     function detectStatusChanges(monitors) {
       if (!monitors || !eventViewerEnabled) return;
@@ -2384,21 +2404,25 @@
         clearTimeout(refreshDebounceTimer);
         refreshDebounceTimer = null;
       }
+      logActionEvent('Manual refresh', 'User clicked refresh button');
       refresh();
     });
     document.getElementById('toggle-problems').addEventListener('click', () => {
       onlyProblems = !onlyProblems;
       updateButtonText('toggle-problems', onlyProblems, 'Show All', 'Show Only Problems');
+      logActionEvent('Toggle problems filter', `Problems filter ${onlyProblems ? 'enabled' : 'disabled'}`);
       debouncedRefresh();
     });
     document.getElementById('toggle-paused').addEventListener('click', () => {
       showPaused = !showPaused;
       updateButtonText('toggle-paused', showPaused, 'Hide Paused', 'Show Paused');
+      logActionEvent('Toggle paused monitors', `Paused monitors ${showPaused ? 'shown' : 'hidden'}`);
       debouncedRefresh();
     });
     document.getElementById('toggle-tags').addEventListener('click', () => {
       showTags = !showTags;
       updateButtonText('toggle-tags', showTags, 'Hide Tags', 'Show Tags');
+      logActionEvent('Toggle tags display', `Tags ${showTags ? 'shown' : 'hidden'}`);
       updateTagVisibility();
     });
     document.getElementById('toggle-filter').addEventListener('click', toggleFilterVisibility);
@@ -2514,6 +2538,8 @@
       updateIntervals();
       // Handle auto fullscreen after config is loaded
       handleAutoFullscreen();
+      // Log page load action
+      logActionEvent('Page loaded', 'Wallboard initialized');
     });
     
     // Initialize config version checking
