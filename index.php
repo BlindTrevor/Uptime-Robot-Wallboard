@@ -1764,6 +1764,32 @@
       cardElement.appendChild(canvas);
     }
 
+    /**
+     * Load response time graphs for all monitors with a delay between requests
+     * to avoid overwhelming the API
+     * @param {NodeList} cards - List of card elements
+     */
+    async function loadResponseTimeGraphs(cards) {
+      const cardsArray = Array.from(cards);
+      
+      // Process cards in batches with a delay
+      for (let i = 0; i < cardsArray.length; i++) {
+        const card = cardsArray[i];
+        const monitorId = card.getAttribute('data-monitor-id');
+        
+        if (monitorId) {
+          // Add graph asynchronously (won't block)
+          addResponseTimeGraph(card, parseInt(monitorId, 10));
+          
+          // Add a small delay between requests (100ms) to spread the load
+          // With caching, repeated requests will be fast
+          if (i < cardsArray.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        }
+      }
+    }
+
     // Fetch
     async function loadData() {
       const params = new URLSearchParams();
@@ -2004,14 +2030,10 @@
 
       // Add response time graphs to monitor cards asynchronously
       // We do this after innerHTML is set so DOM elements exist
+      // Use a queue system with delays to avoid overwhelming the API
       setTimeout(() => {
         const cards = grid.querySelectorAll('.card[data-monitor-id]');
-        cards.forEach(card => {
-          const monitorId = card.getAttribute('data-monitor-id');
-          if (monitorId) {
-            addResponseTimeGraph(card, parseInt(monitorId, 10));
-          }
-        });
+        loadResponseTimeGraphs(cards);
       }, 0);
 
       // Footer - show rate limit info and optionally pagination meta

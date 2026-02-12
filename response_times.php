@@ -57,6 +57,32 @@ if (empty($monitorId) || !is_numeric($monitorId)) {
     exit;
 }
 
+// Cache configuration
+$cacheDir = sys_get_temp_dir() . '/uptimerobot_cache';
+$cacheFile = $cacheDir . '/response_time_' . $monitorId . '.json';
+$cacheDuration = 300; // 5 minutes cache
+
+// Create cache directory if it doesn't exist
+if (!is_dir($cacheDir)) {
+    @mkdir($cacheDir, 0700, true);
+}
+
+// Check cache
+$useCache = false;
+if (file_exists($cacheFile)) {
+    $cacheAge = time() - filemtime($cacheFile);
+    if ($cacheAge < $cacheDuration) {
+        $cachedData = @file_get_contents($cacheFile);
+        if ($cachedData !== false) {
+            $decoded = @json_decode($cachedData, true);
+            if (is_array($decoded)) {
+                echo $cachedData;
+                exit;
+            }
+        }
+    }
+}
+
 // Calculate time range for last hour
 $to = time();
 $from = $to - 3600; // 1 hour ago
@@ -91,7 +117,8 @@ if ($curlErr) {
 
 if ($httpCode < 200 || $httpCode >= 300) {
     // Return error but don't fail completely - some monitors may not have response time data
-    echo json_encode(['ok' => false, 'error' => 'HTTP ' . $httpCode, 'has_data' => false]);
+    $result = json_encode(['ok' => false, 'error' => 'HTTP ' . $httpCode, 'has_data' => false]);
+    echo $result;
     exit;
 }
 
@@ -103,9 +130,16 @@ if (!is_array($data)) {
 }
 
 // Return the response time data
-echo json_encode([
+$result = [
     'ok' => true,
     'monitor_id' => $monitorId,
     'has_data' => isset($data['time_series']) && is_array($data['time_series']) && count($data['time_series']) > 0,
     'data' => $data
-]);
+];
+
+$resultJson = json_encode($result);
+
+// Cache the result
+@file_put_contents($cacheFile, $resultJson, LOCK_EX);
+
+echo $resultJson;
