@@ -1043,6 +1043,7 @@
     let selectedTags = new Set(); // Selected tags for filtering
     let allTags = new Set(); // All available tags
     let filterVisible = false; // Track filter section visibility
+    let lastData = null; // Store last fetched data for re-rendering in norefresh mode
     
     // Event viewer state
     let eventViewerVisible = false;
@@ -1788,12 +1789,20 @@
       updateTagVisibility();
     }
 
+    // Re-render using last fetched data (for filter changes in norefresh mode)
+    function rerender() {
+      if (lastData) {
+        render(lastData);
+      }
+    }
+
     // Debounced refresh function to prevent rapid successive API calls
     // This wraps the actual refresh logic with debouncing and request coalescing
     function debouncedRefresh() {
-      // Skip automatic refresh if norefresh mode is enabled
+      // In norefresh mode, just re-render with existing data instead of fetching
       if (config.norefresh) {
-        console.log('[No Refresh Mode] Skipping automatic refresh');
+        console.log('[No Refresh Mode] Re-rendering with existing data');
+        rerender();
         return;
       }
       
@@ -1854,6 +1863,7 @@
           
           throw new Error(fullErrorMsg);
         }
+        lastData = data; // Store data for re-rendering in norefresh mode
         render(data);
         lastRefreshTime = Date.now(); // Update timestamp on successful refresh
       } catch (e) {
