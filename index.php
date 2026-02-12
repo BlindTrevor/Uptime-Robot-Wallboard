@@ -1103,6 +1103,7 @@
     let eventCurrentPage = 1;
     let eventTotalPages = 1;
     let eventRefreshInterval = null;
+    let timeUpdateInterval = null; // Interval for updating "time since" displays
     let eventTypeFilters = {
       down: true,
       up: true,
@@ -1235,6 +1236,20 @@
       if (parts.length === 0) parts.push(`${secs}s`); // Only show seconds if no other units
       
       return parts.slice(0, 2).join(' '); // Show max 2 units
+    }
+
+    // Update all "time since" displays in the DOM
+    function updateTimeDisplays() {
+      const timeElements = document.querySelectorAll('.time-since');
+      timeElements.forEach(el => {
+        const epoch = el.getAttribute('data-epoch');
+        if (epoch) {
+          const newDuration = formatDuration(epoch);
+          if (newDuration) {
+            el.textContent = newDuration;
+          }
+        }
+      });
     }
 
     function getStatusIcon(status) {
@@ -1766,10 +1781,10 @@
         let statusLabel = '';
         if (status === 'up') {
           const duration = formatDuration(m.last_check);
-          statusLabel = `Up since: ${epochToLocal(m.last_check)}${duration ? ` (${duration})` : ''}`;
+          statusLabel = `Up since: ${epochToLocal(m.last_check)}${duration ? ` (<span class="time-since" data-epoch="${m.last_check}">${duration}</span>)` : ''}`;
         } else if (status === 'down' || status === 'seems_down') {
           const duration = formatDuration(m.last_check);
-          statusLabel = `Down since: ${epochToLocal(m.last_check)}${duration ? ` (${duration})` : ''}`;
+          statusLabel = `Down since: ${epochToLocal(m.last_check)}${duration ? ` (<span class="time-since" data-epoch="${m.last_check}">${duration}</span>)` : ''}`;
         } else if (status === 'paused') {
           statusLabel = ''; // No status time for paused monitors
         } else {
@@ -2059,9 +2074,17 @@
         clearInterval(eventRefreshInterval);
         eventRefreshInterval = null;
       }
+      if (timeUpdateInterval) {
+        clearInterval(timeUpdateInterval);
+        timeUpdateInterval = null;
+      }
       
       // Stop countdown when intervals are being updated
       stopCountdown();
+      
+      // Always set up time update interval (runs every minute regardless of autorefresh state)
+      // This ensures "time since" displays are always up-to-date
+      timeUpdateInterval = setInterval(updateTimeDisplays, 60000);
       
       // Skip setting up intervals if norefresh is enabled
       // This disables: periodic API refresh, config change detection, and event viewer refresh
