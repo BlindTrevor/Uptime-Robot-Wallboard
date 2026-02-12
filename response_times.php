@@ -34,11 +34,17 @@ require_once __DIR__ . '/config-utils.php';
 
 $configPath = findConfigPath();
 $TOKEN = '';
+$cacheDuration = 300; // Default: 5 minutes
 
 if ($configPath !== null) {
-    $parsed = parseEnvFile($configPath, ['UPTIMEROBOT_API_TOKEN']);
+    $parsed = parseEnvFile($configPath, ['UPTIMEROBOT_API_TOKEN', 'RESPONSE_TIME_CACHE_DURATION']);
     if (isset($parsed['UPTIMEROBOT_API_TOKEN'])) {
         $TOKEN = $parsed['UPTIMEROBOT_API_TOKEN'];
+    }
+    
+    // Load cache duration configuration (minimum 60 seconds)
+    if (isset($parsed['RESPONSE_TIME_CACHE_DURATION']) && is_numeric($parsed['RESPONSE_TIME_CACHE_DURATION'])) {
+        $cacheDuration = max(60, (int)$parsed['RESPONSE_TIME_CACHE_DURATION']);
     }
 }
 
@@ -60,7 +66,6 @@ if (empty($monitorId) || !is_numeric($monitorId)) {
 // Cache configuration
 $cacheDir = __DIR__ . '/cache/response_times';
 $cacheFile = $cacheDir . '/monitor_' . $monitorId . '.json';
-$cacheDuration = 300; // 5 minutes cache
 
 // Create cache directory if it doesn't exist
 if (!is_dir($cacheDir)) {

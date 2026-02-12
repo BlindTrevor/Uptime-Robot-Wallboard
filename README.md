@@ -13,6 +13,7 @@ A real-time status wallboard for monitoring your UptimeRobot services. Display s
 
 - 🚀 **Easy Setup** - Built-in installer wizard for first-time configuration
 - 📊 **Real-time Monitoring** - Automatic refresh with live status updates
+- 📈 **Response Time Graphs** - Visual line graphs showing last hour's response times on each tile
 - 🎨 **Dark/Light Themes** - Toggle between themes with system preference support
 - 🔍 **Smart Filtering** - Show all monitors or only those with issues
 - 🏷️ **Tag Filtering** - Filter monitors by tags with colored pills and multi-select
@@ -88,6 +89,7 @@ Edit `config.env` to customize your wallboard:
 | `SHOW_TAGS` | Display tags on monitor cards | `true` |
 | `REFRESH_RATE` | Data refresh interval (seconds) | `20` |
 | `CONFIG_CHECK_RATE` | Config file check interval (seconds) | `5` |
+| `RESPONSE_TIME_CACHE_DURATION` | Response time graph cache duration (seconds, min 60) | `300` |
 | `THEME` | Theme: `dark`, `light`, or `auto` | `dark` |
 | `AUTO_FULLSCREEN` | Auto-enter fullscreen on load | `false` |
 | `ALLOW_QUERY_OVERRIDE` | Allow URL parameter overrides | `true` |
@@ -259,6 +261,42 @@ Supported color formats include:
 - RGB/HSL formats: `rgb(255,0,0)`, `hsl(120,100%,50%)`
 
 If not specified, colors are automatically generated from tag names using a deterministic algorithm for consistent coloring across page reloads.
+
+## 📈 Response Time Graphs
+
+Each monitor tile that provides response time data displays a small green line graph in the bottom-right corner, showing the monitor's response times over the last hour.
+
+### Features
+
+- **Automatic Display** - Graphs automatically appear for monitors that support response time tracking
+- **Last Hour Data** - Shows response time trends over the past 60 minutes
+- **Theme-Aware** - Graph colors adapt to your selected theme (dark/light)
+- **Hover Details** - Hover over a graph to see min/max/avg response times
+- **Smart Caching** - Response time data is cached for 5 minutes (configurable) to reduce API calls
+- **Rate Limit Friendly** - Requests are queued with delays to avoid overwhelming the API
+
+### Configuration
+
+Control the cache duration in `config.env`:
+
+```bash
+# Cache response time data for 5 minutes (300 seconds)
+RESPONSE_TIME_CACHE_DURATION=300
+
+# Or customize to your needs:
+# RESPONSE_TIME_CACHE_DURATION=60    # 1 minute (minimum)
+# RESPONSE_TIME_CACHE_DURATION=600   # 10 minutes
+# RESPONSE_TIME_CACHE_DURATION=1800  # 30 minutes
+```
+
+**Note:** The minimum cache duration is 60 seconds (1 minute). Longer cache durations reduce API calls and help stay within rate limits, but graphs will update less frequently.
+
+### How It Works
+
+1. When the wallboard loads, it queries the UptimeRobot API for each monitor's response time statistics
+2. The data is cached locally for the configured duration (default: 5 minutes)
+3. Small line graphs are rendered using HTML5 canvas on each monitor tile
+4. Graphs automatically update when the cache expires
 
 ## 📜 Event History & Recent Event Highlighting
 
