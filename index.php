@@ -2354,7 +2354,7 @@
         url: '',
         eventType: 'actions',
         timestamp: new Date().toISOString(),
-        message: details || actionName
+        message: details ? `${actionName} - ${details}` : actionName
       };
       
       await logEvent(event);
