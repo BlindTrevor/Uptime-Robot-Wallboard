@@ -530,15 +530,15 @@
     .event-type-filter-pill {
       display: inline-flex;
       align-items: center;
-      gap: 3px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      font-weight: 600;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 1.2rem;
       border: 2px solid;
       cursor: pointer;
       transition: all 0.2s ease;
-      text-transform: uppercase;
       user-select: none;
     }
     .event-type-filter-pill.down {
@@ -576,6 +576,62 @@
     }
     .event-type-filter-pill.inactive:hover {
       opacity: 0.5;
+    }
+    
+    /* Bootstrap-style tooltip */
+    .tooltip-bs {
+      position: absolute;
+      z-index: 1070;
+      display: block;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-style: normal;
+      font-weight: 400;
+      line-height: 1.5;
+      text-align: start;
+      text-decoration: none;
+      text-shadow: none;
+      text-transform: none;
+      letter-spacing: normal;
+      word-break: normal;
+      word-spacing: normal;
+      white-space: normal;
+      line-break: auto;
+      font-size: 0.875rem;
+      word-wrap: break-word;
+      opacity: 0;
+      transition: opacity 0.15s ease-in-out;
+      pointer-events: none;
+    }
+    .tooltip-bs.show {
+      opacity: 0.9;
+    }
+    .tooltip-bs .tooltip-arrow {
+      position: absolute;
+      display: block;
+      width: 0.8rem;
+      height: 0.4rem;
+    }
+    .tooltip-bs .tooltip-arrow::before {
+      position: absolute;
+      content: "";
+      border-color: transparent;
+      border-style: solid;
+    }
+    .tooltip-bs[data-popper-placement^="top"] .tooltip-arrow {
+      bottom: 0;
+    }
+    .tooltip-bs[data-popper-placement^="top"] .tooltip-arrow::before {
+      top: -1px;
+      border-width: 0.4rem 0.4rem 0;
+      border-top-color: #000;
+    }
+    .tooltip-bs .tooltip-inner {
+      max-width: 200px;
+      padding: 0.25rem 0.5rem;
+      color: #fff;
+      text-align: center;
+      background-color: #000;
+      border-radius: 0.25rem;
     }
     
     .event-pagination {
@@ -697,20 +753,20 @@
         </button>
       </div>
       <div id="event-type-filters" class="event-type-filters" style="display: none;">
-        <button class="event-type-filter-pill down" data-event-type="down">
-          <i class="fas fa-times-circle"></i> Down
+        <button class="event-type-filter-pill down" data-event-type="down" data-tooltip="Down" aria-label="Down">
+          <i class="fas fa-times-circle"></i>
         </button>
-        <button class="event-type-filter-pill up" data-event-type="up">
-          <i class="fas fa-check-circle"></i> Up
+        <button class="event-type-filter-pill up" data-event-type="up" data-tooltip="Up" aria-label="Up">
+          <i class="fas fa-check-circle"></i>
         </button>
-        <button class="event-type-filter-pill paused" data-event-type="paused">
-          <i class="fas fa-pause-circle"></i> Paused
+        <button class="event-type-filter-pill paused" data-event-type="paused" data-tooltip="Paused" aria-label="Paused">
+          <i class="fas fa-pause-circle"></i>
         </button>
-        <button class="event-type-filter-pill error" data-event-type="error">
-          <i class="fas fa-exclamation-triangle"></i> Error
+        <button class="event-type-filter-pill error" data-event-type="error" data-tooltip="Error" aria-label="Error">
+          <i class="fas fa-exclamation-triangle"></i>
         </button>
-        <button class="event-type-filter-pill actions" data-event-type="actions">
-          <i class="fas fa-bolt"></i> Actions
+        <button class="event-type-filter-pill actions" data-event-type="actions" data-tooltip="Actions" aria-label="Actions">
+          <i class="fas fa-bolt"></i>
         </button>
       </div>
     </div>
@@ -2585,6 +2641,80 @@
         loadEvents(1);
       });
     }
+    
+    // Bootstrap-style tooltip functionality for event filter pills
+    const initTooltips = () => {
+      const pills = document.querySelectorAll('.event-type-filter-pill[data-tooltip]');
+      
+      pills.forEach(pill => {
+        let tooltipEl = null;
+        let showTimeout = null;
+        let hideTimeout = null;
+        
+        const showTooltip = () => {
+          clearTimeout(hideTimeout);
+          showTimeout = setTimeout(() => {
+            const tooltipText = pill.getAttribute('data-tooltip');
+            if (!tooltipText) return;
+            
+            // Create tooltip element
+            tooltipEl = document.createElement('div');
+            tooltipEl.className = 'tooltip-bs';
+            tooltipEl.setAttribute('role', 'tooltip');
+            tooltipEl.setAttribute('data-popper-placement', 'top');
+            
+            const arrow = document.createElement('div');
+            arrow.className = 'tooltip-arrow';
+            
+            const inner = document.createElement('div');
+            inner.className = 'tooltip-inner';
+            inner.textContent = tooltipText;
+            
+            tooltipEl.appendChild(arrow);
+            tooltipEl.appendChild(inner);
+            document.body.appendChild(tooltipEl);
+            
+            // Position tooltip
+            const pillRect = pill.getBoundingClientRect();
+            const tooltipRect = tooltipEl.getBoundingClientRect();
+            
+            const left = pillRect.left + window.scrollX + (pillRect.width / 2) - (tooltipRect.width / 2);
+            const top = pillRect.top + window.scrollY - tooltipRect.height - 8;
+            
+            tooltipEl.style.left = left + 'px';
+            tooltipEl.style.top = top + 'px';
+            
+            // Show tooltip with animation
+            setTimeout(() => {
+              tooltipEl.classList.add('show');
+            }, 10);
+          }, 200); // 200ms delay before showing (reduced from 500ms for better responsiveness)
+        };
+        
+        const hideTooltip = () => {
+          clearTimeout(showTimeout);
+          if (tooltipEl) {
+            hideTimeout = setTimeout(() => {
+              tooltipEl.classList.remove('show');
+              setTimeout(() => {
+                if (tooltipEl) {
+                  tooltipEl.remove();
+                }
+                tooltipEl = null;
+              }, 150); // Wait for fade out animation
+            }, 0);
+          }
+        };
+        
+        pill.addEventListener('mouseenter', showTooltip);
+        pill.addEventListener('mouseleave', hideTooltip);
+        pill.addEventListener('focus', showTooltip);
+        pill.addEventListener('blur', hideTooltip);
+      });
+    };
+    
+    // Initialize tooltips
+    initTooltips();
     
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
     document.getElementById('fullscreen-toggle').addEventListener('click', toggleFullscreen);
