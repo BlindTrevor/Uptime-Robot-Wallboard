@@ -69,7 +69,10 @@ $cacheFile = $cacheDir . '/monitor_' . $monitorId . '.json';
 
 // Create cache directory if it doesn't exist
 if (!is_dir($cacheDir)) {
-    @mkdir($cacheDir, 0700, true);
+    if (!mkdir($cacheDir, 0700, true) && !is_dir($cacheDir)) {
+        error_log("Failed to create cache directory: $cacheDir");
+        // Continue without caching
+    }
 }
 
 // Check cache
@@ -77,9 +80,9 @@ $useCache = false;
 if (file_exists($cacheFile)) {
     $cacheAge = time() - filemtime($cacheFile);
     if ($cacheAge < $cacheDuration) {
-        $cachedData = @file_get_contents($cacheFile);
+        $cachedData = file_get_contents($cacheFile);
         if ($cachedData !== false) {
-            $decoded = @json_decode($cachedData, true);
+            $decoded = json_decode($cachedData, true);
             if (is_array($decoded)) {
                 echo $cachedData;
                 exit;
@@ -145,6 +148,11 @@ $result = [
 $resultJson = json_encode($result);
 
 // Cache the result
-@file_put_contents($cacheFile, $resultJson, LOCK_EX);
+if (is_dir($cacheDir)) {
+    if (file_put_contents($cacheFile, $resultJson, LOCK_EX) === false) {
+        error_log("Failed to write cache file: $cacheFile");
+        // Continue anyway - caching is optional
+    }
+}
 
 echo $resultJson;

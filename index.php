@@ -210,15 +210,6 @@
     .small { font-size: 0.78rem; color: var(--subtle); margin-top: 6px; }
     .err { color: var(--bad); margin: 0.4rem 0; white-space: pre-wrap; }
     .footer { color: var(--subtle); margin-top: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
-    .status i { font-size: 1.1em; }
-    .status.up { color: var(--ok); }
-    .status.seems_down, .status.down { color: var(--bad); }
-    .status.paused { color: var(--warn); }
-    .status.not_checked { color: var(--subtle); }
-    .kv { font-size: 0.86rem; color: var(--muted); margin-top: 6px; }
-    .small { font-size: 0.78rem; color: var(--subtle); margin-top: 6px; }
-    .err { color: var(--bad); margin: 0.4rem 0; white-space: pre-wrap; }
-    .footer { color: var(--subtle); margin-top: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
     
     /* Rate limit display */
     .rate-limit-info {
@@ -1768,7 +1759,11 @@
       // Add tooltip with summary stats
       if (data.summary) {
         const { min, max, avg } = data.summary;
-        canvas.title = `Response Time (last hour)\nAvg: ${avg}ms\nMin: ${min}ms\nMax: ${max}ms`;
+        const tooltipText = `Response Time (last hour)\nAvg: ${avg}ms\nMin: ${min}ms\nMax: ${max}ms`;
+        canvas.title = tooltipText;
+        canvas.setAttribute('aria-label', `Response time graph: Average ${avg} milliseconds, Minimum ${min} milliseconds, Maximum ${max} milliseconds over the last hour`);
+      } else {
+        canvas.setAttribute('aria-label', 'Response time graph for the last hour');
       }
       
       // Render the graph
@@ -1792,8 +1787,8 @@
         const monitorId = card.getAttribute('data-monitor-id');
         
         if (monitorId) {
-          // Add graph asynchronously (won't block)
-          addResponseTimeGraph(card, parseInt(monitorId, 10));
+          // Add graph asynchronously with await to enforce sequential processing
+          await addResponseTimeGraph(card, parseInt(monitorId, 10));
           
           // Add a small delay between requests to spread the load
           // With caching, repeated requests will be fast
