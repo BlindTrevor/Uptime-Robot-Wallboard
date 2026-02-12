@@ -1839,6 +1839,14 @@
           await logSystemError(fullErrorMsg);
           errorAlreadyLogged = true;
           
+          // Suppress display for HTTP 429 (rate limit) errors
+          if (data._httpStatus === 429) {
+            // Clear any existing error message
+            err.textContent = '';
+            // Don't throw error for 429, just return to avoid UI disruption
+            return;
+          }
+          
           throw new Error(fullErrorMsg);
         }
         render(data);
