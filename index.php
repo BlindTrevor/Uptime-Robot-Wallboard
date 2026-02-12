@@ -763,6 +763,7 @@
       eventTypeFilterDefaultUp: true,
       eventTypeFilterDefaultPaused: true,
       eventTypeFilterDefaultError: true,
+      eventTypeFilterDefaultActions: true,
       norefresh: false,
     };
 
