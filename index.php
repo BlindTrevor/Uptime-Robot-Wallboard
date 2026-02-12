@@ -449,6 +449,7 @@
     .event-item-icon.paused { color: var(--warn); }
     .event-item-icon.error { color: var(--bad); }
     .event-item-icon.transient { color: var(--warn); }
+    .event-item-icon.actions { color: #6c9bff; }
     .event-item-name {
       font-weight: 700;
       font-size: 0.95rem;
@@ -484,6 +485,11 @@
       background: var(--warning-bg);
       color: var(--warn);
       border: 1px solid var(--warning-border);
+    }
+    .event-item-type.actions {
+      background: rgba(108, 155, 255, 0.15);
+      color: #6c9bff;
+      border: 1px solid rgba(108, 155, 255, 0.3);
     }
     .event-item-details {
       font-size: 0.8rem;
@@ -554,6 +560,11 @@
       color: var(--bad);
       border-color: var(--bad);
       background: rgba(255, 107, 107, 0.1);
+    }
+    .event-type-filter-pill.actions {
+      color: #6c9bff;
+      border-color: #6c9bff;
+      background: rgba(108, 155, 255, 0.1);
     }
     .event-type-filter-pill:hover {
       opacity: 0.8;
@@ -697,6 +708,9 @@
         </button>
         <button class="event-type-filter-pill error" data-event-type="error">
           <i class="fas fa-exclamation-triangle"></i> Error
+        </button>
+        <button class="event-type-filter-pill actions" data-event-type="actions">
+          <i class="fas fa-bolt"></i> Actions
         </button>
       </div>
     </div>
@@ -1084,7 +1098,8 @@
       down: true,
       up: true,
       paused: true,
-      error: true
+      error: true,
+      actions: true
     };
     let allEvents = []; // Store all events for client-side filtering
     let currentPagination = null; // Store current pagination info
@@ -2198,7 +2213,8 @@
         down: 'fas fa-times-circle',
         paused: 'fas fa-pause-circle',
         error: 'fas fa-exclamation-triangle',
-        transient: 'fas fa-exclamation-circle'
+        transient: 'fas fa-exclamation-circle',
+        actions: 'fas fa-bolt'
       };
       return icons[eventType] || 'fas fa-circle';
     }

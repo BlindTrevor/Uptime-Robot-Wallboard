@@ -75,6 +75,7 @@ $eventTypeFilters = [
     'up' => true,
     'paused' => true,
     'error' => true,
+    'actions' => true,
 ];
 
 // Apply filters from query parameter (with validation)
