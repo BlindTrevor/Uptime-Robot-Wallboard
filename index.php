@@ -2638,7 +2638,7 @@
             setTimeout(() => {
               tooltipEl.classList.add('show');
             }, 10);
-          }, 500); // 500ms delay before showing
+          }, 200); // 200ms delay before showing (reduced from 500ms for better responsiveness)
         };
         
         const hideTooltip = () => {
