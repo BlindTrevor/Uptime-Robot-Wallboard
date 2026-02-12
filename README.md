@@ -266,10 +266,17 @@ The wallboard includes an event history viewer that tracks all monitor status ch
 
 ### Features
 
-- **Event Tracking** - Automatically logs all monitor state changes (up, down, paused)
+- **Event Tracking** - Automatically logs all monitor state changes (up, down, paused) and system events
+- **Event Types** - Track different event categories:
+  - **Up** - Monitor status changes to operational/up
+  - **Down** - Monitor status changes to down/offline
+  - **Paused** - Monitor paused status events
+  - **Error** - System errors and transient issues
+  - **Actions** - User and page-initiated events (page refresh, button toggles, page load, etc.)
 - **Recent Event Highlighting** - Events within the configured time window are displayed with a prominent color and visual effects
 - **Configurable Time Window** - Customize how long events are considered "recent" (default: 1 hour)
 - **Event Sidebar** - View comprehensive event history with pagination
+- **Event Filtering** - Filter events by type using interactive filter pills
 - **Circular Logging** - Optionally limit event history to a maximum number of events
 
 ### Recent Event Highlighting
@@ -306,7 +313,8 @@ If not configured, the default is 60 minutes (1 hour) to maintain backwards comp
 1. Click the **Events** button in the controls to open the event history sidebar
 2. Recent events (within your configured time window) will appear with prominent highlighting
 3. Older events appear with standard styling
-4. Use pagination controls to browse through historical events
+4. Use the event type filter pills to show/hide specific event categories (Down, Up, Paused, Error, Actions)
+5. Use pagination controls to browse through historical events
 
 ## 🖥️ Kiosk Mode
 

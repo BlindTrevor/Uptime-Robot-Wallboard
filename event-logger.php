@@ -87,7 +87,7 @@ foreach ($requiredFields as $field) {
 }
 
 // Validate event type
-$validEventTypes = ['up', 'down', 'paused', 'error', 'transient'];
+$validEventTypes = ['up', 'down', 'paused', 'error', 'transient', 'actions'];
 if (!in_array($event['eventType'], $validEventTypes, true)) {
     http_response_code(400);
     echo json_encode(['ok' => false, 'error' => 'Invalid eventType. Must be one of: ' . implode(', ', $validEventTypes)]);

@@ -449,6 +449,7 @@
     .event-item-icon.paused { color: var(--warn); }
     .event-item-icon.error { color: var(--bad); }
     .event-item-icon.transient { color: var(--warn); }
+    .event-item-icon.actions { color: #6c9bff; }
     .event-item-name {
       font-weight: 700;
       font-size: 0.95rem;
@@ -484,6 +485,11 @@
       background: var(--warning-bg);
       color: var(--warn);
       border: 1px solid var(--warning-border);
+    }
+    .event-item-type.actions {
+      background: rgba(108, 155, 255, 0.15);
+      color: #6c9bff;
+      border: 1px solid rgba(108, 155, 255, 0.3);
     }
     .event-item-details {
       font-size: 0.8rem;
@@ -554,6 +560,11 @@
       color: var(--bad);
       border-color: var(--bad);
       background: rgba(255, 107, 107, 0.1);
+    }
+    .event-type-filter-pill.actions {
+      color: #6c9bff;
+      border-color: #6c9bff;
+      background: rgba(108, 155, 255, 0.1);
     }
     .event-type-filter-pill:hover {
       opacity: 0.8;
@@ -698,6 +709,9 @@
         <button class="event-type-filter-pill error" data-event-type="error">
           <i class="fas fa-exclamation-triangle"></i> Error
         </button>
+        <button class="event-type-filter-pill actions" data-event-type="actions">
+          <i class="fas fa-bolt"></i> Actions
+        </button>
       </div>
     </div>
     <div id="event-sidebar-content" class="event-sidebar-content">
@@ -749,6 +763,7 @@
       eventTypeFilterDefaultUp: true,
       eventTypeFilterDefaultPaused: true,
       eventTypeFilterDefaultError: true,
+      eventTypeFilterDefaultActions: true,
       norefresh: false,
     };
 
@@ -819,6 +834,7 @@
       const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
       applyTheme(newTheme);
       setCookie('theme', newTheme);
+      logActionEvent('Toggle theme', `Theme changed to ${newTheme} mode`);
     }
 
     // Listen for system theme changes when in auto mode
@@ -868,8 +884,10 @@
 
     function toggleFullscreen() {
       if (isFullscreen()) {
+        logActionEvent('Exit fullscreen', 'User exited fullscreen mode');
         exitFullscreen();
       } else {
+        logActionEvent('Enter fullscreen', 'User entered fullscreen mode');
         requestFullscreen();
       }
     }
@@ -1040,6 +1058,9 @@
         if (typeof serverConfig.eventTypeFilterDefaultError === 'boolean') {
           config.eventTypeFilterDefaultError = serverConfig.eventTypeFilterDefaultError;
         }
+        if (typeof serverConfig.eventTypeFilterDefaultActions === 'boolean') {
+          config.eventTypeFilterDefaultActions = serverConfig.eventTypeFilterDefaultActions;
+        }
       }
       
       // Apply query string overrides if allowed
@@ -1086,7 +1107,8 @@
       down: true,
       up: true,
       paused: true,
-      error: true
+      error: true,
+      actions: true
     };
     let allEvents = []; // Store all events for client-side filtering
     let currentPagination = null; // Store current pagination info
@@ -2083,6 +2105,7 @@
       eventTypeFilters.up = config.eventTypeFilterDefaultUp;
       eventTypeFilters.paused = config.eventTypeFilterDefaultPaused;
       eventTypeFilters.error = config.eventTypeFilterDefaultError;
+      eventTypeFilters.actions = config.eventTypeFilterDefaultActions;
       
       // Show or hide event type filter pills based on config
       const filterPillsEl = document.getElementById('event-type-filters');
@@ -2124,6 +2147,7 @@
       if (!eventViewerEnabled) return;
       eventViewerVisible = !eventViewerVisible;
       setEventViewerVisibility(eventViewerVisible);
+      logActionEvent('Toggle event viewer', `Event viewer ${eventViewerVisible ? 'opened' : 'closed'}`);
       
       // Start/stop auto-refresh based on visibility
       if (eventViewerVisible) {
@@ -2249,7 +2273,8 @@
         down: 'fas fa-times-circle',
         paused: 'fas fa-pause-circle',
         error: 'fas fa-exclamation-triangle',
-        transient: 'fas fa-exclamation-circle'
+        transient: 'fas fa-exclamation-circle',
+        actions: 'fas fa-bolt'
       };
       return icons[eventType] || 'fas fa-circle';
     }
@@ -2341,7 +2366,7 @@
     
     // Log event to backend
     async function logEvent(event) {
-      if (!eventViewerEnabled) return;
+      if (!eventViewerEnabled) return false;
       
       try {
         const res = await fetch(EVENT_LOGGER_ENDPOINT, {
@@ -2353,9 +2378,12 @@
         
         if (!res.ok) {
           console.error('Failed to log event:', res.status);
+          return false;
         }
+        return true;
       } catch (e) {
         console.error('Error logging event:', e);
+        return false;
       }
     }
     
@@ -2373,6 +2401,27 @@
       };
       
       await logEvent(event);
+    }
+    
+    // Log user/page action to event viewer
+    async function logActionEvent(actionName, details = '') {
+      if (!eventViewerEnabled) return;
+      
+      const event = {
+        monitorId: 0, // Actions are system-level, not monitor-specific
+        monitorName: 'System',
+        url: '',
+        eventType: 'actions',
+        timestamp: new Date().toISOString(),
+        message: details ? `${actionName} - ${details}` : actionName
+      };
+      
+      const success = await logEvent(event);
+      
+      // If event was logged successfully and event viewer is visible, refresh immediately
+      if (success && eventViewerVisible) {
+        loadEvents();
+      }
     }
     
     // Detect and log status changes
@@ -2419,21 +2468,25 @@
         clearTimeout(refreshDebounceTimer);
         refreshDebounceTimer = null;
       }
+      logActionEvent('Manual refresh', 'User clicked refresh button');
       refresh();
     });
     document.getElementById('toggle-problems').addEventListener('click', () => {
       onlyProblems = !onlyProblems;
       updateButtonText('toggle-problems', onlyProblems, 'Show All', 'Show Only Problems');
+      logActionEvent('Toggle problems filter', `Problems filter ${onlyProblems ? 'enabled' : 'disabled'}`);
       debouncedRefresh();
     });
     document.getElementById('toggle-paused').addEventListener('click', () => {
       showPaused = !showPaused;
       updateButtonText('toggle-paused', showPaused, 'Hide Paused', 'Show Paused');
+      logActionEvent('Toggle paused monitors', `Paused monitors ${showPaused ? 'shown' : 'hidden'}`);
       debouncedRefresh();
     });
     document.getElementById('toggle-tags').addEventListener('click', () => {
       showTags = !showTags;
       updateButtonText('toggle-tags', showTags, 'Hide Tags', 'Show Tags');
+      logActionEvent('Toggle tags display', `Tags ${showTags ? 'shown' : 'hidden'}`);
       updateTagVisibility();
     });
     document.getElementById('toggle-filter').addEventListener('click', toggleFilterVisibility);
@@ -2549,6 +2602,8 @@
       updateIntervals();
       // Handle auto fullscreen after config is loaded
       handleAutoFullscreen();
+      // Log page load action
+      logActionEvent('Page loaded', 'Wallboard initialized');
     });
     
     // Initialize config version checking

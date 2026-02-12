@@ -95,7 +95,8 @@ if ($configPath !== null) {
         'EVENT_TYPE_FILTER_DEFAULT_DOWN',
         'EVENT_TYPE_FILTER_DEFAULT_UP',
         'EVENT_TYPE_FILTER_DEFAULT_PAUSED',
-        'EVENT_TYPE_FILTER_DEFAULT_ERROR'
+        'EVENT_TYPE_FILTER_DEFAULT_ERROR',
+        'EVENT_TYPE_FILTER_DEFAULT_ACTIONS'
     ]);
     
     // Load API token
@@ -289,6 +290,10 @@ if ($configPath !== null) {
     if (isset($parsed['EVENT_TYPE_FILTER_DEFAULT_ERROR'])) {
         $value = strtolower(trim($parsed['EVENT_TYPE_FILTER_DEFAULT_ERROR']));
         $CONFIG['eventTypeFilterDefaultError'] = ($value === 'true' || $value === '1');
+    }
+    if (isset($parsed['EVENT_TYPE_FILTER_DEFAULT_ACTIONS'])) {
+        $value = strtolower(trim($parsed['EVENT_TYPE_FILTER_DEFAULT_ACTIONS']));
+        $CONFIG['eventTypeFilterDefaultActions'] = ($value === 'true' || $value === '1');
     }
 }
 
@@ -563,5 +568,6 @@ echo json_encode([
         'eventTypeFilterDefaultUp' => $CONFIG['eventTypeFilterDefaultUp'] ?? true,
         'eventTypeFilterDefaultPaused' => $CONFIG['eventTypeFilterDefaultPaused'] ?? true,
         'eventTypeFilterDefaultError' => $CONFIG['eventTypeFilterDefaultError'] ?? true,
+        'eventTypeFilterDefaultActions' => $CONFIG['eventTypeFilterDefaultActions'] ?? true,
     ],
 ], JSON_UNESCAPED_SLASHES);
