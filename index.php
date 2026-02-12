@@ -1250,8 +1250,7 @@
         if (!epoch || isNaN(epoch)) return; // Skip if not a valid number
         
         const newDuration = formatDuration(epoch);
-        // Only update if we got a valid duration (non-empty string)
-        if (newDuration) {
+        if (newDuration) { // formatDuration returns empty string for invalid/negative times
           el.textContent = newDuration;
         }
       });
@@ -1268,8 +1267,7 @@
         // formatCompactDuration expects an ISO string or timestamp, so convert ms to ISO
         const isoString = new Date(timestamp).toISOString();
         const newDuration = formatCompactDuration(isoString);
-        // Only update if we got a valid duration (non-empty string)
-        if (newDuration) {
+        if (newDuration) { // formatCompactDuration returns empty string for future events
           el.textContent = newDuration;
         }
       });
@@ -2284,7 +2282,7 @@
         const isRecent = (now - eventTime) <= windowMs;
         const recentClass = isRecent ? ' recent' : '';
         
-        // Store timestamp for real-time updates (convert to milliseconds)
+        // Store timestamp in milliseconds for real-time updates
         const timestampMs = eventTime;
         
         return `
