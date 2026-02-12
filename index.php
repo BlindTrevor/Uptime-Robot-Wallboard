@@ -74,6 +74,25 @@
     .pill.ok { background: #163327; color: #8af0c9; border-color: #184836; }
     .pill.paused { background: var(--warning-bg); color: var(--warn); border-color: var(--warning-border); }
     
+    /* Refresh status indicator */
+    .pill.refresh-on { 
+      background: #163327; 
+      color: #8af0c9; 
+      border-color: #184836;
+      font-size: 0.75rem;
+    }
+    .pill.refresh-off { 
+      background: var(--warning-bg); 
+      color: var(--warn); 
+      border-color: var(--warning-border);
+      font-size: 0.75rem;
+    }
+    .pill.refresh-on i { animation: spin 2s linear infinite; }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
     /* Down tags display */
     #down-tags {
       display: inline-flex;
@@ -608,6 +627,7 @@
     </div>
     <div class="meta row">
       <span id="last-updated">Last updated: —</span>
+      <span id="refresh-status" class="pill refresh-on"><i class="fas fa-sync"></i> Auto-refresh: ON</span>
       <span id="problem-pill" class="pill" style="display:none"></span>
       <span id="down-tags" style="display:none"></span>
     </div>
@@ -703,6 +723,11 @@
     // Time conversion constant
     const MS_PER_MINUTE = 60 * 1000;
     
+    // Debounce delays (in milliseconds)
+    // These are separate constants to allow independent tuning in the future
+    const REFRESH_DEBOUNCE_DELAY = 500; // Delay for API refresh debouncing
+    const RERENDER_DEBOUNCE_DELAY = 500; // Delay for re-render debouncing in norefresh mode
+    
     // Default configuration (will be overridden by server config and/or query string)
     let config = {
       refreshRate: 20,
@@ -724,6 +749,7 @@
       eventTypeFilterDefaultUp: true,
       eventTypeFilterDefaultPaused: true,
       eventTypeFilterDefaultError: true,
+      norefresh: false,
     };
 
     // --- Theme Management ---
@@ -941,6 +967,12 @@
         }
       }
       
+      // Parse norefresh (case-insensitive, accepts 'true' or '1')
+      if (params.has('norefresh')) {
+        const value = params.get('norefresh').toLowerCase();
+        queryConfig.norefresh = (value === 'true' || value === '1');
+      }
+      
       return queryConfig;
     }
     
@@ -1016,6 +1048,9 @@
         Object.assign(config, queryConfig);
       }
       
+      // Update refresh status indicator after config is applied
+      updateRefreshStatusIndicator();
+      
       // Re-initialize theme after server configuration is applied
       // This respects the priority: cookie > query string > server config
       initializeTheme();
@@ -1036,6 +1071,7 @@
     let selectedTags = new Set(); // Selected tags for filtering
     let allTags = new Set(); // All available tags
     let filterVisible = false; // Track filter section visibility
+    let lastData = null; // Store last fetched data for re-rendering in norefresh mode
     
     // Event viewer state
     let eventViewerVisible = false;
@@ -1080,6 +1116,12 @@
         eventViewerSetByQuery = true;
         // Will be processed after config is loaded
       }
+      // Apply norefresh setting early
+      if (config.allowQueryOverride && typeof queryConfig.norefresh === 'boolean') {
+        config.norefresh = queryConfig.norefresh;
+      }
+      // Update refresh status indicator after early config parsing
+      updateRefreshStatusIndicator();
     })();
 
     // Utilities
@@ -1781,9 +1823,47 @@
       updateTagVisibility();
     }
 
+    // Update refresh status indicator
+    function updateRefreshStatusIndicator() {
+      const refreshStatus = document.getElementById('refresh-status');
+      if (!refreshStatus) return;
+      
+      if (config.norefresh) {
+        refreshStatus.className = 'pill refresh-off';
+        refreshStatus.innerHTML = '<i class="fas fa-pause"></i> Auto-refresh: OFF';
+      } else {
+        refreshStatus.className = 'pill refresh-on';
+        refreshStatus.innerHTML = '<i class="fas fa-sync"></i> Auto-refresh: ON';
+      }
+    }
+
+    // Re-render using last fetched data (for filter changes in norefresh mode)
+    function rerender() {
+      if (lastData) {
+        render(lastData);
+      } else {
+        console.warn('[No Refresh Mode] No data available to re-render yet');
+      }
+    }
+
     // Debounced refresh function to prevent rapid successive API calls
     // This wraps the actual refresh logic with debouncing and request coalescing
     function debouncedRefresh() {
+      // In norefresh mode, debounce re-renders with existing data instead of fetching
+      if (config.norefresh) {
+        // Clear any pending debounce timer
+        if (refreshDebounceTimer) {
+          clearTimeout(refreshDebounceTimer);
+        }
+        
+        // Set new debounce timer for re-render
+        refreshDebounceTimer = setTimeout(() => {
+          console.log('[No Refresh Mode] Re-rendering with existing data');
+          rerender();
+        }, RERENDER_DEBOUNCE_DELAY);
+        return;
+      }
+      
       // If a refresh is currently in progress, mark that we need another refresh after it completes
       if (refreshInProgress) {
         pendingRefreshAfterComplete = true;
@@ -1796,11 +1876,11 @@
         clearTimeout(refreshDebounceTimer);
       }
       
-      // Set new debounce timer (500ms)
+      // Set new debounce timer
       // Multiple rapid calls will only result in one actual API call
       refreshDebounceTimer = setTimeout(() => {
         refresh();
-      }, 500);
+      }, REFRESH_DEBOUNCE_DELAY);
     }
 
     async function refresh() {
@@ -1849,6 +1929,7 @@
           
           throw new Error(fullErrorMsg);
         }
+        lastData = data; // Store data for re-rendering in norefresh mode
         render(data);
         lastRefreshTime = Date.now(); // Update timestamp on successful refresh
       } catch (e) {
@@ -1910,6 +1991,13 @@
       if (eventRefreshInterval) {
         clearInterval(eventRefreshInterval);
         eventRefreshInterval = null;
+      }
+      
+      // Skip setting up intervals if norefresh is enabled
+      // This disables: periodic API refresh, config change detection, and event viewer refresh
+      if (config.norefresh) {
+        console.log('[No Refresh Mode] Automatic refresh disabled via querystring parameter');
+        return;
       }
       
       // Set new intervals based on config
