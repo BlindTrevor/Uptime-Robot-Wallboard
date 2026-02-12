@@ -1057,6 +1057,9 @@
         if (typeof serverConfig.eventTypeFilterDefaultError === 'boolean') {
           config.eventTypeFilterDefaultError = serverConfig.eventTypeFilterDefaultError;
         }
+        if (typeof serverConfig.eventTypeFilterDefaultActions === 'boolean') {
+          config.eventTypeFilterDefaultActions = serverConfig.eventTypeFilterDefaultActions;
+        }
       }
       
       // Apply query string overrides if allowed
