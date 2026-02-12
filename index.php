@@ -530,15 +530,15 @@
     .event-type-filter-pill {
       display: inline-flex;
       align-items: center;
-      gap: 3px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      font-weight: 600;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 1.2rem;
       border: 2px solid;
       cursor: pointer;
       transition: all 0.2s ease;
-      text-transform: uppercase;
       user-select: none;
     }
     .event-type-filter-pill.down {
@@ -697,20 +697,20 @@
         </button>
       </div>
       <div id="event-type-filters" class="event-type-filters" style="display: none;">
-        <button class="event-type-filter-pill down" data-event-type="down">
-          <i class="fas fa-times-circle"></i> Down
+        <button class="event-type-filter-pill down" data-event-type="down" title="Down" aria-label="Down">
+          <i class="fas fa-times-circle"></i>
         </button>
-        <button class="event-type-filter-pill up" data-event-type="up">
-          <i class="fas fa-check-circle"></i> Up
+        <button class="event-type-filter-pill up" data-event-type="up" title="Up" aria-label="Up">
+          <i class="fas fa-check-circle"></i>
         </button>
-        <button class="event-type-filter-pill paused" data-event-type="paused">
-          <i class="fas fa-pause-circle"></i> Paused
+        <button class="event-type-filter-pill paused" data-event-type="paused" title="Paused" aria-label="Paused">
+          <i class="fas fa-pause-circle"></i>
         </button>
-        <button class="event-type-filter-pill error" data-event-type="error">
-          <i class="fas fa-exclamation-triangle"></i> Error
+        <button class="event-type-filter-pill error" data-event-type="error" title="Error" aria-label="Error">
+          <i class="fas fa-exclamation-triangle"></i>
         </button>
-        <button class="event-type-filter-pill actions" data-event-type="actions">
-          <i class="fas fa-bolt"></i> Actions
+        <button class="event-type-filter-pill actions" data-event-type="actions" title="Actions" aria-label="Actions">
+          <i class="fas fa-bolt"></i>
         </button>
       </div>
     </div>
