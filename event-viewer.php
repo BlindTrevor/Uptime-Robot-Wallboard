@@ -77,14 +77,17 @@ $eventTypeFilters = [
     'error' => true,
 ];
 
+// Apply filters from query parameter (with validation)
 if (isset($_GET['filters'])) {
     $filterParam = $_GET['filters'];
-    if (is_string($filterParam)) {
+    if (is_string($filterParam) && strlen($filterParam) < 1000) { // Sanity check length
         $filterDecoded = json_decode($filterParam, true);
-        if (is_array($filterDecoded)) {
+        // Only accept array with expected keys and boolean values
+        if (is_array($filterDecoded) && json_last_error() === JSON_ERROR_NONE) {
+            // Whitelist: only process known event type keys
             foreach ($eventTypeFilters as $type => $default) {
-                if (isset($filterDecoded[$type])) {
-                    $eventTypeFilters[$type] = (bool)$filterDecoded[$type];
+                if (array_key_exists($type, $filterDecoded) && is_bool($filterDecoded[$type])) {
+                    $eventTypeFilters[$type] = $filterDecoded[$type];
                 }
             }
         }

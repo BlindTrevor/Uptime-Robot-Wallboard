@@ -2013,8 +2013,8 @@
       
       try {
         const currentPage = page || eventCurrentPage;
-        const filtersParam = encodeURIComponent(JSON.stringify(eventTypeFilters));
-        const url = `${EVENT_VIEWER_ENDPOINT}?page=${currentPage}&perPage=${config.eventViewerItemsPerPage}&filters=${filtersParam}`;
+        const encodedFiltersParam = encodeURIComponent(JSON.stringify(eventTypeFilters));
+        const url = `${EVENT_VIEWER_ENDPOINT}?page=${currentPage}&perPage=${config.eventViewerItemsPerPage}&filters=${encodedFiltersParam}`;
         const res = await fetch(url, { cache: 'no-store' });
         
         if (!res.ok) {
