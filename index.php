@@ -1243,11 +1243,12 @@
       const timeElements = document.querySelectorAll('.time-since');
       timeElements.forEach(el => {
         const epoch = el.getAttribute('data-epoch');
-        if (epoch) {
-          const newDuration = formatDuration(epoch);
-          if (newDuration) {
-            el.textContent = newDuration;
-          }
+        if (!epoch) return; // Skip if no epoch attribute
+        
+        const newDuration = formatDuration(epoch);
+        // Only update if we got a valid duration (non-empty string)
+        if (newDuration) {
+          el.textContent = newDuration;
         }
       });
     }
@@ -1781,10 +1782,12 @@
         let statusLabel = '';
         if (status === 'up') {
           const duration = formatDuration(m.last_check);
-          statusLabel = `Up since: ${epochToLocal(m.last_check)}${duration ? ` (<span class="time-since" data-epoch="${m.last_check}">${duration}</span>)` : ''}`;
+          const epoch = Number(m.last_check) || 0; // Ensure it's a number
+          statusLabel = `Up since: ${epochToLocal(m.last_check)}${duration ? ` (<span class="time-since" data-epoch="${epoch}">${duration}</span>)` : ''}`;
         } else if (status === 'down' || status === 'seems_down') {
           const duration = formatDuration(m.last_check);
-          statusLabel = `Down since: ${epochToLocal(m.last_check)}${duration ? ` (<span class="time-since" data-epoch="${m.last_check}">${duration}</span>)` : ''}`;
+          const epoch = Number(m.last_check) || 0; // Ensure it's a number
+          statusLabel = `Down since: ${epochToLocal(m.last_check)}${duration ? ` (<span class="time-since" data-epoch="${epoch}">${duration}</span>)` : ''}`;
         } else if (status === 'paused') {
           statusLabel = ''; // No status time for paused monitors
         } else {
