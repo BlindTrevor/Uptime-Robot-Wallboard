@@ -2628,8 +2628,8 @@
             const pillRect = pill.getBoundingClientRect();
             const tooltipRect = tooltipEl.getBoundingClientRect();
             
-            const left = pillRect.left + window.pageXOffset + (pillRect.width / 2) - (tooltipRect.width / 2);
-            const top = pillRect.top + window.pageYOffset - tooltipRect.height - 8;
+            const left = pillRect.left + window.scrollX + (pillRect.width / 2) - (tooltipRect.width / 2);
+            const top = pillRect.top + window.scrollY - tooltipRect.height - 8;
             
             tooltipEl.style.left = left + 'px';
             tooltipEl.style.top = top + 'px';
@@ -2647,8 +2647,8 @@
             hideTimeout = setTimeout(() => {
               tooltipEl.classList.remove('show');
               setTimeout(() => {
-                if (tooltipEl && tooltipEl.parentNode) {
-                  tooltipEl.parentNode.removeChild(tooltipEl);
+                if (tooltipEl) {
+                  tooltipEl.remove();
                 }
                 tooltipEl = null;
               }, 150); // Wait for fade out animation
