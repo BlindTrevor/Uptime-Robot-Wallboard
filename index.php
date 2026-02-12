@@ -24,6 +24,8 @@
       --border-offline: #5e2323;
       --warning-bg: #3b2a1a;
       --warning-border: #5e4123;
+      --response-graph-width: 80px;
+      --response-graph-spacing: 10px;
     }
 
     /* Light theme */
@@ -177,13 +179,26 @@
       display: flex;
       flex-wrap: wrap;
       margin-top: 6px;
+      padding-right: calc(var(--response-graph-width) + var(--response-graph-spacing));
     }
     .tags-container.hidden {
       display: none;
     }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; position: relative; }
     .card.offline { background: var(--card-offline); border-color: var(--border-offline); }
+    .response-time-graph {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      width: var(--response-graph-width);
+      height: 30px;
+      opacity: 0.7;
+      transition: opacity 0.2s ease;
+    }
+    .response-time-graph:hover {
+      opacity: 1;
+    }
     .name { font-weight: 700; font-size: 1.05rem; margin-bottom: 6px; }
     .status { margin-top: 8px; font-weight: 800; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px; }
     .status i { font-size: 1.1em; }
@@ -1174,6 +1189,9 @@
     let refreshInProgress = false; // Prevent concurrent API requests
     let refreshDebounceTimer = null; // Timer for debouncing rapid refresh calls
     let lastRefreshTime = Date.now(); // Timestamp of last successful refresh
+    
+    // Response time graph constants
+    const RESPONSE_GRAPH_LOAD_DELAY_MS = 100; // Delay between graph API requests to avoid rate limits
     let apiCallCount = 0; // Counter for debugging API call frequency
     let pendingRefreshAfterComplete = false; // Flag to trigger refresh after current request completes
     
@@ -1643,6 +1661,144 @@
       return s !== 'up';
     }
 
+    /**
+     * Fetch response time data for a monitor
+     * @param {number} monitorId - Monitor ID
+     * @returns {Promise<object|null>} Response time data or null if unavailable
+     */
+    async function fetchResponseTimeData(monitorId) {
+      try {
+        const response = await fetch(`response_times.php?monitor_id=${monitorId}`);
+        if (!response.ok) {
+          return null;
+        }
+        const data = await response.json();
+        if (data.ok && data.has_data && data.data.time_series) {
+          return data.data;
+        }
+        return null;
+      } catch (err) {
+        console.error(`Failed to fetch response time for monitor ${monitorId}:`, err);
+        return null;
+      }
+    }
+
+    /**
+     * Render a small response time graph on a canvas
+     * @param {HTMLCanvasElement} canvas - Canvas element to draw on
+     * @param {Array} timeSeries - Array of {timestamp, value} objects
+     */
+    function renderResponseTimeGraph(canvas, timeSeries) {
+      if (!timeSeries || timeSeries.length === 0) return;
+      
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width;
+      const height = canvas.height;
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, width, height);
+      
+      // Extract values and find min/max for scaling
+      const values = timeSeries.map(point => point.value).filter(v => v !== null && v >= 0);
+      if (values.length === 0) return;
+      
+      const minValue = Math.min(...values);
+      const maxValue = Math.max(...values);
+      const range = maxValue - minValue || 1; // Prevent division by zero
+      
+      // Calculate points
+      const points = timeSeries.map((point, index) => {
+        if (point.value === null || point.value < 0) return null;
+        // Handle single point or multiple points
+        const x = timeSeries.length > 1 ? (index / (timeSeries.length - 1)) * width : width / 2;
+        const y = height - ((point.value - minValue) / range) * height;
+        return { x, y };
+      }).filter(p => p !== null);
+      
+      if (points.length === 0) return;
+      
+      // Get the --ok color from CSS variables (theme-aware)
+      const okColor = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#3ad29f';
+      
+      // Draw the line graph in green
+      ctx.strokeStyle = okColor;
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.stroke();
+    }
+
+    /**
+     * Add response time graph to a monitor card
+     * @param {HTMLElement} cardElement - The card element
+     * @param {number} monitorId - Monitor ID
+     */
+    async function addResponseTimeGraph(cardElement, monitorId) {
+      // Check if graph already exists
+      if (cardElement.querySelector('.response-time-graph')) return;
+      
+      const data = await fetchResponseTimeData(monitorId);
+      if (!data || !data.time_series || data.time_series.length === 0) {
+        return; // No data available, skip graph
+      }
+      
+      // Create canvas element
+      const canvas = document.createElement('canvas');
+      canvas.className = 'response-time-graph';
+      canvas.width = 160; // Double for retina displays
+      canvas.height = 60; // Double for retina displays
+      canvas.style.width = '80px';
+      canvas.style.height = '30px';
+      
+      // Add tooltip with summary stats
+      if (data.summary) {
+        const { min, max, avg } = data.summary;
+        const tooltipText = `Response Time (last hour)\nAvg: ${avg}ms\nMin: ${min}ms\nMax: ${max}ms`;
+        canvas.title = tooltipText;
+        canvas.setAttribute('aria-label', `Response time graph: Average ${avg} milliseconds, Minimum ${min} milliseconds, Maximum ${max} milliseconds over the last hour`);
+      } else {
+        canvas.setAttribute('aria-label', 'Response time graph for the last hour');
+      }
+      
+      // Render the graph
+      renderResponseTimeGraph(canvas, data.time_series);
+      
+      // Add to card
+      cardElement.appendChild(canvas);
+    }
+
+    /**
+     * Load response time graphs for all monitors with a delay between requests
+     * to avoid overwhelming the API
+     * @param {NodeList} cards - List of card elements
+     */
+    async function loadResponseTimeGraphs(cards) {
+      const cardsArray = Array.from(cards);
+      
+      // Process cards in batches with a delay
+      for (let i = 0; i < cardsArray.length; i++) {
+        const card = cardsArray[i];
+        const monitorId = card.getAttribute('data-monitor-id');
+        
+        if (monitorId) {
+          // Add graph asynchronously with await to enforce sequential processing
+          await addResponseTimeGraph(card, parseInt(monitorId, 10));
+          
+          // Add a small delay between requests to spread the load
+          // With caching, repeated requests will be fast
+          if (i < cardsArray.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, RESPONSE_GRAPH_LOAD_DELAY_MS));
+          }
+        }
+      }
+    }
+
     // Fetch
     async function loadData() {
       const params = new URLSearchParams();
@@ -1872,7 +2028,7 @@
         }
 
         return `
-          <div class="${cardClass}">
+          <div class="${cardClass}" data-monitor-id="${m.id || ''}">
             <div class="name">${m.friendly_name || '—'}</div>
             <div class="${cls}">${statusIcon}${(m.status || 'UNKNOWN').toUpperCase()}</div>
             <div class="kv">${statusLabel}</div>
@@ -1880,6 +2036,14 @@
           </div>
         `;
       }).join('');
+
+      // Add response time graphs to monitor cards asynchronously
+      // We do this after innerHTML is set so DOM elements exist
+      // Use a queue system with delays to avoid overwhelming the API
+      setTimeout(() => {
+        const cards = grid.querySelectorAll('.card[data-monitor-id]');
+        loadResponseTimeGraphs(cards);
+      }, 0);
 
       // Footer - show rate limit info and optionally pagination meta
       let footerContent = '';
