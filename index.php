@@ -201,7 +201,11 @@
     .tags-container {
       display: flex;
       flex-wrap: wrap;
-      margin-top: 6px;
+      position: absolute;
+      bottom: 8px;
+      left: 10px;
+      right: 10px;
+      z-index: 2;
     }
     .tags-container.hidden {
       display: none;
@@ -211,9 +215,13 @@
       background: var(--card); 
       border: 1px solid var(--border); 
       border-radius: 10px; 
-      padding: 12px; 
+      padding: 10px; 
+      padding-bottom: 40px;
       position: relative;
       overflow: hidden;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
     }
     .card.offline { background: var(--card-offline); border-color: var(--border-offline); }
     .response-time-graph {
@@ -230,13 +238,16 @@
     .response-time-graph:hover {
       opacity: 0.35;
     }
-    .card > *:not(.response-time-graph) {
+    .card > *:not(.response-time-graph):not(.tags-container) {
       position: relative;
       z-index: 1;
     }
     .name { font-weight: 700; font-size: 1.05rem; margin-bottom: 6px; }
-    .status { margin-top: 8px; font-weight: 800; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px; }
+    .status { margin-top: 8px; font-weight: 800; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .status i { font-size: 1.1em; }
+    .status .status-text { font-size: 1em; font-weight: 800; }
+    .status .since-text { font-size: 0.6em; font-weight: 400; letter-spacing: normal; }
+    .status .time-info { font-size: 0.6em; font-weight: 400; letter-spacing: normal; }
     .status.up { color: var(--ok); }
     .status.seems_down, .status.down { color: var(--bad); }
     .status.paused { color: var(--warn); }
@@ -1266,6 +1277,23 @@
       const d = new Date(n * 1000);
       return isNaN(d.getTime()) ? '—' : d.toLocaleString();
     }
+    
+    // Format date as YY/MM/DD, HH:MM for compact display
+    function epochToCompactDate(epoch) {
+      const n = Number(epoch);
+      if (!n) return '—';
+      const d = new Date(n * 1000);
+      if (isNaN(d.getTime())) return '—';
+      
+      const year = String(d.getFullYear()).slice(-2);
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      
+      return `${year}/${month}/${day}, ${hours}:${minutes}`;
+    }
+    
     const toClass = s => (s || 'unknown').toLowerCase().replace(/\s+/g, '_');
 
     /**
@@ -2129,25 +2157,31 @@
         let statusLabel = '';
         if (status === 'up') {
           const duration = formatDuration(m.last_check);
+          const compactDate = epochToCompactDate(m.last_check);
           // Convert epoch to number for safety (prevents XSS from malicious API responses)
           const epoch = Number(m.last_check) || 0;
-          statusLabel = `Up since: ${epochToLocal(m.last_check)}${duration ? ` (<span class="time-since" data-epoch="${epoch}">${duration}</span>)` : ''}`;
+          statusLabel = duration ? `${compactDate} (<span class="time-since" data-epoch="${epoch}">${duration}</span>)` : compactDate;
         } else if (status === 'down' || status === 'seems_down') {
           const duration = formatDuration(m.last_check);
+          const compactDate = epochToCompactDate(m.last_check);
           // Convert epoch to number for safety (prevents XSS from malicious API responses)
           const epoch = Number(m.last_check) || 0;
-          statusLabel = `Down since: ${epochToLocal(m.last_check)}${duration ? ` (<span class="time-since" data-epoch="${epoch}">${duration}</span>)` : ''}`;
+          statusLabel = duration ? `${compactDate} (<span class="time-since" data-epoch="${epoch}">${duration}</span>)` : compactDate;
         } else if (status === 'paused') {
           statusLabel = ''; // No status time for paused monitors
         } else {
-          statusLabel = `Last check: ${epochToLocal(m.last_check)}`;
+          statusLabel = `${epochToCompactDate(m.last_check)}`;
         }
+        
+        // Build status text with inline "since" information
+        const statusText = statusLabel 
+          ? `${statusIcon}<span class="status-text">${(m.status || 'UNKNOWN').toUpperCase()}</span> <span class="time-info"><span class="since-text">since:</span> ${statusLabel}</span>`
+          : `${statusIcon}<span class="status-text">${(m.status || 'UNKNOWN').toUpperCase()}</span>`;
 
         return `
           <div class="${cardClass}" data-monitor-id="${m.id || ''}">
             <div class="name">${m.friendly_name || '—'}</div>
-            <div class="${cls}">${statusIcon}${(m.status || 'UNKNOWN').toUpperCase()}</div>
-            <div class="kv">${statusLabel}</div>
+            <div class="${cls}">${statusText}</div>
             ${tagPills ? `<div class="tags-container">${tagPills}</div>` : ''}
           </div>
         `;
