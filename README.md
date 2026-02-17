@@ -145,7 +145,7 @@ The wallboard now supports running multiple independent instances (browser tabs/
 #### API Request Coordination
 - **Cross-Tab Communication**: When multiple tabs are open, they coordinate to prevent duplicate API calls
 - **Smart Refresh**: Only one tab makes API requests while others benefit from the results
-- **Rate Limit Protection**: Automatic coordination reduces API calls and respects rate limits
+- **Reduced API Volume**: Automatic coordination helps reduce overall API call volume
 
 #### Best Practices for Multiple Displays
 1. **Active Displays**: Open normally - tabs will coordinate automatically
