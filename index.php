@@ -142,6 +142,9 @@
       font-weight: 600;
       border: 1px solid;
       transition: all 0.2s ease;
+      opacity: 0.85;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
     }
     
     /* Tag filter section */
@@ -2068,10 +2071,33 @@
         mons = mons.filter(m => monitorHasSelectedTag(m, selectedTags));
       }
 
-      // Sort: problems first, then by name
+      // Sort: problems first, then by tags, then by name
       mons.sort((a, b) => {
         const ap = isProblem(a), bp = isProblem(b);
         if (ap !== bp) return ap ? -1 : 1;
+        
+        // Get first tag for each monitor (sorted alphabetically)
+        const getFirstTag = (monitor) => {
+          if (!Array.isArray(monitor.tags) || !monitor.tags.length) return '';
+          const tagNames = monitor.tags
+            .map(t => typeof t === 'object' && t !== null ? (t.name || '') : t)
+            .filter(Boolean)
+            .sort();
+          return tagNames[0] || '';
+        };
+        
+        const aTag = getFirstTag(a);
+        const bTag = getFirstTag(b);
+        
+        // Sort by tag first
+        if (aTag !== bTag) {
+          // Monitors without tags go last
+          if (!aTag) return 1;
+          if (!bTag) return -1;
+          return aTag.localeCompare(bTag);
+        }
+        
+        // If same tag (or both no tags), sort by name
         return (a.friendly_name || '').localeCompare(b.friendly_name || '');
       });
 
