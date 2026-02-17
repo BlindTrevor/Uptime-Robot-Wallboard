@@ -2170,11 +2170,16 @@
         } else {
           statusLabel = `${epochToCompactDate(m.last_check)}`;
         }
+        
+        // Build status text with inline "since" information
+        const statusText = statusLabel 
+          ? `${statusIcon}${(m.status || 'UNKNOWN').toUpperCase()} <span class="since-text">since:</span> ${statusLabel}`
+          : `${statusIcon}${(m.status || 'UNKNOWN').toUpperCase()}`;
 
         return `
           <div class="${cardClass}" data-monitor-id="${m.id || ''}">
             <div class="name">${m.friendly_name || '—'}</div>
-            <div class="${cls}">${statusIcon}${(m.status || 'UNKNOWN').toUpperCase()}${statusLabel ? ` <span class="since-text">since:</span> ${statusLabel}` : ''}</div>
+            <div class="${cls}">${statusText}</div>
             ${tagPills ? `<div class="tags-container">${tagPills}</div>` : ''}
           </div>
         `;
