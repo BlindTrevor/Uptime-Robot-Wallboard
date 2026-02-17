@@ -99,6 +99,16 @@
     .pill.ok { background: #163327; color: #8af0c9; border-color: #184836; }
     .pill.paused { background: var(--warning-bg); color: var(--warn); border-color: var(--warning-border); }
     
+    /* Session indicator */
+    .pill.session-indicator { 
+      background: var(--card); 
+      color: var(--subtle); 
+      border-color: var(--border);
+      font-size: 0.7rem;
+      font-family: monospace;
+      cursor: help;
+    }
+    
     /* Refresh status indicator */
     .pill.refresh-on { 
       background: #163327; 
@@ -758,6 +768,7 @@
     <div class="meta row">
       <span id="last-updated">Last updated: —</span>
       <span id="refresh-status" class="pill refresh-on"><i class="fas fa-sync"></i> Auto-refresh: ON</span>
+      <span id="session-indicator" class="pill session-indicator" title="Session ID for debugging multi-instance scenarios"><i class="fas fa-fingerprint"></i> Session: <span id="session-id-display"></span></span>
       <span id="problem-pill" class="pill" style="display:none"></span>
       <span id="down-tags" style="display:none"></span>
     </div>
@@ -887,8 +898,47 @@
       spikeDetectionSensitivity: 3.0,
     };
 
+    // --- Session Management ---
+    // Generate a unique session ID for this browser tab/window
+    function generateSessionId() {
+      // Simple UUID v4 implementation
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    // Get or create session ID (stored in sessionStorage for per-tab isolation)
+    let sessionId = sessionStorage.getItem('wallboard_session_id');
+    if (!sessionId) {
+      sessionId = generateSessionId();
+      sessionStorage.setItem('wallboard_session_id', sessionId);
+    }
+    
+    console.log('[Session] Session ID:', sessionId);
+
+    // Session Storage utilities
+    function setSessionData(key, value) {
+      try {
+        sessionStorage.setItem(`wallboard_${key}`, JSON.stringify(value));
+      } catch (e) {
+        console.error('[Session] Failed to save to sessionStorage:', e);
+      }
+    }
+
+    function getSessionData(key, defaultValue = null) {
+      try {
+        const item = sessionStorage.getItem(`wallboard_${key}`);
+        return item ? JSON.parse(item) : defaultValue;
+      } catch (e) {
+        console.error('[Session] Failed to read from sessionStorage:', e);
+        return defaultValue;
+      }
+    }
+
     // --- Theme Management ---
-    // Cookie utilities
+    // Cookie utilities (still used for cross-session theme persistence if needed)
     const COOKIE_EXPIRY_DAYS = 365;
     const MS_PER_DAY = 864e5; // Milliseconds in a day
     
@@ -927,10 +977,10 @@
       return resolvedTheme;
     }
 
-    // Initialize theme from cookie, config, or system preference
+    // Initialize theme from session storage, query string, config, or system preference
     function initializeTheme() {
-      // Priority: cookie > query string > config > auto (system preference)
-      const cookieTheme = getCookie('theme');
+      // Priority: session storage > query string > config > auto (system preference)
+      const sessionTheme = getSessionData('theme');
       const queryTheme = new URLSearchParams(window.location.search).get('theme');
       
       let selectedTheme = config.theme || 'auto';
@@ -940,9 +990,9 @@
         selectedTheme = queryTheme;
       }
       
-      // Cookie overrides everything (user's explicit choice)
-      if (cookieTheme && ['dark', 'light', 'auto'].includes(cookieTheme)) {
-        selectedTheme = cookieTheme;
+      // Session storage overrides everything (user's explicit choice for this session)
+      if (sessionTheme && ['dark', 'light', 'auto'].includes(sessionTheme)) {
+        selectedTheme = sessionTheme;
       }
       
       applyTheme(selectedTheme);
@@ -953,15 +1003,15 @@
       const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
       const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
       applyTheme(newTheme);
-      setCookie('theme', newTheme);
+      setSessionData('theme', newTheme);
       logActionEvent('Toggle theme', `Theme changed to ${newTheme} mode`);
     }
 
     // Listen for system theme changes when in auto mode
     if (window.matchMedia) {
       window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-        const cookieTheme = getCookie('theme');
-        if (!cookieTheme || cookieTheme === 'auto') {
+        const sessionTheme = getSessionData('theme');
+        if (!sessionTheme || sessionTheme === 'auto') {
           applyTheme('auto');
         }
       });
@@ -1233,6 +1283,97 @@
     };
     let allEvents = []; // Store all events for client-side filtering
     let currentPagination = null; // Store current pagination info
+    
+    // Initialize session state from sessionStorage
+    function initializeSessionState() {
+      // Initialize filter states from session storage
+      const savedOnlyProblems = getSessionData('onlyProblems');
+      const savedShowPaused = getSessionData('showPaused');
+      const savedShowTags = getSessionData('showTags');
+      const savedEventViewerVisible = getSessionData('eventViewerVisible');
+      const savedSelectedTags = getSessionData('selectedTags');
+      const savedEventTypeFilters = getSessionData('eventTypeFilters');
+      
+      // Only restore from session if not set by query string
+      if (savedOnlyProblems !== null && !onlyProblemsSetByQuery) {
+        onlyProblems = savedOnlyProblems;
+      }
+      if (savedShowPaused !== null && !showPausedSetByQuery) {
+        showPaused = savedShowPaused;
+      }
+      if (savedShowTags !== null && !showTagsSetByQuery) {
+        showTags = savedShowTags;
+      }
+      if (savedEventViewerVisible !== null && !eventViewerSetByQuery) {
+        eventViewerVisible = savedEventViewerVisible;
+      }
+      if (savedSelectedTags !== null) {
+        selectedTags = new Set(savedSelectedTags);
+      }
+      if (savedEventTypeFilters !== null) {
+        eventTypeFilters = savedEventTypeFilters;
+      }
+      
+      console.log('[Session] Initialized state from session storage');
+    }
+    
+    // Save session state to sessionStorage
+    function saveSessionState() {
+      setSessionData('onlyProblems', onlyProblems);
+      setSessionData('showPaused', showPaused);
+      setSessionData('showTags', showTags);
+      setSessionData('eventViewerVisible', eventViewerVisible);
+      setSessionData('selectedTags', Array.from(selectedTags));
+      setSessionData('eventTypeFilters', eventTypeFilters);
+    }
+    
+    // --- Cross-Tab Communication for API Coordination ---
+    // Use BroadcastChannel to coordinate API requests across multiple tabs/windows
+    let broadcastChannel = null;
+    let isLeaderTab = false; // Track if this tab is the leader making API calls
+    let lastBroadcastReceived = 0;
+    
+    // Initialize BroadcastChannel if supported
+    if (typeof BroadcastChannel !== 'undefined') {
+      broadcastChannel = new BroadcastChannel('wallboard-sync');
+      
+      // Listen for messages from other tabs
+      broadcastChannel.addEventListener('message', (event) => {
+        if (event.data.type === 'refresh-complete' && event.data.sessionId !== sessionId) {
+          // Another tab completed a refresh, update our timestamp
+          lastBroadcastReceived = Date.now();
+          console.log('[Cross-Tab] Received refresh notification from another session:', event.data.sessionId.substring(0, 8));
+        }
+      });
+      
+      // Broadcast when this tab completes a refresh
+      function broadcastRefreshComplete() {
+        if (broadcastChannel) {
+          broadcastChannel.postMessage({
+            type: 'refresh-complete',
+            sessionId: sessionId,
+            timestamp: Date.now()
+          });
+          console.log('[Cross-Tab] Broadcasted refresh completion to other tabs');
+        }
+      }
+      
+      // Check if we should skip API call because another tab just refreshed
+      function shouldSkipRefreshDueToOtherTab() {
+        const timeSinceLastBroadcast = Date.now() - lastBroadcastReceived;
+        // If another tab refreshed within the last 5 seconds, we can skip our refresh
+        if (lastBroadcastReceived > 0 && timeSinceLastBroadcast < 5000) {
+          console.log('[Cross-Tab] Skipping API call - another tab refreshed', (timeSinceLastBroadcast / 1000).toFixed(1), 's ago');
+          return true;
+        }
+        return false;
+      }
+    } else {
+      // BroadcastChannel not supported, each tab operates independently
+      console.log('[Cross-Tab] BroadcastChannel not supported, tabs will operate independently');
+      function broadcastRefreshComplete() { /* no-op */ }
+      function shouldSkipRefreshDueToOtherTab() { return false; }
+    }
     
     // Rate limiting state
     let refreshInProgress = false; // Prevent concurrent API requests
@@ -2395,13 +2536,18 @@
         return;
       }
       
+      // Check if another tab recently refreshed (cross-tab coordination)
+      if (shouldSkipRefreshDueToOtherTab()) {
+        return;
+      }
+      
       // Prevent concurrent requests
       refreshInProgress = true;
       apiCallCount++;
       
       const now = Date.now();
       const timeSinceLastRefresh = now - lastRefreshTime;
-      console.log(`[API Call #${apiCallCount}] Time since last refresh: ${(timeSinceLastRefresh / 1000).toFixed(1)}s`);
+      console.log(`[API Call #${apiCallCount}] Session ${sessionId.substring(0, 8)} - Time since last refresh: ${(timeSinceLastRefresh / 1000).toFixed(1)}s`);
       
       const err = document.getElementById('error');
       let errorAlreadyLogged = false; // Track if error was already logged
@@ -2437,6 +2583,9 @@
         lastData = data; // Store data for re-rendering in norefresh mode
         render(data);
         lastRefreshTime = Date.now(); // Update timestamp on successful refresh
+        
+        // Broadcast to other tabs that we completed a refresh
+        broadcastRefreshComplete();
       } catch (e) {
         err.textContent = 'Error: ' + e.message;
         
@@ -2598,6 +2747,7 @@
       if (!eventViewerEnabled) return;
       eventViewerVisible = !eventViewerVisible;
       setEventViewerVisibility(eventViewerVisible);
+      saveSessionState();
       logActionEvent('Toggle event viewer', `Event viewer ${eventViewerVisible ? 'opened' : 'closed'}`);
       
       // Start/stop auto-refresh based on visibility
@@ -2867,7 +3017,8 @@
         url: '',
         eventType: 'actions',
         timestamp: new Date().toISOString(),
-        message: details ? `${actionName} - ${details}` : actionName
+        message: details ? `${actionName} - ${details}` : actionName,
+        sessionId: sessionId // Include session ID for tracking
       };
       
       const success = await logEvent(event);
@@ -2928,18 +3079,21 @@
     document.getElementById('toggle-problems').addEventListener('click', () => {
       onlyProblems = !onlyProblems;
       updateButtonText('toggle-problems', onlyProblems, 'Show All', 'Show Only Problems');
+      saveSessionState();
       logActionEvent('Toggle problems filter', `Problems filter ${onlyProblems ? 'enabled' : 'disabled'}`);
       debouncedRefresh();
     });
     document.getElementById('toggle-paused').addEventListener('click', () => {
       showPaused = !showPaused;
       updateButtonText('toggle-paused', showPaused, 'Hide Paused', 'Show Paused');
+      saveSessionState();
       logActionEvent('Toggle paused monitors', `Paused monitors ${showPaused ? 'shown' : 'hidden'}`);
       debouncedRefresh();
     });
     document.getElementById('toggle-tags').addEventListener('click', () => {
       showTags = !showTags;
       updateButtonText('toggle-tags', showTags, 'Hide Tags', 'Show Tags');
+      saveSessionState();
       logActionEvent('Toggle tags display', `Tags ${showTags ? 'shown' : 'hidden'}`);
       updateTagVisibility();
     });
@@ -2948,6 +3102,7 @@
     document.getElementById('event-sidebar-close').addEventListener('click', () => {
       eventViewerVisible = false;
       setEventViewerVisibility(false);
+      saveSessionState();
       if (eventRefreshInterval) {
         clearInterval(eventRefreshInterval);
         eventRefreshInterval = null;
@@ -3095,6 +3250,7 @@
         pill.classList.add('selected');
       }
       
+      saveSessionState();
       // Re-render with current data
       debouncedRefresh();
     });
@@ -3105,6 +3261,7 @@
       document.querySelectorAll('.tag-filter-pill').forEach(pill => {
         pill.classList.remove('selected');
       });
+      saveSessionState();
       debouncedRefresh();
     });
 
@@ -3123,6 +3280,30 @@
         }, 500);
       }
     }
+
+    // Display session ID in UI
+    function displaySessionId() {
+      const sessionIdDisplay = document.getElementById('session-id-display');
+      if (sessionIdDisplay) {
+        // Show first 8 characters of session ID for brevity
+        sessionIdDisplay.textContent = sessionId.substring(0, 8);
+      }
+    }
+
+    // Update button states to reflect current session state
+    function updateButtonStates() {
+      updateButtonText('toggle-problems', onlyProblems, 'Show All', 'Show Only Problems');
+      updateButtonText('toggle-paused', showPaused, 'Hide Paused', 'Show Paused');
+      updateButtonText('toggle-tags', showTags, 'Hide Tags', 'Show Tags');
+      if (eventViewerVisible) {
+        setEventViewerVisibility(true);
+      }
+    }
+
+    // Initialize session state and UI
+    displaySessionId();
+    initializeSessionState();
+    updateButtonStates();
 
     // Initial load + polling
     refresh().finally(() => {

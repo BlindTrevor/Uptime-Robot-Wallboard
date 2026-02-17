@@ -133,6 +133,49 @@ https://your-domain.com/status/?showPausedDevices=true&showTags=false
 - **Fullscreen** - Enter/exit fullscreen mode
 - **Refresh Now** - Manually trigger data refresh
 
+### Multi-Instance Support 🆕
+
+The wallboard now supports running multiple independent instances (browser tabs/windows/machines) without API query duplication or shared actions:
+
+#### Session Isolation
+- **Unique Session ID**: Each browser tab/window gets a unique session identifier displayed in the header
+- **Independent State**: Theme, filters, and view settings are isolated per session
+- **No Cross-Session Interference**: Actions in one tab don't affect others
+
+#### API Request Coordination
+- **Cross-Tab Communication**: When multiple tabs are open, they coordinate to prevent duplicate API calls
+- **Smart Refresh**: Only one tab makes API requests while others benefit from the results
+- **Rate Limit Protection**: Automatic coordination reduces API calls and respects rate limits
+
+#### Best Practices for Multiple Displays
+1. **Active Displays**: Open normally - tabs will coordinate automatically
+2. **Passive/View-Only Displays**: Use `?norefresh=true` parameter (see below)
+3. **Debugging**: Check the session ID in the header to distinguish instances
+
+#### Disable Auto-Refresh (Passive Mode)
+
+For displays that don't need real-time updates or to reduce API usage:
+
+```
+# Load data once without automatic refreshes
+https://your-domain.com/status/?norefresh=true
+
+# Combine with other parameters
+https://your-domain.com/status/?norefresh=true&showProblemsOnly=true
+```
+
+When `norefresh` is enabled:
+- ✅ Initial data loads normally
+- ⛔ No automatic API polling
+- ⛔ Config change detection disabled
+- ✅ Manual "Refresh Now" button still works
+
+**Use cases**:
+- Kiosk displays that don't need real-time updates
+- Secondary monitors in multi-display setups
+- Reducing API quota usage
+- Screenshots or demos with static data
+
 ## 🔒 Security Best Practices
 
 ### Store Config Outside Webroot (Recommended)
@@ -430,30 +473,9 @@ All configuration options can be overridden via URL (when `ALLOW_QUERY_OVERRIDE=
 
 #### Disable Automatic Refresh
 
-Use the `?norefresh=true` parameter to disable all automatic API refreshes:
+> **Note**: For multi-instance scenarios and best practices, see the [Multi-Instance Support](#multi-instance-support-) section above.
 
-```
-# Load data once without any automatic refreshes
-https://your-domain.com/status/?norefresh=true
-
-# Also accepts '1' as a value
-https://your-domain.com/status/?norefresh=1
-
-# Combine with other parameters
-https://your-domain.com/status/?norefresh=true&showProblemsOnly=true
-```
-
-When `norefresh` is enabled:
-- ✅ Initial API call loads data normally
-- ⛔ No scheduled refreshes occur (no API polling)
-- ⛔ Config change detection is disabled
-- ✅ Manual "Refresh Now" button still works
-
-**Use cases:**
-- Viewing status briefly without triggering API quota usage
-- Kiosk displays that don't need real-time updates
-- Demos or screenshots where static data is sufficient
-- Reducing server load when monitoring multiple tabs
+Use the `?norefresh=true` parameter to disable all automatic API refreshes. See the Usage section for detailed information and use cases.
 
 ### Auto-Refresh on Config Changes
 
