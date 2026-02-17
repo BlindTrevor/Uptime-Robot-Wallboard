@@ -1719,6 +1719,32 @@
     }
 
     /**
+     * Detect if there are unusual spikes in the response time data
+     * A spike is defined as a value that exceeds 2 standard deviations from the mean
+     * @param {Array} timeSeries - Array of {timestamp, value} objects
+     * @returns {boolean} - True if spikes are detected
+     */
+    function detectSpikes(timeSeries) {
+      if (!timeSeries || timeSeries.length < 3) return false;
+      
+      const values = timeSeries.map(point => point.value).filter(v => v !== null && v >= 0);
+      if (values.length < 3) return false;
+      
+      // Calculate mean
+      const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+      
+      // Calculate standard deviation
+      const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+      const stdDev = Math.sqrt(variance);
+      
+      // Check if any value exceeds mean + 2 * standard deviation
+      // This catches values in the top ~2.5% (assuming normal distribution)
+      const threshold = mean + (2 * stdDev);
+      
+      return values.some(val => val > threshold);
+    }
+
+    /**
      * Render a small response time graph on a canvas
      * @param {HTMLCanvasElement} canvas - Canvas element to draw on
      * @param {Array} timeSeries - Array of {timestamp, value} objects
@@ -1756,13 +1782,19 @@
       
       if (points.length === 0) return;
       
-      // Get the --ok color from CSS variables (theme-aware)
+      // Detect if there are unusual spikes in the data
+      const hasSpikes = detectSpikes(timeSeries);
+      
+      // Choose color based on spike detection
+      // Get colors from CSS variables (theme-aware)
       const okColor = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#3ad29f';
+      const badColor = getComputedStyle(document.documentElement).getPropertyValue('--bad').trim() || '#ff6b6b';
+      const graphColor = hasSpikes ? badColor : okColor;
       
       // Create gradient fill for area under the line
       const gradient = ctx.createLinearGradient(0, 0, 0, height);
-      gradient.addColorStop(0, okColor + '66'); // 0x66 = 102/255 ≈ 40% opacity at top
-      gradient.addColorStop(1, okColor + '00'); // 0x00 = 0% opacity at bottom
+      gradient.addColorStop(0, graphColor + '66'); // 0x66 = 102/255 ≈ 40% opacity at top
+      gradient.addColorStop(1, graphColor + '00'); // 0x00 = 0% opacity at bottom
       
       // Draw filled area
       ctx.fillStyle = gradient;
@@ -1777,7 +1809,7 @@
       ctx.fill();
       
       // Draw the line graph on top
-      ctx.strokeStyle = okColor;
+      ctx.strokeStyle = graphColor;
       ctx.lineWidth = 2;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
