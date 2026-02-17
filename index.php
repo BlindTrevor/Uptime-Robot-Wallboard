@@ -54,6 +54,29 @@
       will-change: background;
     }
     body.has-offline { background: var(--bg-offline); }
+    
+    /* Custom scrollbar for main page */
+    ::-webkit-scrollbar {
+      width: 12px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+      border-left: 1px solid var(--border);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 6px;
+      border: 2px solid var(--bg);
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent);
+    }
+    /* Firefox scrollbar */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) var(--bg);
+    }
+    
     header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
     .header-content { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
     .logo { height: 50px; max-width: 400px; width: auto; object-fit: contain; }
