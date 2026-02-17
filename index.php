@@ -202,25 +202,38 @@
       display: flex;
       flex-wrap: wrap;
       margin-top: 6px;
-      padding-right: calc(var(--response-graph-width) + var(--response-graph-spacing));
     }
     .tags-container.hidden {
       display: none;
     }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; position: relative; }
+    .card { 
+      background: var(--card); 
+      border: 1px solid var(--border); 
+      border-radius: 10px; 
+      padding: 12px; 
+      position: relative;
+      overflow: hidden;
+      min-height: 140px;
+    }
     .card.offline { background: var(--card-offline); border-color: var(--border-offline); }
     .response-time-graph {
       position: absolute;
-      bottom: 8px;
-      right: 8px;
-      width: var(--response-graph-width);
-      height: 30px;
-      opacity: 0.7;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 50%;
+      opacity: 0.15;
       transition: opacity 0.2s ease;
+      pointer-events: none;
+      z-index: 0;
     }
     .response-time-graph:hover {
-      opacity: 1;
+      opacity: 0.2;
+    }
+    .card > * {
+      position: relative;
+      z-index: 1;
     }
     .name { font-weight: 700; font-size: 1.05rem; margin-bottom: 6px; }
     .status { margin-top: 8px; font-weight: 800; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px; }
@@ -1729,12 +1742,16 @@
       const maxValue = Math.max(...values);
       const range = maxValue - minValue || 1; // Prevent division by zero
       
+      // Add some padding at the top and bottom for better visualization
+      const padding = height * 0.1;
+      const graphHeight = height - (padding * 2);
+      
       // Calculate points
       const points = timeSeries.map((point, index) => {
         if (point.value === null || point.value < 0) return null;
         // Handle single point or multiple points
         const x = timeSeries.length > 1 ? (index / (timeSeries.length - 1)) * width : width / 2;
-        const y = height - ((point.value - minValue) / range) * height;
+        const y = padding + graphHeight - ((point.value - minValue) / range) * graphHeight;
         return { x, y };
       }).filter(p => p !== null);
       
@@ -1743,9 +1760,26 @@
       // Get the --ok color from CSS variables (theme-aware)
       const okColor = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#3ad29f';
       
-      // Draw the line graph in green
+      // Create gradient fill for area under the line
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, okColor + '40'); // 25% opacity at top
+      gradient.addColorStop(1, okColor + '00'); // 0% opacity at bottom
+      
+      // Draw filled area
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, height); // Start at bottom-left
+      ctx.lineTo(points[0].x, points[0].y); // Move to first point
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.lineTo(points[points.length - 1].x, height); // Close path at bottom-right
+      ctx.closePath();
+      ctx.fill();
+      
+      // Draw the line graph on top
       ctx.strokeStyle = okColor;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
       
@@ -1771,13 +1805,16 @@
         return; // No data available, skip graph
       }
       
-      // Create canvas element
+      // Get card dimensions for responsive sizing
+      const cardWidth = cardElement.offsetWidth;
+      const cardHeight = cardElement.offsetHeight;
+      
+      // Create canvas element - full width, bottom 50% of card
       const canvas = document.createElement('canvas');
       canvas.className = 'response-time-graph';
-      canvas.width = 160; // Double for retina displays
-      canvas.height = 60; // Double for retina displays
-      canvas.style.width = '80px';
-      canvas.style.height = '30px';
+      // Use double resolution for retina displays
+      canvas.width = cardWidth * 2;
+      canvas.height = cardHeight; // 50% height will be applied via CSS
       
       // Add tooltip with summary stats
       if (data.summary) {
