@@ -230,7 +230,7 @@
     .response-time-graph:hover {
       opacity: 0.35;
     }
-    .card > * {
+    .card > *:not(.response-time-graph) {
       position: relative;
       z-index: 1;
     }
