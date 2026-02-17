@@ -142,6 +142,9 @@
       font-weight: 600;
       border: 1px solid;
       transition: all 0.2s ease;
+      opacity: 0.7;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
     }
     
     /* Tag filter section */
@@ -1726,6 +1729,25 @@
     }
 
     /**
+     * Get the first tag from a monitor (alphabetically sorted)
+     * @param {object} monitor - Monitor object
+     * @returns {string} First tag name or empty string if no tags
+     */
+    function getFirstTag(monitor) {
+      if (!Array.isArray(monitor.tags) || !monitor.tags.length) return '';
+      
+      // Extract tag names and find minimum without full sort
+      let firstTag = null;
+      for (const tag of monitor.tags) {
+        const tagName = typeof tag === 'object' && tag !== null ? (tag.name || '') : tag;
+        if (tagName && (firstTag === null || tagName < firstTag)) {
+          firstTag = tagName;
+        }
+      }
+      return firstTag || '';
+    }
+
+    /**
      * Fetch response time data for a monitor
      * @param {number} monitorId - Monitor ID
      * @returns {Promise<object|null>} Response time data or null if unavailable
@@ -2068,10 +2090,23 @@
         mons = mons.filter(m => monitorHasSelectedTag(m, selectedTags));
       }
 
-      // Sort: problems first, then by name
+      // Sort: problems first, then by tags, then by name
       mons.sort((a, b) => {
         const ap = isProblem(a), bp = isProblem(b);
         if (ap !== bp) return ap ? -1 : 1;
+        
+        const aTag = getFirstTag(a);
+        const bTag = getFirstTag(b);
+        
+        // Sort by tag first
+        if (aTag !== bTag) {
+          // Monitors without tags go last
+          if (!aTag) return 1;
+          if (!bTag) return -1;
+          return aTag.localeCompare(bTag);
+        }
+        
+        // If same tag (or both no tags), sort by name
         return (a.friendly_name || '').localeCompare(b.friendly_name || '');
       });
 
