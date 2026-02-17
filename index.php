@@ -238,7 +238,7 @@
     .response-time-graph:hover {
       opacity: 0.35;
     }
-    .card > *:not(.response-time-graph) {
+    .card > *:not(.response-time-graph):not(.tags-container) {
       position: relative;
       z-index: 1;
     }
