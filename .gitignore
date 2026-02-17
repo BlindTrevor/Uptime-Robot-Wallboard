@@ -12,6 +12,8 @@ cache/
 
 # Demo files (for screenshots only)
 demo.html
+demo-paused.html
+demo-filtered.html
 demo_data.php
 demo_response_times.php
 screenshots/

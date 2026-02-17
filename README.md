@@ -7,7 +7,9 @@
 
 A real-time status wallboard for monitoring your UptimeRobot services. Display service health, uptime status, and alerts on a clean, customizable dashboard perfect for NOC displays, office monitors, or personal dashboards.
 
-![Status Wallboard](https://github.com/user-attachments/assets/9611054a-cf93-40c5-a305-59a6a8b4a4de)
+![Status Wallboard](https://github.com/user-attachments/assets/f869e78e-6df6-4640-b81c-49b6109ee23d)
+
+> **Note:** Screenshots show demo data only. No real services or sensitive information are displayed.
 
 ## ✨ Key Features
 
@@ -230,10 +232,14 @@ If you must store `config.env` in the webroot:
 ## 🎨 Themes
 
 ### Dark Theme (Default)
-![Dark Theme](https://github.com/user-attachments/assets/9611054a-cf93-40c5-a305-59a6a8b4a4de)
+![Dark Theme](https://github.com/user-attachments/assets/f869e78e-6df6-4640-b81c-49b6109ee23d)
+
+*Screenshot shows demo data with response time graphs visible on each monitor tile.*
 
 ### Light Theme
-![Light Theme](https://github.com/user-attachments/assets/488ed1bf-3c88-4a0b-a8c4-7b5ea5e8c860)
+![Light Theme](https://github.com/user-attachments/assets/24cff022-fa08-477d-be51-f7483a44c420)
+
+*Screenshot shows demo data with response time graphs in light theme.*
 
 Switch themes using:
 - The theme toggle button in the UI
@@ -254,13 +260,17 @@ Filter your monitors by tags for better organization and focused monitoring. Eac
 
 ### Filter Section
 
-![Tag Filter Section](https://github.com/user-attachments/assets/d42a399a-8de7-486a-a2dc-6c7b72086810)
+![Tag Filter Section](https://github.com/user-attachments/assets/a4979ee9-e675-44fd-b0c6-b3c6f50f9dfe)
 
-Click "Show Filter" to reveal all available tags. Click any tag to filter monitors:
+*Screenshot shows demo data with the tag filter section expanded, displaying all available tags with colored pills. Response time graphs are visible on each monitor tile.*
+
+Click "Show Filter" to reveal all available tags. Click any tag to filter monitors.
 
 ### Filtered View
 
-![Filtered by Critical Tag](https://github.com/user-attachments/assets/1768d14b-c720-4401-adf5-1c5c86737811)
+![Filtered by Critical Tag](https://github.com/user-attachments/assets/ce688881-982b-4b05-9bbd-18619e886008)
+
+*Screenshot shows demo data filtered to only display monitors tagged with "critical". The selected tag appears highlighted in the filter section, and only matching monitors are shown with their response time graphs.*
 
 When one or more tags are selected, only monitors with those tags are displayed. Selected tags appear highlighted with increased opacity and a shadow effect.
 
@@ -456,7 +466,9 @@ When shown, paused monitors:
 - Are counted separately in the header
 - Don't trigger the red "issues" background
 
-![Paused Monitors View](https://github.com/user-attachments/assets/09c4e855-b8d9-43d0-8b45-fb47a8add799)
+![Paused Monitors View](https://github.com/user-attachments/assets/2030e75c-e305-4322-8531-2eeaec587dc3)
+
+*Screenshot shows demo data with a paused monitor (Example Staging Server) displayed with warning colors and "PAUSED" status. Response time graphs are visible on all monitor tiles, including the paused one.*
 
 ### Query String Parameters
 
