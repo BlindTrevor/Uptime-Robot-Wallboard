@@ -871,7 +871,7 @@
       eventTypeFilterDefaultError: true,
       eventTypeFilterDefaultActions: true,
       norefresh: false,
-      spikeDetectionSensitivity: 2.5,
+      spikeDetectionSensitivity: 3.0,
     };
 
     // --- Theme Management ---
@@ -1721,29 +1721,45 @@
 
     /**
      * Detect if there are unusual spikes in the response time data
-     * Uses configurable sensitivity threshold (standard deviations from mean)
+     * Uses configurable sensitivity threshold with additional filters for ping/broadband data
      * @param {Array} timeSeries - Array of {timestamp, value} objects
      * @returns {boolean} - True if spikes are detected
      */
     function detectSpikes(timeSeries) {
-      if (!timeSeries || timeSeries.length < 3) return false;
+      if (!timeSeries || timeSeries.length < 5) return false;
       
       const values = timeSeries.map(point => point.value).filter(v => v !== null && v >= 0);
-      if (values.length < 3) return false;
+      if (values.length < 5) return false;
       
-      // Calculate mean
+      // Calculate mean and median (median is more robust to outliers)
       const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+      const sortedValues = [...values].sort((a, b) => a - b);
+      const median = sortedValues[Math.floor(sortedValues.length / 2)];
       
       // Calculate standard deviation using sample variance (n-1)
       const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / (values.length - 1);
       const stdDev = Math.sqrt(variance);
       
-      // Use configured sensitivity (default: 2.5 standard deviations)
-      // Lower values = more sensitive, higher values = less sensitive
-      const sensitivity = config.spikeDetectionSensitivity || 2.5;
+      // Use configured sensitivity (default: 3.0 standard deviations for less false positives)
+      // Higher threshold for ping/broadband data which has natural variation
+      const sensitivity = config.spikeDetectionSensitivity || 3.0;
       const threshold = mean + (sensitivity * stdDev);
       
-      return values.some(val => val > threshold);
+      // Find values that exceed the threshold
+      const spikes = values.filter(val => val > threshold);
+      
+      // Only flag as problematic if:
+      // 1. Multiple spikes detected (not just a single outlier), OR
+      // 2. A single spike but it's VERY significant (> 3x median)
+      if (spikes.length === 0) return false;
+      if (spikes.length >= 2) return true; // Multiple spikes = real issue
+      
+      // For single spike: check if it's exceptionally large
+      const maxSpike = Math.max(...spikes);
+      const spikeRatio = maxSpike / (median || mean);
+      
+      // Flag only if spike is more than 3x the typical response time
+      return spikeRatio > 3.0;
     }
 
     /**

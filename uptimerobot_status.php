@@ -69,7 +69,7 @@ $CONFIG = [
     'eventLoggingMaxEvents' => 1000,
     'eventViewerItemsPerPage' => 50,
     'recentEventWindowMinutes' => 60,
-    'spikeDetectionSensitivity' => 2.5,
+    'spikeDetectionSensitivity' => 3.0,
 ];
 
 if ($configPath !== null) {
