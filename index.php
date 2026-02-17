@@ -201,7 +201,11 @@
     .tags-container {
       display: flex;
       flex-wrap: wrap;
-      margin-top: 6px;
+      position: absolute;
+      bottom: 8px;
+      left: 10px;
+      right: 10px;
+      z-index: 2;
     }
     .tags-container.hidden {
       display: none;
@@ -211,9 +215,12 @@
       background: var(--card); 
       border: 1px solid var(--border); 
       border-radius: 10px; 
-      padding: 12px; 
+      padding: 10px; 
       position: relative;
       overflow: hidden;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
     }
     .card.offline { background: var(--card-offline); border-color: var(--border-offline); }
     .response-time-graph {
@@ -241,7 +248,7 @@
     .status.seems_down, .status.down { color: var(--bad); }
     .status.paused { color: var(--warn); }
     .status.not_checked { color: var(--subtle); }
-    .kv { font-size: 0.86rem; color: var(--muted); margin-top: 6px; }
+    .kv { font-size: 0.86rem; color: var(--muted); margin-top: 6px; padding-bottom: 30px; }
     .small { font-size: 0.78rem; color: var(--subtle); margin-top: 6px; }
     .err { color: var(--bad); margin: 0.4rem 0; white-space: pre-wrap; }
     .footer { color: var(--subtle); margin-top: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
@@ -2131,12 +2138,12 @@
           const duration = formatDuration(m.last_check);
           // Convert epoch to number for safety (prevents XSS from malicious API responses)
           const epoch = Number(m.last_check) || 0;
-          statusLabel = `Up since: ${epochToLocal(m.last_check)}${duration ? ` (<span class="time-since" data-epoch="${epoch}">${duration}</span>)` : ''}`;
+          statusLabel = duration ? `<span class="time-since" data-epoch="${epoch}">${duration}</span>` : epochToLocal(m.last_check);
         } else if (status === 'down' || status === 'seems_down') {
           const duration = formatDuration(m.last_check);
           // Convert epoch to number for safety (prevents XSS from malicious API responses)
           const epoch = Number(m.last_check) || 0;
-          statusLabel = `Down since: ${epochToLocal(m.last_check)}${duration ? ` (<span class="time-since" data-epoch="${epoch}">${duration}</span>)` : ''}`;
+          statusLabel = `Down: ${duration ? `<span class="time-since" data-epoch="${epoch}">${duration}</span>` : epochToLocal(m.last_check)}`;
         } else if (status === 'paused') {
           statusLabel = ''; // No status time for paused monitors
         } else {
