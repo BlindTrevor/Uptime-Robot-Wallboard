@@ -1762,8 +1762,8 @@
       
       // Create gradient fill for area under the line
       const gradient = ctx.createLinearGradient(0, 0, 0, height);
-      gradient.addColorStop(0, okColor + '40'); // 25% opacity at top
-      gradient.addColorStop(1, okColor + '00'); // 0% opacity at bottom
+      gradient.addColorStop(0, okColor + '40'); // 0x40 = 64/255 ≈ 25% opacity at top
+      gradient.addColorStop(1, okColor + '00'); // 0x00 = 0% opacity at bottom
       
       // Draw filled area
       ctx.fillStyle = gradient;
@@ -1812,9 +1812,11 @@
       // Create canvas element - full width, bottom 50% of card
       const canvas = document.createElement('canvas');
       canvas.className = 'response-time-graph';
-      // Use double resolution for retina displays
+      // Retina display (2x pixel density):
+      // - Horizontal: cardWidth * 2 (explicit 2x)
+      // - Vertical: cardHeight (implicit 2x via CSS - displayed at 50% height means cardHeight pixels for 50% display = 2x density)
       canvas.width = cardWidth * 2;
-      canvas.height = cardHeight; // 50% height will be applied via CSS
+      canvas.height = cardHeight;
       
       // Add tooltip with summary stats
       if (data.summary) {
