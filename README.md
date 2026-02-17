@@ -262,7 +262,7 @@ Click "Show Filter" to reveal all available tags. Click any tag to filter monito
 
 ![Filtered by Critical Tag](https://github.com/user-attachments/assets/1768d14b-c720-4401-adf5-1c5c86737811)
 
-When tags are selected, only monitors with those tags are displayed. The selected tags appear highlighted with increased opacity and a shadow effect.
+When one or more tags are selected, only monitors with those tags are displayed. Selected tags appear highlighted with increased opacity and a shadow effect.
 
 ### How to Use
 
