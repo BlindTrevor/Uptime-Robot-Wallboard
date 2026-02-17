@@ -223,13 +223,13 @@
       left: 0;
       width: 100%;
       height: 50%;
-      opacity: 0.15;
+      opacity: 0.25;
       transition: opacity 0.2s ease;
       pointer-events: none;
       z-index: 0;
     }
     .response-time-graph:hover {
-      opacity: 0.2;
+      opacity: 0.35;
     }
     .card > * {
       position: relative;
@@ -1762,7 +1762,7 @@
       
       // Create gradient fill for area under the line
       const gradient = ctx.createLinearGradient(0, 0, 0, height);
-      gradient.addColorStop(0, okColor + '40'); // 0x40 = 64/255 ≈ 25% opacity at top
+      gradient.addColorStop(0, okColor + '66'); // 0x66 = 102/255 ≈ 40% opacity at top
       gradient.addColorStop(1, okColor + '00'); // 0x00 = 0% opacity at bottom
       
       // Draw filled area
