@@ -1733,8 +1733,8 @@
       // Calculate mean
       const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
       
-      // Calculate standard deviation
-      const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+      // Calculate standard deviation using sample variance (n-1)
+      const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / (values.length - 1);
       const stdDev = Math.sqrt(variance);
       
       // Check if any value exceeds mean + 2 * standard deviation
