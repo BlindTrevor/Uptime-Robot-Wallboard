@@ -249,7 +249,6 @@
     .status { margin-top: 8px; font-weight: 800; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .status i { font-size: 1.1em; }
     .status .status-text { font-size: 1em; font-weight: 800; }
-    .status .since-text { font-size: 0.6em; font-weight: 400; letter-spacing: normal; }
     .status .time-info { font-size: 0.6em; font-weight: 400; letter-spacing: normal; }
     .status.up { color: var(--ok); }
     .status.seems_down, .status.down { color: var(--bad); }
@@ -2210,7 +2209,7 @@
         
         // Build status text with inline "since" information
         const statusText = statusLabel 
-          ? `${statusIcon}<span class="status-text">${(m.status || 'UNKNOWN').toUpperCase()}</span> <span class="time-info"><span class="since-text">since:</span> ${statusLabel}</span>`
+          ? `${statusIcon}<span class="status-text">${(m.status || 'UNKNOWN').toUpperCase()}</span> <span class="time-info">since: ${statusLabel}</span>`
           : `${statusIcon}<span class="status-text">${(m.status || 'UNKNOWN').toUpperCase()}</span>`;
 
         return `
