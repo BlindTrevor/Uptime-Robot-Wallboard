@@ -7,7 +7,7 @@
 
 A real-time status wallboard for monitoring your UptimeRobot services. Display service health, uptime status, and alerts on a clean, customizable dashboard perfect for NOC displays, office monitors, or personal dashboards.
 
-![Status Wallboard](https://github.com/user-attachments/assets/9dc7fbde-3e3e-471d-8cd0-2f2fc2296fa4)
+![Status Wallboard](https://github.com/user-attachments/assets/9611054a-cf93-40c5-a305-59a6a8b4a4de)
 
 ## ✨ Key Features
 
@@ -230,10 +230,10 @@ If you must store `config.env` in the webroot:
 ## 🎨 Themes
 
 ### Dark Theme (Default)
-![Dark Theme](https://github.com/user-attachments/assets/dccafa9b-ad72-40fd-80ee-630e3270773a)
+![Dark Theme](https://github.com/user-attachments/assets/9611054a-cf93-40c5-a305-59a6a8b4a4de)
 
 ### Light Theme
-![Light Theme](https://github.com/user-attachments/assets/cae35529-41ab-482f-a4d9-96bac8e7b38e)
+![Light Theme](https://github.com/user-attachments/assets/488ed1bf-3c88-4a0b-a8c4-7b5ea5e8c860)
 
 Switch themes using:
 - The theme toggle button in the UI
@@ -254,15 +254,15 @@ Filter your monitors by tags for better organization and focused monitoring. Eac
 
 ### Filter Section
 
-![Tag Filter Section](https://github.com/user-attachments/assets/c1ec9ab2-d3ad-45c4-9329-892301bb2818)
+![Tag Filter Section](https://github.com/user-attachments/assets/d42a399a-8de7-486a-a2dc-6c7b72086810)
 
 Click "Show Filter" to reveal all available tags. Click any tag to filter monitors:
 
 ### Filtered View
 
-![Filtered by Production Tag](https://github.com/user-attachments/assets/041aa20a-ca42-4377-8287-0a2a03de19a6)
+![Filtered by Critical Tag](https://github.com/user-attachments/assets/1768d14b-c720-4401-adf5-1c5c86737811)
 
-When tags are selected, only monitors with those tags are displayed. The selected tags appear highlighted with increased opacity and a shadow effect.
+When one or more tags are selected, only monitors with those tags are displayed. Selected tags appear highlighted with increased opacity and a shadow effect.
 
 ### How to Use
 
@@ -455,6 +455,8 @@ When shown, paused monitors:
 - Use warning (yellow/orange) color
 - Are counted separately in the header
 - Don't trigger the red "issues" background
+
+![Paused Monitors View](https://github.com/user-attachments/assets/09c4e855-b8d9-43d0-8b45-fb47a8add799)
 
 ### Query String Parameters
 

@@ -10,6 +10,12 @@ events.ndjson
 # Cache directory
 cache/
 
+# Demo files (for screenshots only)
+demo.html
+demo_data.php
+demo_response_times.php
+screenshots/
+
 # IDE and editor files
 .vscode/
 .idea/
