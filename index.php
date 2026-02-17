@@ -1756,7 +1756,12 @@
       
       // For single spike: check if it's exceptionally large
       const maxSpike = Math.max(...spikes);
-      const spikeRatio = maxSpike / (median || mean);
+      const baseValue = median || mean;
+      
+      // Guard against division by zero (can happen with all-zero data)
+      if (baseValue === 0) return false;
+      
+      const spikeRatio = maxSpike / baseValue;
       
       // Flag only if spike is more than 3x the typical response time
       return spikeRatio > 3.0;
