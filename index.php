@@ -2163,7 +2163,7 @@
     async function refreshResponseTimeGraphs() {
       const cards = document.querySelectorAll('.card[data-monitor-id]');
       if (cards.length > 0) {
-        // Force refresh - graphs will check their own cache duration
+        // Force refresh - bypasses cache check and always fetches/renders
         await loadResponseTimeGraphs(cards, true);
       }
     }
