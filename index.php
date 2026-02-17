@@ -898,6 +898,7 @@
       eventTypeFilterDefaultActions: true,
       norefresh: false,
       spikeDetectionSensitivity: 3.0,
+      responseTimeCacheDuration: 300,
     };
 
     // --- Session Management ---
@@ -1239,6 +1240,12 @@
         if (typeof serverConfig.eventTypeFilterDefaultActions === 'boolean') {
           config.eventTypeFilterDefaultActions = serverConfig.eventTypeFilterDefaultActions;
         }
+        if (typeof serverConfig.spikeDetectionSensitivity === 'number' && serverConfig.spikeDetectionSensitivity >= 1.5 && serverConfig.spikeDetectionSensitivity <= 4.0) {
+          config.spikeDetectionSensitivity = serverConfig.spikeDetectionSensitivity;
+        }
+        if (typeof serverConfig.responseTimeCacheDuration === 'number' && serverConfig.responseTimeCacheDuration >= 60) {
+          config.responseTimeCacheDuration = serverConfig.responseTimeCacheDuration;
+        }
       }
       
       // Apply query string overrides if allowed
@@ -1273,6 +1280,10 @@
     let allTags = new Set(); // All available tags
     let filterVisible = false; // Track filter section visibility
     let lastData = null; // Store last fetched data for re-rendering in norefresh mode
+    
+    // Response graph tracking
+    let graphRefreshInterval = null; // Independent interval for graph refreshes
+    let graphLastLoadTime = new Map(); // monitorId -> timestamp of last graph load
     
     // Event viewer state
     let eventViewerVisible = false;
@@ -2054,14 +2065,39 @@
      * Add response time graph to a monitor card
      * @param {HTMLElement} cardElement - The card element
      * @param {number} monitorId - Monitor ID
+     * @param {boolean} forceRefresh - Force refresh even if cache is valid
      */
-    async function addResponseTimeGraph(cardElement, monitorId) {
-      // Check if graph already exists
-      if (cardElement.querySelector('.response-time-graph')) return;
+    async function addResponseTimeGraph(cardElement, monitorId, forceRefresh = false) {
+      // If not forcing a refresh, check if we recently loaded data for this monitor
+      if (!forceRefresh) {
+        const lastLoadTime = graphLastLoadTime.get(monitorId);
+        if (lastLoadTime) {
+          const cacheAge = (Date.now() - lastLoadTime) / 1000; // Convert to seconds
+          const cacheDuration = config.responseTimeCacheDuration || 300;
+          
+          // If cache is still valid, skip rendering entirely
+          // This prevents re-rendering on every main refresh
+          if (cacheAge < cacheDuration) {
+            return;
+          }
+        }
+      }
       
+      // Fetch data (server-side cache applies)
       const data = await fetchResponseTimeData(monitorId);
       if (!data || !data.time_series || data.time_series.length === 0) {
+        // Record load time even on failure to prevent rapid retries
+        graphLastLoadTime.set(monitorId, Date.now());
         return; // No data available, skip graph
+      }
+      
+      // Record the load time for this graph
+      graphLastLoadTime.set(monitorId, Date.now());
+      
+      // Remove existing graph if present (for refresh)
+      const existingGraph = cardElement.querySelector('.response-time-graph');
+      if (existingGraph) {
+        existingGraph.remove();
       }
       
       // Get card dimensions for responsive sizing
@@ -2098,8 +2134,9 @@
      * Load response time graphs for all monitors with a delay between requests
      * to avoid overwhelming the API
      * @param {NodeList} cards - List of card elements
+     * @param {boolean} forceRefresh - Force refresh even if cache is valid
      */
-    async function loadResponseTimeGraphs(cards) {
+    async function loadResponseTimeGraphs(cards, forceRefresh = false) {
       const cardsArray = Array.from(cards);
       
       // Process cards in batches with a delay
@@ -2109,7 +2146,7 @@
         
         if (monitorId) {
           // Add graph asynchronously with await to enforce sequential processing
-          await addResponseTimeGraph(card, parseInt(monitorId, 10));
+          await addResponseTimeGraph(card, parseInt(monitorId, 10), forceRefresh);
           
           // Add a small delay between requests to spread the load
           // With caching, repeated requests will be fast
@@ -2117,6 +2154,17 @@
             await new Promise(resolve => setTimeout(resolve, RESPONSE_GRAPH_LOAD_DELAY_MS));
           }
         }
+      }
+    }
+
+    /**
+     * Refresh all visible response time graphs if their cache has expired
+     */
+    async function refreshResponseTimeGraphs() {
+      const cards = document.querySelectorAll('.card[data-monitor-id]');
+      if (cards.length > 0) {
+        // Force refresh - bypasses cache check and always fetches/renders
+        await loadResponseTimeGraphs(cards, true);
       }
     }
 
@@ -2334,6 +2382,18 @@
         alertBar.classList.remove('visible');
       }
 
+      // Preserve existing graph canvases before they're removed by innerHTML
+      // Store them by monitor ID so we can re-insert them after render
+      const existingGraphs = new Map();
+      const oldCards = grid.querySelectorAll('.card[data-monitor-id]');
+      oldCards.forEach(card => {
+        const monitorId = card.getAttribute('data-monitor-id');
+        const graph = card.querySelector('.response-time-graph');
+        if (monitorId && graph) {
+          existingGraphs.set(monitorId, graph);
+        }
+      });
+
       // Build cards
       grid.innerHTML = mons.map(m => {
         const cls = `status ${toClass(m.status)}`;
@@ -2377,9 +2437,19 @@
         `;
       }).join('');
 
+      // Re-insert preserved graphs into their cards
+      const newCards = grid.querySelectorAll('.card[data-monitor-id]');
+      newCards.forEach(card => {
+        const monitorId = card.getAttribute('data-monitor-id');
+        if (monitorId && existingGraphs.has(monitorId)) {
+          const graph = existingGraphs.get(monitorId);
+          card.appendChild(graph);
+        }
+      });
+
       // Add response time graphs to monitor cards asynchronously
-      // We do this after innerHTML is set so DOM elements exist
-      // Use a queue system with delays to avoid overwhelming the API
+      // This will only add graphs for monitors that don't have one yet
+      // or where the cache has expired (checked in addResponseTimeGraph)
       setTimeout(() => {
         const cards = grid.querySelectorAll('.card[data-monitor-id]');
         loadResponseTimeGraphs(cards);
@@ -2670,6 +2740,10 @@
         clearInterval(timeUpdateInterval);
         timeUpdateInterval = null;
       }
+      if (graphRefreshInterval) {
+        clearInterval(graphRefreshInterval);
+        graphRefreshInterval = null;
+      }
       
       // Stop countdown when intervals are being updated
       stopCountdown();
@@ -2688,6 +2762,10 @@
       // Set new intervals based on config
       refreshInterval = setInterval(refresh, config.refreshRate * 1000);
       configCheckInterval = setInterval(checkConfigVersion, config.configCheckRate * 1000);
+      
+      // Set up independent graph refresh interval
+      const graphRefreshRate = (config.responseTimeCacheDuration || 300) * 1000;
+      graphRefreshInterval = setInterval(refreshResponseTimeGraphs, graphRefreshRate);
       
       // Start countdown timer for auto-refresh
       startCountdown();

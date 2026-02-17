@@ -70,6 +70,7 @@ $CONFIG = [
     'eventViewerItemsPerPage' => 50,
     'recentEventWindowMinutes' => 60,
     'spikeDetectionSensitivity' => 3.0,
+    'responseTimeCacheDuration' => 300,
 ];
 
 if ($configPath !== null) {
@@ -98,7 +99,8 @@ if ($configPath !== null) {
         'EVENT_TYPE_FILTER_DEFAULT_PAUSED',
         'EVENT_TYPE_FILTER_DEFAULT_ERROR',
         'EVENT_TYPE_FILTER_DEFAULT_ACTIONS',
-        'SPIKE_DETECTION_SENSITIVITY'
+        'SPIKE_DETECTION_SENSITIVITY',
+        'RESPONSE_TIME_CACHE_DURATION'
     ]);
     
     // Load API token
@@ -275,6 +277,11 @@ if ($configPath !== null) {
         $value = (float)$parsed['SPIKE_DETECTION_SENSITIVITY'];
         // Clamp to reasonable range: 1.5 (very sensitive) to 4.0 (very insensitive)
         $CONFIG['spikeDetectionSensitivity'] = max(1.5, min(4.0, $value));
+    }
+    
+    // Load response time cache duration (minimum 60 seconds)
+    if (isset($parsed['RESPONSE_TIME_CACHE_DURATION']) && is_numeric($parsed['RESPONSE_TIME_CACHE_DURATION'])) {
+        $CONFIG['responseTimeCacheDuration'] = max(60, (int)$parsed['RESPONSE_TIME_CACHE_DURATION']);
     }
     
     // Load event type filter enabled
