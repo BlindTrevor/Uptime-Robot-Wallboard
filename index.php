@@ -257,7 +257,7 @@
     .kv { font-size: 0.86rem; color: var(--muted); margin-top: 6px; }
     .small { font-size: 0.78rem; color: var(--subtle); margin-top: 6px; }
     .err { color: var(--bad); margin: 0.4rem 0; white-space: pre-wrap; }
-    .footer { color: var(--subtle); margin-top: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+    .footer { position: fixed; left: 12px; bottom: 8px; color: var(--subtle); font-size: 0.85rem; z-index: 1000; }
     .footer a { color: var(--accent); text-decoration: none; }
     .footer a:hover { text-decoration: underline; }
     
