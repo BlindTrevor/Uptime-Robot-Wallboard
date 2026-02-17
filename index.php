@@ -2143,7 +2143,8 @@
           const duration = formatDuration(m.last_check);
           // Convert epoch to number for safety (prevents XSS from malicious API responses)
           const epoch = Number(m.last_check) || 0;
-          statusLabel = `Down: ${duration ? `<span class="time-since" data-epoch="${epoch}">${duration}</span>` : epochToLocal(m.last_check)}`;
+          const timeDisplay = duration ? `<span class="time-since" data-epoch="${epoch}">${duration}</span>` : epochToLocal(m.last_check);
+          statusLabel = timeDisplay;
         } else if (status === 'paused') {
           statusLabel = ''; // No status time for paused monitors
         } else {
