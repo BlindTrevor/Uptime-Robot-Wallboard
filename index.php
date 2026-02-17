@@ -257,7 +257,7 @@
     .kv { font-size: 0.86rem; color: var(--muted); margin-top: 6px; }
     .small { font-size: 0.78rem; color: var(--subtle); margin-top: 6px; }
     .err { color: var(--bad); margin: 0.4rem 0; white-space: pre-wrap; }
-    .footer { position: fixed; left: 12px; bottom: 8px; color: var(--subtle); font-size: 0.85rem; z-index: 1000; }
+    .footer { position: fixed; left: 12px; bottom: 8px; color: var(--subtle); font-size: 0.85rem; z-index: 1000; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
     .footer a { color: var(--accent); text-decoration: none; }
     .footer a:hover { text-decoration: underline; }
     
@@ -786,9 +786,7 @@
 
   <div id="error" class="err"></div>
   <div id="grid" class="grid"></div>
-  <div id="footer" class="footer">
-    Uptime Robot Wallboard - By <a href="https://sweetpeasoftware.co.uk/app.php?repo=Uptime-Robot-Wallboard" target="_blank" rel="noopener noreferrer">Sweet Pea Software</a>
-  </div>
+  <div id="footer" class="footer"></div>
   
   <!-- Fullscreen prompt overlay -->
   <div id="fullscreen-prompt" class="fullscreen-prompt">
@@ -2234,7 +2232,7 @@
       }, 0);
 
       // Footer - show rate limit info and optionally pagination meta
-      let footerContent = '';
+      let footerContent = '<span>Uptime Robot Wallboard - By <a href="https://sweetpeasoftware.co.uk/app.php?repo=Uptime-Robot-Wallboard" target="_blank" rel="noopener noreferrer">Sweet Pea Software</a></span>';
       
       // Rate limit display
       if (data.rateLimit) {
