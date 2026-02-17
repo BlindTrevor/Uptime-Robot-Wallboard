@@ -908,7 +908,7 @@
       
       // Fallback: Simple UUID v4 implementation using Math.random()
       // Note: Not cryptographically secure, but sufficient for session tracking
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
         const r = Math.random() * 16 | 0;
         const v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
@@ -1340,7 +1340,13 @@
     let lastBroadcastReceived = 0;
     
     // Configuration constant for cross-tab refresh coordination
-    const CROSS_TAB_REFRESH_WINDOW_MS = 5000; // Time window to skip refresh after another tab refreshed
+    // 5000ms provides a balance between reducing API calls and ensuring data freshness.
+    // Tabs skip refresh if another tab refreshed within this window.
+    const CROSS_TAB_REFRESH_WINDOW_MS = 5000;
+    
+    // Initialize fallback functions (will be reassigned if BroadcastChannel is supported)
+    let broadcastRefreshComplete = () => { /* no-op */ };
+    let shouldSkipRefreshDueToOtherTab = () => false;
     
     // Initialize BroadcastChannel if supported
     if (typeof BroadcastChannel !== 'undefined') {
@@ -1356,7 +1362,7 @@
       });
       
       // Broadcast when this tab completes a refresh
-      function broadcastRefreshComplete() {
+      broadcastRefreshComplete = () => {
         if (broadcastChannel) {
           broadcastChannel.postMessage({
             type: 'refresh-complete',
@@ -1365,10 +1371,10 @@
           });
           console.log('[Cross-Tab] Broadcasted refresh completion to other tabs');
         }
-      }
+      };
       
       // Check if we should skip API call because another tab just refreshed
-      function shouldSkipRefreshDueToOtherTab() {
+      shouldSkipRefreshDueToOtherTab = () => {
         const timeSinceLastBroadcast = Date.now() - lastBroadcastReceived;
         // If another tab refreshed within the coordination window, we can skip our refresh
         if (lastBroadcastReceived > 0 && timeSinceLastBroadcast < CROSS_TAB_REFRESH_WINDOW_MS) {
@@ -1376,14 +1382,10 @@
           return true;
         }
         return false;
-      }
+      };
     } else {
       // BroadcastChannel not supported, each tab operates independently
       console.log('[Cross-Tab] BroadcastChannel not supported, tabs will operate independently');
-      
-      // No-op fallback functions when BroadcastChannel is not available
-      function broadcastRefreshComplete() { /* no-op */ }
-      function shouldSkipRefreshDueToOtherTab() { return false; }
     }
     
     // Rate limiting state
