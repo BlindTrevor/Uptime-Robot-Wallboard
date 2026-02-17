@@ -1737,14 +1737,14 @@
       if (!Array.isArray(monitor.tags) || !monitor.tags.length) return '';
       
       // Extract tag names and find minimum without full sort
-      let minTag = null;
+      let firstTag = null;
       for (const tag of monitor.tags) {
         const tagName = typeof tag === 'object' && tag !== null ? (tag.name || '') : tag;
-        if (tagName && (minTag === null || tagName < minTag)) {
-          minTag = tagName;
+        if (tagName && (firstTag === null || tagName < firstTag)) {
+          firstTag = tagName;
         }
       }
-      return minTag || '';
+      return firstTag || '';
     }
 
     /**
