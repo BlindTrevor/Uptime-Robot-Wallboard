@@ -142,7 +142,7 @@
       font-weight: 600;
       border: 1px solid;
       transition: all 0.2s ease;
-      opacity: 0.85;
+      opacity: 0.7;
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
     }
