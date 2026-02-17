@@ -258,6 +258,8 @@
     .small { font-size: 0.78rem; color: var(--subtle); margin-top: 6px; }
     .err { color: var(--bad); margin: 0.4rem 0; white-space: pre-wrap; }
     .footer { color: var(--subtle); margin-top: 0.5rem; font-size: 0.85rem; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+    .footer a { color: var(--accent); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
     
     /* Rate limit display */
     .rate-limit-info {
@@ -784,7 +786,9 @@
 
   <div id="error" class="err"></div>
   <div id="grid" class="grid"></div>
-  <div id="footer" class="footer"></div>
+  <div id="footer" class="footer">
+    Uptime robot Wallboard - By <a href="https://sweetpeasoftware.co.uk/app.php?repo=Uptime-Robot-Wallboard" target="_blank" rel="noopener">Sweet Pea Software</a>
+  </div>
   
   <!-- Fullscreen prompt overlay -->
   <div id="fullscreen-prompt" class="fullscreen-prompt">
