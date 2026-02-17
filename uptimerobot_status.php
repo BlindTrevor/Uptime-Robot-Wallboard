@@ -69,6 +69,7 @@ $CONFIG = [
     'eventLoggingMaxEvents' => 1000,
     'eventViewerItemsPerPage' => 50,
     'recentEventWindowMinutes' => 60,
+    'spikeDetectionSensitivity' => 3.0,
 ];
 
 if ($configPath !== null) {
@@ -96,7 +97,8 @@ if ($configPath !== null) {
         'EVENT_TYPE_FILTER_DEFAULT_UP',
         'EVENT_TYPE_FILTER_DEFAULT_PAUSED',
         'EVENT_TYPE_FILTER_DEFAULT_ERROR',
-        'EVENT_TYPE_FILTER_DEFAULT_ACTIONS'
+        'EVENT_TYPE_FILTER_DEFAULT_ACTIONS',
+        'SPIKE_DETECTION_SENSITIVITY'
     ]);
     
     // Load API token
@@ -266,6 +268,13 @@ if ($configPath !== null) {
     if (isset($parsed['RECENT_EVENT_WINDOW_MINUTES']) && is_numeric($parsed['RECENT_EVENT_WINDOW_MINUTES'])) {
         $value = (int)$parsed['RECENT_EVENT_WINDOW_MINUTES'];
         $CONFIG['recentEventWindowMinutes'] = max(1, $value);
+    }
+    
+    // Load spike detection sensitivity (range: 1.5 to 4.0)
+    if (isset($parsed['SPIKE_DETECTION_SENSITIVITY']) && is_numeric($parsed['SPIKE_DETECTION_SENSITIVITY'])) {
+        $value = (float)$parsed['SPIKE_DETECTION_SENSITIVITY'];
+        // Clamp to reasonable range: 1.5 (very sensitive) to 4.0 (very insensitive)
+        $CONFIG['spikeDetectionSensitivity'] = max(1.5, min(4.0, $value));
     }
     
     // Load event type filter enabled

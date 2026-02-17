@@ -202,25 +202,37 @@
       display: flex;
       flex-wrap: wrap;
       margin-top: 6px;
-      padding-right: calc(var(--response-graph-width) + var(--response-graph-spacing));
     }
     .tags-container.hidden {
       display: none;
     }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; position: relative; }
+    .card { 
+      background: var(--card); 
+      border: 1px solid var(--border); 
+      border-radius: 10px; 
+      padding: 12px; 
+      position: relative;
+      overflow: hidden;
+    }
     .card.offline { background: var(--card-offline); border-color: var(--border-offline); }
     .response-time-graph {
       position: absolute;
-      bottom: 8px;
-      right: 8px;
-      width: var(--response-graph-width);
-      height: 30px;
-      opacity: 0.7;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 50%;
+      opacity: 0.25;
       transition: opacity 0.2s ease;
+      pointer-events: none;
+      z-index: 0;
     }
     .response-time-graph:hover {
-      opacity: 1;
+      opacity: 0.35;
+    }
+    .card > *:not(.response-time-graph) {
+      position: relative;
+      z-index: 1;
     }
     .name { font-weight: 700; font-size: 1.05rem; margin-bottom: 6px; }
     .status { margin-top: 8px; font-weight: 800; letter-spacing: 0.4px; display: flex; align-items: center; gap: 6px; }
@@ -859,6 +871,7 @@
       eventTypeFilterDefaultError: true,
       eventTypeFilterDefaultActions: true,
       norefresh: false,
+      spikeDetectionSensitivity: 3.0,
     };
 
     // --- Theme Management ---
@@ -1707,6 +1720,54 @@
     }
 
     /**
+     * Detect if there are unusual spikes in the response time data
+     * Uses configurable sensitivity threshold with additional filters for ping/broadband data
+     * @param {Array} timeSeries - Array of {timestamp, value} objects
+     * @returns {boolean} - True if spikes are detected
+     */
+    function detectSpikes(timeSeries) {
+      if (!timeSeries || timeSeries.length < 5) return false;
+      
+      const values = timeSeries.map(point => point.value).filter(v => v !== null && v >= 0);
+      if (values.length < 5) return false;
+      
+      // Calculate mean and median (median is more robust to outliers)
+      const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+      const sortedValues = [...values].sort((a, b) => a - b);
+      const median = sortedValues[Math.floor(sortedValues.length / 2)];
+      
+      // Calculate standard deviation using sample variance (n-1)
+      const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / (values.length - 1);
+      const stdDev = Math.sqrt(variance);
+      
+      // Use configured sensitivity (default: 3.0 standard deviations for less false positives)
+      // Higher threshold for ping/broadband data which has natural variation
+      const sensitivity = config.spikeDetectionSensitivity || 3.0;
+      const threshold = mean + (sensitivity * stdDev);
+      
+      // Find values that exceed the threshold
+      const spikes = values.filter(val => val > threshold);
+      
+      // Only flag as problematic if:
+      // 1. Multiple spikes detected (not just a single outlier), OR
+      // 2. A single spike but it's VERY significant (> 3x median)
+      if (spikes.length === 0) return false;
+      if (spikes.length >= 2) return true; // Multiple spikes = real issue
+      
+      // For single spike: check if it's exceptionally large
+      const maxSpike = Math.max(...spikes);
+      const baseValue = median || mean;
+      
+      // Guard against division by zero (can happen with all-zero data)
+      if (baseValue === 0) return false;
+      
+      const spikeRatio = maxSpike / baseValue;
+      
+      // Flag only if spike is more than 3x the typical response time
+      return spikeRatio > 3.0;
+    }
+
+    /**
      * Render a small response time graph on a canvas
      * @param {HTMLCanvasElement} canvas - Canvas element to draw on
      * @param {Array} timeSeries - Array of {timestamp, value} objects
@@ -1729,23 +1790,50 @@
       const maxValue = Math.max(...values);
       const range = maxValue - minValue || 1; // Prevent division by zero
       
+      // Add some padding at the top and bottom for better visualization
+      const padding = height * 0.1;
+      const graphHeight = height - (padding * 2);
+      
       // Calculate points
       const points = timeSeries.map((point, index) => {
         if (point.value === null || point.value < 0) return null;
         // Handle single point or multiple points
         const x = timeSeries.length > 1 ? (index / (timeSeries.length - 1)) * width : width / 2;
-        const y = height - ((point.value - minValue) / range) * height;
+        const y = padding + graphHeight - ((point.value - minValue) / range) * graphHeight;
         return { x, y };
       }).filter(p => p !== null);
       
       if (points.length === 0) return;
       
-      // Get the --ok color from CSS variables (theme-aware)
-      const okColor = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#3ad29f';
+      // Detect if there are unusual spikes in the data
+      const hasSpikes = detectSpikes(timeSeries);
       
-      // Draw the line graph in green
-      ctx.strokeStyle = okColor;
-      ctx.lineWidth = 1.5;
+      // Choose color based on spike detection
+      // Get colors from CSS variables (theme-aware)
+      const okColor = getComputedStyle(document.documentElement).getPropertyValue('--ok').trim() || '#3ad29f';
+      const badColor = getComputedStyle(document.documentElement).getPropertyValue('--bad').trim() || '#ff6b6b';
+      const graphColor = hasSpikes ? badColor : okColor;
+      
+      // Create gradient fill for area under the line
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, graphColor + '66'); // 0x66 = 102/255 ≈ 40% opacity at top
+      gradient.addColorStop(1, graphColor + '00'); // 0x00 = 0% opacity at bottom
+      
+      // Draw filled area
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, height); // Start at bottom-left
+      ctx.lineTo(points[0].x, points[0].y); // Move to first point
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.lineTo(points[points.length - 1].x, height); // Close path at bottom-right
+      ctx.closePath();
+      ctx.fill();
+      
+      // Draw the line graph on top
+      ctx.strokeStyle = graphColor;
+      ctx.lineWidth = 2;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
       
@@ -1771,13 +1859,18 @@
         return; // No data available, skip graph
       }
       
-      // Create canvas element
+      // Get card dimensions for responsive sizing
+      const cardWidth = cardElement.offsetWidth;
+      const cardHeight = cardElement.offsetHeight;
+      
+      // Create canvas element - full width, bottom 50% of card
       const canvas = document.createElement('canvas');
       canvas.className = 'response-time-graph';
-      canvas.width = 160; // Double for retina displays
-      canvas.height = 60; // Double for retina displays
-      canvas.style.width = '80px';
-      canvas.style.height = '30px';
+      // Retina display (2x pixel density):
+      // - Horizontal: cardWidth * 2 (explicit 2x)
+      // - Vertical: cardHeight (implicit 2x via CSS - displayed at 50% height means cardHeight pixels for 50% display = 2x density)
+      canvas.width = cardWidth * 2;
+      canvas.height = cardHeight;
       
       // Add tooltip with summary stats
       if (data.summary) {
