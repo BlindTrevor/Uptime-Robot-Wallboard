@@ -787,7 +787,7 @@
   <div id="error" class="err"></div>
   <div id="grid" class="grid"></div>
   <div id="footer" class="footer">
-    Uptime Robot Wallboard - By <a href="https://sweetpeasoftware.co.uk/app.php?repo=Uptime-Robot-Wallboard" target="_blank" rel="noopener">Sweet Pea Software</a>
+    Uptime Robot Wallboard - By <a href="https://sweetpeasoftware.co.uk/app.php?repo=Uptime-Robot-Wallboard" target="_blank" rel="noopener noreferrer">Sweet Pea Software</a>
   </div>
   
   <!-- Fullscreen prompt overlay -->
