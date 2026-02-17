@@ -214,7 +214,6 @@
       padding: 12px; 
       position: relative;
       overflow: hidden;
-      min-height: 140px;
     }
     .card.offline { background: var(--card-offline); border-color: var(--border-offline); }
     .response-time-graph {
