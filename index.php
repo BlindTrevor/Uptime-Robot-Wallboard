@@ -1720,7 +1720,7 @@
 
     /**
      * Detect if there are unusual spikes in the response time data
-     * A spike is defined as a value that exceeds 2 standard deviations from the mean
+     * A spike is defined as a value that exceeds 2.5 standard deviations from the mean
      * @param {Array} timeSeries - Array of {timestamp, value} objects
      * @returns {boolean} - True if spikes are detected
      */
@@ -1737,9 +1737,10 @@
       const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / (values.length - 1);
       const stdDev = Math.sqrt(variance);
       
-      // Check if any value exceeds mean + 2 * standard deviation
-      // This catches values in the top ~2.5% (assuming normal distribution)
-      const threshold = mean + (2 * stdDev);
+      // Check if any value exceeds mean + 2.5 * standard deviation
+      // This catches values in the top ~0.6% (assuming normal distribution)
+      // Less sensitive than 2σ, reducing false positives
+      const threshold = mean + (2.5 * stdDev);
       
       return values.some(val => val > threshold);
     }
