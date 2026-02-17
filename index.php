@@ -871,6 +871,7 @@
       eventTypeFilterDefaultError: true,
       eventTypeFilterDefaultActions: true,
       norefresh: false,
+      spikeDetectionSensitivity: 2.5,
     };
 
     // --- Theme Management ---
@@ -1720,7 +1721,7 @@
 
     /**
      * Detect if there are unusual spikes in the response time data
-     * A spike is defined as a value that exceeds 2.5 standard deviations from the mean
+     * Uses configurable sensitivity threshold (standard deviations from mean)
      * @param {Array} timeSeries - Array of {timestamp, value} objects
      * @returns {boolean} - True if spikes are detected
      */
@@ -1737,10 +1738,10 @@
       const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / (values.length - 1);
       const stdDev = Math.sqrt(variance);
       
-      // Check if any value exceeds mean + 2.5 * standard deviation
-      // This catches values in the top ~0.6% (assuming normal distribution)
-      // Less sensitive than 2σ, reducing false positives
-      const threshold = mean + (2.5 * stdDev);
+      // Use configured sensitivity (default: 2.5 standard deviations)
+      // Lower values = more sensitive, higher values = less sensitive
+      const sensitivity = config.spikeDetectionSensitivity || 2.5;
+      const threshold = mean + (sensitivity * stdDev);
       
       return values.some(val => val > threshold);
     }
