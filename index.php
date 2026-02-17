@@ -72,7 +72,7 @@
       background: var(--accent);
     }
     /* Firefox scrollbar */
-    * {
+    html, body {
       scrollbar-width: thin;
       scrollbar-color: var(--border) var(--bg);
     }
