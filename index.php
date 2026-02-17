@@ -1729,6 +1729,25 @@
     }
 
     /**
+     * Get the first tag from a monitor (alphabetically sorted)
+     * @param {object} monitor - Monitor object
+     * @returns {string} First tag name or empty string if no tags
+     */
+    function getFirstTag(monitor) {
+      if (!Array.isArray(monitor.tags) || !monitor.tags.length) return '';
+      
+      // Extract tag names and find minimum without full sort
+      let minTag = null;
+      for (const tag of monitor.tags) {
+        const tagName = typeof tag === 'object' && tag !== null ? (tag.name || '') : tag;
+        if (tagName && (minTag === null || tagName < minTag)) {
+          minTag = tagName;
+        }
+      }
+      return minTag || '';
+    }
+
+    /**
      * Fetch response time data for a monitor
      * @param {number} monitorId - Monitor ID
      * @returns {Promise<object|null>} Response time data or null if unavailable
@@ -2075,16 +2094,6 @@
       mons.sort((a, b) => {
         const ap = isProblem(a), bp = isProblem(b);
         if (ap !== bp) return ap ? -1 : 1;
-        
-        // Get first tag for each monitor (sorted alphabetically)
-        const getFirstTag = (monitor) => {
-          if (!Array.isArray(monitor.tags) || !monitor.tags.length) return '';
-          const tagNames = monitor.tags
-            .map(t => typeof t === 'object' && t !== null ? (t.name || '') : t)
-            .filter(Boolean)
-            .sort();
-          return tagNames[0] || '';
-        };
         
         const aTag = getFirstTag(a);
         const bTag = getFirstTag(b);
