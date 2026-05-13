@@ -339,6 +339,92 @@ if (!$TOKEN) {
 $API_BASE = 'https://api.uptimerobot.com/v3';
 $url = $API_BASE . '/monitors?page_size=100';
 
+// --- Wallboard Cache ---
+// Status data is cached in a file named after the SHA512 hash of the API key.
+// No plain API key is ever written to disk; only the hash is used as the filename.
+// When the cron_update.php job is running, all displays read from this shared
+// cache and therefore always show identical, up-to-date data.
+$wallboardCacheHash = hash('sha512', $TOKEN);
+$wallboardCacheDir  = __DIR__ . '/cache/wallboard';
+$wallboardCacheFile = $wallboardCacheDir . '/' . $wallboardCacheHash . '.json';
+
+// Maximum age (seconds) before falling back to a live API call.
+// Formula: clamp(refreshRate × multiplier, min, max)
+//   multiplier: allow the cache to be up to 3× the frontend refresh rate old
+//   min: never consider a cache older than 60 s stale (lower bound)
+//   max: always consider a cache older than 300 s stale (upper bound / 5 min)
+// When cron_update.php runs at the recommended frequency, the cache will
+// always be fresh. Without cron, the first browser to hit the endpoint
+// populates the cache and subsequent browsers within this window read from it.
+$wallboardCacheAgeMultiplier = 3;    // cache valid for up to 3× the refresh interval
+$wallboardCacheMinAge        = 60;   // minimum threshold: 60 seconds
+$wallboardCacheMaxAgeLimit   = 300;  // hard upper limit: 5 minutes
+$wallboardCacheMaxAge        = min(max($CONFIG['refreshRate'] * $wallboardCacheAgeMultiplier, $wallboardCacheMinAge), $wallboardCacheMaxAgeLimit);
+
+if (file_exists($wallboardCacheFile)) {
+    $cacheFileAge = time() - filemtime($wallboardCacheFile);
+    if ($cacheFileAge <= $wallboardCacheMaxAge) {
+        $rawCacheData = @file_get_contents($wallboardCacheFile);
+        if ($rawCacheData !== false) {
+            $cachedPayload = json_decode($rawCacheData, true);
+            if (is_array($cachedPayload) && isset($cachedPayload['all_monitors_transformed'])) {
+                // Apply per-request filters to the shared cached dataset so every
+                // client gets a consistent view of the same underlying data.
+                $cachedAllMonitors = $cachedPayload['all_monitors_transformed'];
+                $cachedMonitors    = $cachedAllMonitors;
+
+                if ($onlyProblems) {
+                    $cachedMonitors = array_values(array_filter($cachedMonitors, function ($m) {
+                        return strtolower((string)($m['status'] ?? 'unknown')) !== 'up';
+                    }));
+                }
+                if (!$CONFIG['showPausedDevices']) {
+                    $cachedMonitors = array_values(array_filter($cachedMonitors, function ($m) {
+                        return strtolower((string)($m['status'] ?? 'unknown')) !== 'paused';
+                    }));
+                }
+
+                echo json_encode([
+                    'ok'             => true,
+                    'fetched_at_utc' => $cachedPayload['fetched_at_utc'] ?? (new DateTime('now', new DateTimeZone('UTC')))->format(DateTime::ATOM),
+                    'count'          => count($cachedMonitors),
+                    'paused_count'   => $cachedPayload['paused_count'] ?? 0,
+                    'monitors'       => $cachedMonitors,
+                    'all_monitors'   => $cachedAllMonitors,
+                    'meta'           => $cachedPayload['meta'] ?? new stdClass(),
+                    'rateLimit'      => $cachedPayload['rateLimit'] ?? ['limit' => null, 'remaining' => null, 'reset' => null],
+                    'config'         => [
+                        'title'                         => $WALLBOARD_CONFIG['title'],
+                        'logo'                          => $WALLBOARD_CONFIG['logo'],
+                        'showProblemsOnly'              => $CONFIG['showProblemsOnly'],
+                        'showPausedDevices'             => $CONFIG['showPausedDevices'],
+                        'refreshRate'                   => $CONFIG['refreshRate'],
+                        'configCheckRate'               => $CONFIG['configCheckRate'],
+                        'allowQueryOverride'            => $CONFIG['allowQueryOverride'],
+                        'theme'                         => $CONFIG['theme'],
+                        'showTags'                      => $CONFIG['showTags'],
+                        'tagColors'                     => $CONFIG['tagColors'] ?? null,
+                        'rateLimitWarningThreshold'     => $CONFIG['rateLimitWarningThreshold'],
+                        'eventViewerDefault'            => $CONFIG['eventViewerDefault'],
+                        'eventLoggingMode'              => $CONFIG['eventLoggingMode'],
+                        'eventLoggingMaxEvents'         => $CONFIG['eventLoggingMaxEvents'],
+                        'eventViewerItemsPerPage'       => $CONFIG['eventViewerItemsPerPage'],
+                        'recentEventWindowMinutes'      => $CONFIG['recentEventWindowMinutes'] ?? 60,
+                        'eventTypeFilterEnabled'        => $CONFIG['eventTypeFilterEnabled'] ?? true,
+                        'eventTypeFilterDefaultDown'    => $CONFIG['eventTypeFilterDefaultDown'] ?? true,
+                        'eventTypeFilterDefaultUp'      => $CONFIG['eventTypeFilterDefaultUp'] ?? true,
+                        'eventTypeFilterDefaultPaused'  => $CONFIG['eventTypeFilterDefaultPaused'] ?? true,
+                        'eventTypeFilterDefaultError'   => $CONFIG['eventTypeFilterDefaultError'] ?? true,
+                        'eventTypeFilterDefaultActions' => $CONFIG['eventTypeFilterDefaultActions'] ?? true,
+                    ],
+                ], JSON_UNESCAPED_SLASHES);
+                exit;
+            }
+        }
+    }
+}
+// --- End Wallboard Cache Check ---
+
 // Variable to capture response headers
 $responseHeaders = [];
 
@@ -552,6 +638,22 @@ $transformMonitor = function ($m) {
 
 $transformed = array_map($transformMonitor, $monitors);
 $allMonitorsTransformed = array_map($transformMonitor, $allMonitors);
+
+// Persist the unfiltered monitor data to the shared wallboard cache so that
+// all clients reading from this file always see the same dataset.
+// Per-request filters (only_problems, showPausedDevices) are applied at serve
+// time (in the cache-check block above) and are NOT stored in the cache.
+$wallboardCachePayload = json_encode([
+    'fetched_at_utc'           => $nowUtc,
+    'all_monitors_transformed' => $allMonitorsTransformed,
+    'paused_count'             => $pausedCount,
+    'meta'                     => $data['meta'] ?? new stdClass(),
+    'rateLimit'                => $rateLimit,
+], JSON_UNESCAPED_SLASHES);
+if ($wallboardCachePayload !== false && ensureCacheDir($wallboardCacheDir)) {
+    // LOCK_EX prevents race conditions when cron and a browser request overlap
+    @file_put_contents($wallboardCacheFile, $wallboardCachePayload, LOCK_EX);
+}
 
 echo json_encode([
     'ok' => true,

@@ -178,6 +178,87 @@ When `norefresh` is enabled:
 - Reducing API quota usage
 - Screenshots or demos with static data
 
+## 🔄 Server-Side Cron Cache
+
+For the most consistent multi-display experience, the wallboard can be configured with a server-side cron job that pre-fetches data and stores it in a shared flat-file cache. All browser displays then read from this single cache file, so they always see identical, up-to-date data regardless of when each screen last refreshed.
+
+### How It Works
+
+1. `cron_update.php` is executed periodically by the server's cron daemon
+2. It fetches the current monitor status from the UptimeRobot API
+3. The result is written to `cache/wallboard/<sha512-of-api-key>.json`
+   - The filename is the **SHA512 hash** of the API key — the plain key is never written to disk
+4. Every browser request to `uptimerobot_status.php` reads from this cache file
+   - Per-request filters (`only_problems`, `showPausedDevices`) are applied at serve time
+   - All displays reading the same cache see the same base dataset
+
+Without the cron job, `uptimerobot_status.php` still works: it makes a live API call on cache miss and writes to the cache for subsequent requests.
+
+### Setting Up the Cron Job
+
+Add a line to your crontab (run `crontab -e` as the web server user):
+
+```bash
+# Update wallboard cache every minute
+* * * * * /usr/bin/php /var/www/html/status/cron_update.php >> /var/log/wallboard_cron.log 2>&1
+```
+
+Adjust the path to match your installation directory and PHP binary location.
+
+To find your PHP binary:
+```bash
+which php
+```
+
+To run as the web server user (recommended):
+```bash
+sudo crontab -u www-data -e
+```
+
+### Cron Job Frequency
+
+| REFRESH_RATE | Recommended cron frequency |
+|---|---|
+| 20 s (default) | Every minute (`* * * * *`) |
+| 30 s | Every minute (`* * * * *`) |
+| 60 s | Every minute (`* * * * *`) |
+| 5 min | Every 5 minutes (`*/5 * * * *`) |
+
+The minimum cron granularity is one minute. For refresh rates shorter than 60 seconds, running the cron every minute is still fine — the wallboard frontend will read the freshest available cache file.
+
+### Verifying the Cron Job
+
+Run the script manually to confirm it works:
+
+```bash
+php /var/www/html/status/cron_update.php
+# Expected output:
+# [2025-01-01 12:00:00] OK: Cached 12 monitors (1 paused) — hash a3f8c92d1b7e...
+```
+
+Check the log file to confirm it runs on schedule:
+
+```bash
+tail -f /var/log/wallboard_cron.log
+```
+
+### Cache File Location and Cleanup
+
+Cache files are stored in `cache/wallboard/` inside the application directory. The directory is excluded from version control by `.gitignore`.
+
+**If you change your API key**, delete the old cache file to avoid serving stale data until the new key's cache is populated:
+
+```bash
+rm -f /var/www/html/status/cache/wallboard/*.json
+```
+
+The next cron run (or browser request) will create a fresh cache file for the new key.
+
+### Race Condition Handling
+
+- `cron_update.php` uses `LOCK_EX` when writing the cache file, ensuring atomic writes even if a browser request and a cron job run simultaneously
+- Updating one API key's cache never affects another key's cache file
+
 ## 🔒 Security Best Practices
 
 ### Store Config Outside Webroot (Recommended)
