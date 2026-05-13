@@ -50,6 +50,8 @@ A real-time status wallboard for monitoring your UptimeRobot services. Display s
 
 5. **Done!** The wallboard will automatically load and display your monitors
 
+> **Install path note:** The wallboard API requests resolve relative to the directory where you host the application, so you can deploy it under `/status`, `/wallboard`, or any other path without editing frontend endpoint URLs.
+
 ### Manual Configuration (Alternative)
 
 If you prefer manual setup:
