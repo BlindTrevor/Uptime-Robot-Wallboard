@@ -861,10 +861,10 @@
 
   <script>
     // --- Configuration ---
-    const ENDPOINT = '/status/uptimerobot_status.php'; // adjust if you host elsewhere
-    const CONFIG_VERSION_ENDPOINT = '/status/config_version.php'; // endpoint to check config changes
-    const EVENT_LOGGER_ENDPOINT = '/status/event-logger.php';
-    const EVENT_VIEWER_ENDPOINT = '/status/event-viewer.php';
+    const ENDPOINT = 'uptimerobot_status.php';
+    const CONFIG_VERSION_ENDPOINT = 'config_version.php';
+    const EVENT_LOGGER_ENDPOINT = 'event-logger.php';
+    const EVENT_VIEWER_ENDPOINT = 'event-viewer.php';
     
     // Time conversion constant
     const MS_PER_MINUTE = 60 * 1000;
