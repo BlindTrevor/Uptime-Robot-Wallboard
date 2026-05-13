@@ -83,22 +83,34 @@ If you prefer manual setup:
 
 Edit `config.env` to customize your wallboard:
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `UPTIMEROBOT_API_TOKEN` | Your UptimeRobot API token (required) | - |
-| `WALLBOARD_TITLE` | Custom title for your wallboard | `UptimeRobot – Current Status` |
-| `WALLBOARD_LOGO` | Path to logo image or URL | (empty) |
-| `SHOW_PROBLEMS_ONLY` | Show only monitors with issues | `false` |
-| `SHOW_PAUSED_DEVICES` | Display paused monitors | `false` |
-| `SHOW_TAGS` | Display tags on monitor cards | `true` |
-| `REFRESH_RATE` | Data refresh interval (seconds) | `20` |
-| `CONFIG_CHECK_RATE` | Config file check interval (seconds) | `5` |
-| `RESPONSE_TIME_CACHE_DURATION` | Response time graph cache duration (seconds, min 60) | `300` |
-| `THEME` | Theme: `dark`, `light`, or `auto` | `dark` |
-| `AUTO_FULLSCREEN` | Auto-enter fullscreen on load | `false` |
-| `ALLOW_QUERY_OVERRIDE` | Allow URL parameter overrides | `true` |
-| `TAG_COLORS` | Custom tag color configuration (JSON format) | (empty) |
-| `RECENT_EVENT_WINDOW_MINUTES` | Time window (in minutes) for highlighting recent events | `60` |
+| Variable | Format / values | Default | Behavior and impact |
+|----------|------------------|---------|---------------------|
+| `UPTIMEROBOT_API_TOKEN` | String token from UptimeRobot API settings (**required**) | _(none)_ | Authenticates all API calls. App cannot run without it. |
+| `WALLBOARD_TITLE` | String | `UptimeRobot – Current Status` | Header title shown on the wallboard. |
+| `WALLBOARD_LOGO` | Empty, relative image path, absolute `http(s)` image URL, or image data URI | _(empty)_ | Shows a logo in the header when valid. Invalid values are ignored for safety. |
+| `SHOW_PROBLEMS_ONLY` | `true` / `false` | `false` | Initial state for showing only non-up monitors. |
+| `SHOW_PAUSED_DEVICES` | `true` / `false` | `false` | Controls whether paused monitors are included by default. |
+| `SHOW_TAGS` | `true` / `false` | `true` | Initial tag visibility on monitor cards. |
+| `REFRESH_RATE` | Integer seconds (`>=10`) | `20` | Polling interval for status refresh and cache freshness behavior. |
+| `CONFIG_CHECK_RATE` | Integer seconds (`>=1`) | `5` | How often frontend checks for config file updates. |
+| `ALLOW_QUERY_OVERRIDE` | `true` / `false` | `true` | Enables/disables URL query-string overrides on the main wallboard URL. |
+| `THEME` | `dark`, `light`, or `auto` | `dark` | Default visual theme (before session/user overrides). |
+| `AUTO_FULLSCREEN` | `true` / `false` | `false` | If enabled, wallboard prompts for fullscreen on load. |
+| `TAG_COLORS` | JSON object with optional `acceptable` array and/or `tags` map | _(empty)_ | Custom tag color palette and per-tag color mapping. |
+| `RATE_LIMIT_WARNING_THRESHOLD` | Integer (`>=1`) | `3` | Warns/logs when API remaining quota is at or below this number. |
+| `EVENT_VIEWER_DEFAULT` | `visible`, `hidden`, or `disabled` | `hidden` | Controls default event sidebar state and whether it can be used. |
+| `EVENT_LOGGING_MODE` | `circular` or `forever` | `circular` | Event retention strategy for `events.ndjson`. |
+| `EVENT_LOGGING_MAX_EVENTS` | Integer (`>=10`) | `1000` | Max events retained when `EVENT_LOGGING_MODE=circular`. |
+| `EVENT_VIEWER_ITEMS_PER_PAGE` | Integer (`>=10`) or `all` | `50` | Event viewer page size; `all` disables pagination. |
+| `RECENT_EVENT_WINDOW_MINUTES` | Integer minutes (`>=1`) | `60` | Marks events inside this window as recent/highlighted. |
+| `EVENT_TYPE_FILTER_ENABLED` | `true` / `false` | `true` | Enables/disables event-type filter pills in event history. |
+| `EVENT_TYPE_FILTER_DEFAULT_DOWN` | `true` / `false` | `true` | Initial visibility for Down events in event viewer filters. |
+| `EVENT_TYPE_FILTER_DEFAULT_UP` | `true` / `false` | `true` | Initial visibility for Up events in event viewer filters. |
+| `EVENT_TYPE_FILTER_DEFAULT_PAUSED` | `true` / `false` | `true` | Initial visibility for Paused events in event viewer filters. |
+| `EVENT_TYPE_FILTER_DEFAULT_ERROR` | `true` / `false` | `true` | Initial visibility for Error events in event viewer filters. |
+| `EVENT_TYPE_FILTER_DEFAULT_ACTIONS` | `true` / `false` | `true` | Initial visibility for Action events in event viewer filters. |
+| `SPIKE_DETECTION_SENSITIVITY` | Decimal (`1.5` to `4.0`) | `3.0` | Controls response-time spike sensitivity (lower = more sensitive). |
+| `RESPONSE_TIME_CACHE_DURATION` | Integer seconds (`>=60`) | `300` | Response-time graph cache TTL; higher values reduce API calls. |
 
 ## 🎯 Usage
 
@@ -114,9 +126,25 @@ Simply open the wallboard in your browser. It will automatically:
 
 ### URL Parameters
 
-Override settings temporarily using URL parameters:
+#### Main wallboard URL (`index.php`)
 
-```
+These query strings affect the wallboard page (when `ALLOW_QUERY_OVERRIDE=true`):
+
+| Parameter | Format / values | Default | Effect |
+|-----------|------------------|---------|--------|
+| `showProblemsOnly` | `true` / `false` | Uses `SHOW_PROBLEMS_ONLY` (`false`) | Starts in problem-only mode. |
+| `showPausedDevices` | `true` / `false` | Uses `SHOW_PAUSED_DEVICES` (`false`) | Shows or hides paused monitors. |
+| `showTags` | `true` / `false` | Uses `SHOW_TAGS` (`true`) | Shows or hides tag pills on monitor cards. |
+| `refreshRate` | Integer seconds (`>=10`) | Uses `REFRESH_RATE` (`20`) | Overrides automatic status refresh interval. |
+| `configCheckRate` | Integer seconds (`>=1`) | Uses `CONFIG_CHECK_RATE` (`5`) | Overrides config file change check interval. |
+| `theme` | `dark`, `light`, `auto` | Uses `THEME` (`dark`) | Sets starting theme for the current session. |
+| `autoFullscreen` | `true` / `false` | Uses `AUTO_FULLSCREEN` (`false`) | Enables/disables auto-fullscreen prompt on load. |
+| `eventViewer` | `visible` / `hidden` | Uses `EVENT_VIEWER_DEFAULT` (`hidden`) | Sets initial event viewer visibility (ignored if disabled in config). |
+| `norefresh` | `true` / `1` (case-insensitive) | `false` | Disables automatic status/config polling; manual refresh still works. |
+
+Examples:
+
+```text
 # Show only problems, refresh every 30 seconds
 https://your-domain.com/status/?showProblemsOnly=true&refreshRate=30
 
@@ -125,7 +153,23 @@ https://your-domain.com/status/?theme=light&autoFullscreen=true
 
 # Show paused devices and hide tags
 https://your-domain.com/status/?showPausedDevices=true&showTags=false
+
+# Open event viewer and disable automatic polling
+https://your-domain.com/status/?eventViewer=visible&norefresh=1
 ```
+
+#### Backend/API endpoint query strings
+
+These are used by the frontend and can also be useful for troubleshooting:
+
+| Endpoint | Parameter | Format / values | Default | Effect |
+|----------|-----------|------------------|---------|--------|
+| `uptimerobot_status.php` | `only_problems` | `1` to enable | Not set | Returns only non-up monitors. |
+| `uptimerobot_status.php` | `showPausedDevices` | `true`/`1` or `false`/`0` | Uses config value | Includes/excludes paused monitors in API response. |
+| `event-viewer.php` | `page` | Integer (`>=1`) | `1` | Event viewer page number. |
+| `event-viewer.php` | `perPage` | Integer (`>=10`) or `all` | Uses `EVENT_VIEWER_ITEMS_PER_PAGE` (`50`) | Event page size or all events. |
+| `event-viewer.php` | `filters` | JSON object with booleans for `down`,`up`,`paused`,`error`,`actions` | All `true` | Filters event types before pagination. |
+| `response_times.php` | `monitor_id` | Numeric monitor ID (**required**) | _(none)_ | Returns response-time history for a specific monitor. |
 
 ### Control Buttons
 
@@ -577,18 +621,11 @@ When shown, paused monitors:
 
 ### Query String Parameters
 
-All configuration options can be overridden via URL (when `ALLOW_QUERY_OVERRIDE=true`):
+See [Usage → URL Parameters](#url-parameters) for the complete query-string reference (main wallboard URL and backend endpoint parameters).
 
-```
-?showProblemsOnly=true          # Show only problematic monitors
-?showPausedDevices=true         # Show/hide paused monitors
-?showTags=false                 # Show/hide tags on monitor cards
-?refreshRate=30                 # Set refresh interval (seconds)
-?theme=light                    # Set theme (dark/light/auto)
-?autoFullscreen=true            # Auto-enter fullscreen
-?configCheckRate=10             # Config check interval
-?norefresh=true                 # Disable automatic refresh (accepts 'true' or '1')
-```
+Common example:
+
+`https://your-domain.com/status/?showProblemsOnly=true&theme=light&norefresh=true`
 
 #### Disable Automatic Refresh
 
