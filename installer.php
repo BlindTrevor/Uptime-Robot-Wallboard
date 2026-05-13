@@ -306,7 +306,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ];
                     } else {
                         // Read existing crontab (suppress error output for users with no crontab yet)
-                        exec('crontab -l 2>/dev/null', $existingLines, $listRc);
+                        exec('crontab -l 2>/dev/null', $existingLines);
 
                         // Remove any existing line that invokes our script (precise word-boundary match)
                         $quotedScript = preg_quote($cronScriptPath, '/');
@@ -319,7 +319,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         );
 
                         $existingBody = implode("\n", $filteredLines);
-                        $newCrontab   = ($existingBody !== '' ? rtrim($existingBody) . "\n" : '') . $cronCommand . "\n";
+                        $newCrontab = ($existingBody !== '' ? rtrim($existingBody) . "\n" : '') . $cronCommand . "\n";
 
                         $tmpFile = tempnam(sys_get_temp_dir(), 'wallboard_crontab_');
                         if ($tmpFile !== false) {
@@ -628,7 +628,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <p style="color: var(--bad); margin: 0 0 0.75rem 0;">⚠ <?php echo htmlspecialchars($cronInstallResult['message']); ?></p>
                             <?php endif; ?>
                         <?php else: ?>
-                            <p style="color: var(--subtle); margin: 0 0 0.75rem 0;">Automatic install was not requested. To activate the cron job, add the following line to your crontab. Run <code>crontab -e</code> as the web server user (e.g. <code>sudo -u www-data crontab -e</code>):</p>
+                            <p style="color: var(--subtle); margin: 0 0 0.75rem 0;">Automatic install was not requested. Add the following line to your crontab to activate the cron job. Run <code>sudo -u www-data crontab -e</code> (or <code>crontab -e</code> as the web server user):</p>
                         <?php endif; ?>
                         <code style="display: block; padding: 0.75rem; background: rgba(0,0,0,0.35); border-radius: 6px; color: var(--text); font-size: 0.85rem; word-break: break-all; white-space: pre-wrap;"><?php echo htmlspecialchars($cronCommand); ?></code>
                         <p style="margin: 0.75rem 0 0 0; color: var(--subtle); font-size: 0.85rem;">The cron job keeps the wallboard cache up-to-date so every display sees consistent data. Without it the wallboard still works by making live API calls on each request.</p>
