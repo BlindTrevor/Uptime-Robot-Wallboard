@@ -84,6 +84,29 @@ $canWriteToParent = $securePathInfo['writable'];
 $securePathReason = $securePathInfo['reason'];
 $defaultConfigLocation = 'current';             // Default location
 
+// Cron job auto-detection defaults
+$detectedPhpPath = PHP_BINARY;
+$detectedScriptPath = realpath(__DIR__ . '/cron_update.php') ?: (__DIR__ . '/cron_update.php');
+$cronIntervalOptions = [
+    '* * * * *'    => 'Every minute (recommended)',
+    '*/2 * * * *'  => 'Every 2 minutes',
+    '*/5 * * * *'  => 'Every 5 minutes',
+    '*/10 * * * *' => 'Every 10 minutes',
+    '*/15 * * * *' => 'Every 15 minutes',
+    '*/30 * * * *' => 'Every 30 minutes',
+    '0 * * * *'    => 'Every hour',
+];
+
+// Cron state (initialised to defaults; overridden by POST values below)
+$enableCron         = true;
+$attemptCronInstall = true;
+$cronInterval       = '* * * * *';
+$cronPhpPath        = $detectedPhpPath;
+$cronScriptPath     = $detectedScriptPath;
+$cronLogPath        = '';
+$cronCommand        = '';
+$cronInstallResult  = null;
+
 // Handle form submission
 $errors = [];
 $success = false;
@@ -107,6 +130,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $eventLoggingMode = $_POST['event_logging_mode'] ?? 'circular';
     $eventLoggingMaxEvents = trim($_POST['event_logging_max_events'] ?? '1000');
     $eventViewerItemsPerPage = trim($_POST['event_viewer_items_per_page'] ?? '50');
+
+    // Cron job configuration
+    $enableCron         = isset($_POST['enable_cron']);
+    $attemptCronInstall = isset($_POST['attempt_cron_install']);
+    $cronInterval       = $_POST['cron_interval'] ?? '* * * * *';
+    $cronPhpPath        = trim($_POST['cron_php_path'] ?? $detectedPhpPath);
+    $cronScriptPath     = trim($_POST['cron_script_path'] ?? $detectedScriptPath);
+    $cronLogPath        = trim($_POST['cron_log_path'] ?? '');
     
     // Handle logo file upload
     if (isset($_FILES['logo_file']) && $_FILES['logo_file']['error'] === UPLOAD_ERR_OK) {
@@ -200,6 +231,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($eventViewerItemsPerPage !== 'all' && (!is_numeric($eventViewerItemsPerPage) || (int)$eventViewerItemsPerPage < 10)) {
         $errors[] = 'Event viewer items per page must be a number at least 10, or "all".';
     }
+
+    // Validate cron settings
+    if ($enableCron) {
+        if (!array_key_exists($cronInterval, $cronIntervalOptions)) {
+            $errors[] = 'Invalid cron interval selected.';
+        }
+        if (!preg_match('/^[a-zA-Z0-9\/_.~-]+$/', $cronPhpPath)) {
+            $errors[] = 'PHP binary path contains invalid characters.';
+        }
+        if (!preg_match('/^[a-zA-Z0-9\/_.~-]+$/', $cronScriptPath)) {
+            $errors[] = 'Cron script path contains invalid characters.';
+        }
+        if ($cronLogPath !== '' && !preg_match('/^[a-zA-Z0-9\/_.~-]+$/', $cronLogPath)) {
+            $errors[] = 'Cron log file path contains invalid characters.';
+        }
+    }
     
     // If no errors, create the config file
     if (empty($errors)) {
@@ -242,6 +289,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Set secure file permissions (readable/writable only by owner)
             @chmod($targetConfigPath, 0600);
             $success = true;
+
+            // Build the cron command (used both for display and for auto-install)
+            if ($enableCron) {
+                $cronCommand = $cronInterval . ' ' . $cronPhpPath . ' ' . $cronScriptPath;
+                if ($cronLogPath !== '') {
+                    $cronCommand .= ' >> ' . $cronLogPath . ' 2>&1';
+                }
+
+                // Attempt automatic cron installation via crontab
+                if ($attemptCronInstall) {
+                    if (!function_exists('exec')) {
+                        $cronInstallResult = [
+                            'success' => false,
+                            'message' => 'exec() is disabled on this server. Please add the cron job manually.',
+                        ];
+                    } else {
+                        // Read existing crontab (suppress error output for users with no crontab yet)
+                        exec('crontab -l 2>/dev/null', $existingLines, $listRc);
+
+                        // Remove any existing line that invokes our script (precise word-boundary match)
+                        $quotedScript = preg_quote($cronScriptPath, '/');
+                        $filteredLines = array_filter(
+                            $existingLines,
+                            static function (string $line) use ($quotedScript): bool {
+                                // Match only lines where the script path appears as a whole path token
+                                return !preg_match('/(?:^|[\s])' . $quotedScript . '(?:[\s]|$)/', $line);
+                            }
+                        );
+
+                        $existingBody = implode("\n", $filteredLines);
+                        $newCrontab   = ($existingBody !== '' ? rtrim($existingBody) . "\n" : '') . $cronCommand . "\n";
+
+                        $tmpFile = tempnam(sys_get_temp_dir(), 'wallboard_crontab_');
+                        if ($tmpFile !== false) {
+                            // Restrict temp file to owner only before writing
+                            @chmod($tmpFile, 0600);
+                            if (file_put_contents($tmpFile, $newCrontab) !== false) {
+                                exec('crontab ' . escapeshellarg($tmpFile) . ' 2>&1', $installOutput, $installRc);
+                                @unlink($tmpFile);
+                                if ($installRc === 0) {
+                                    $cronInstallResult = [
+                                        'success' => true,
+                                        'message' => 'Cron job installed successfully for the current user.',
+                                    ];
+                                } else {
+                                    $cronInstallResult = [
+                                        'success' => false,
+                                        'message' => 'Automatic cron install failed: ' . implode(' ', $installOutput) . '. Please add the cron job manually.',
+                                    ];
+                                }
+                            } else {
+                                @unlink($tmpFile);
+                                $cronInstallResult = [
+                                    'success' => false,
+                                    'message' => 'Could not write temporary crontab file. Please add the cron job manually.',
+                                ];
+                            }
+                        } else {
+                            $cronInstallResult = [
+                                'success' => false,
+                                'message' => 'Could not create temporary file for cron install. Please add the cron job manually.',
+                            ];
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -504,6 +617,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <p>You can now use your wallboard.</p>
                     <p><a href="index.php" style="color: var(--ok); font-weight: bold;">→ Go to Wallboard</a></p>
                 </div>
+
+                <?php if ($enableCron): ?>
+                    <div style="margin-top: 1.5rem; padding: 1.25rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; text-align: left;">
+                        <h3 style="margin: 0 0 0.75rem 0; color: var(--text);">⏱ Cron Job Setup</h3>
+                        <?php if ($cronInstallResult !== null): ?>
+                            <?php if ($cronInstallResult['success']): ?>
+                                <p style="color: var(--ok); margin: 0 0 0.75rem 0;">✓ <?php echo htmlspecialchars($cronInstallResult['message']); ?></p>
+                            <?php else: ?>
+                                <p style="color: var(--bad); margin: 0 0 0.75rem 0;">⚠ <?php echo htmlspecialchars($cronInstallResult['message']); ?></p>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <p style="color: var(--subtle); margin: 0 0 0.75rem 0;">Automatic install was not requested. To activate the cron job, add the following line to your crontab. Run <code>crontab -e</code> as the web server user (e.g. <code>sudo -u www-data crontab -e</code>):</p>
+                        <?php endif; ?>
+                        <code style="display: block; padding: 0.75rem; background: rgba(0,0,0,0.35); border-radius: 6px; color: var(--text); font-size: 0.85rem; word-break: break-all; white-space: pre-wrap;"><?php echo htmlspecialchars($cronCommand); ?></code>
+                        <p style="margin: 0.75rem 0 0 0; color: var(--subtle); font-size: 0.85rem;">The cron job keeps the wallboard cache up-to-date so every display sees consistent data. Without it the wallboard still works by making live API calls on each request.</p>
+                    </div>
+                <?php endif; ?>
             <?php else: ?>
                 <?php if (!empty($errors)): ?>
                     <div class="error">
@@ -740,6 +870,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </label>
                         <input type="text" name="event_viewer_items_per_page" value="<?php echo htmlspecialchars($_POST['event_viewer_items_per_page'] ?? '50'); ?>" placeholder="50 or all">
                     </div>
+
+                    <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--text);">⏱ Cron Job Setup</h3>
+
+                    <div class="info-box">
+                        The cron job periodically fetches data from the UptimeRobot API and stores it in a shared cache file. All displays then read from this cache, ensuring they always show consistent, up-to-date data. Without the cron job the wallboard still works by making live API calls on each page load.
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" name="enable_cron" id="enable_cron"
+                                <?php echo (($_SERVER['REQUEST_METHOD'] !== 'POST') || isset($_POST['enable_cron'])) ? 'checked' : ''; ?>>
+                            <label for="enable_cron">Configure cron job for automatic cache updates</label>
+                        </div>
+                    </div>
+
+                    <div id="cron-options">
+                        <div class="form-group">
+                            <div class="checkbox-group">
+                                <input type="checkbox" name="attempt_cron_install" id="attempt_cron_install"
+                                    <?php echo (($_SERVER['REQUEST_METHOD'] !== 'POST') || isset($_POST['attempt_cron_install'])) ? 'checked' : ''; ?>>
+                                <label for="attempt_cron_install">Attempt to install cron job automatically (requires <code>exec()</code> to be enabled on this server)</label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                Update Interval
+                                <div class="label-description">How often the cron job runs to refresh the wallboard cache</div>
+                            </label>
+                            <select name="cron_interval">
+                                <?php foreach ($cronIntervalOptions as $value => $label): ?>
+                                    <option value="<?php echo htmlspecialchars($value); ?>"
+                                        <?php echo (($_POST['cron_interval'] ?? '* * * * *') === $value) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($label); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                PHP Binary Path
+                                <div class="label-description">Full path to the PHP CLI binary (auto-detected from the current PHP process)</div>
+                            </label>
+                            <input type="text" name="cron_php_path"
+                                value="<?php echo htmlspecialchars($_POST['cron_php_path'] ?? $detectedPhpPath); ?>"
+                                placeholder="/usr/bin/php">
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                Script Path
+                                <div class="label-description">Full path to <code>cron_update.php</code> on this server</div>
+                            </label>
+                            <input type="text" name="cron_script_path"
+                                value="<?php echo htmlspecialchars($_POST['cron_script_path'] ?? $detectedScriptPath); ?>"
+                                placeholder="/var/www/html/status/cron_update.php">
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                Log File Path <span style="color: var(--subtle); font-weight: normal;">(optional)</span>
+                                <div class="label-description">Where to write cron output. Leave empty to discard output.</div>
+                            </label>
+                            <input type="text" name="cron_log_path"
+                                value="<?php echo htmlspecialchars($_POST['cron_log_path'] ?? ''); ?>"
+                                placeholder="/var/log/wallboard_cron.log">
+                        </div>
+                    </div>
                     
                     <button type="submit">Create Configuration</button>
                 </form>
@@ -928,6 +1127,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Initialize on page load
                     document.addEventListener('DOMContentLoaded', function() {
                         initializeTagColors();
+                        // Sync cron-options visibility with the enable_cron checkbox
+                        const enableCronCb = document.getElementById('enable_cron');
+                        const cronOptions  = document.getElementById('cron-options');
+                        function toggleCronOptions() {
+                            cronOptions.style.display = enableCronCb.checked ? '' : 'none';
+                        }
+                        enableCronCb.addEventListener('change', toggleCronOptions);
+                        toggleCronOptions();
                     });
                 </script>
             <?php endif; ?>

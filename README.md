@@ -194,16 +194,38 @@ For the most consistent multi-display experience, the wallboard can be configure
 
 Without the cron job, `uptimerobot_status.php` still works: it makes a live API call on cache miss and writes to the cache for subsequent requests.
 
-### Setting Up the Cron Job
+### Configuring the Cron Job via the Installer
 
-Add a line to your crontab (run `crontab -e` as the web server user):
+The easiest way to set up the cron job is through the built-in installer (`installer.php`). The **⏱ Cron Job Setup** section at the bottom of the installer form lets you:
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| **Configure cron job** | Enable or skip cron setup entirely | Enabled |
+| **Attempt automatic install** | Let the installer run `crontab` for you | Enabled |
+| **Update Interval** | How often the cron job runs | Every minute |
+| **PHP Binary Path** | Full path to the PHP CLI binary (auto-detected) | Current PHP binary |
+| **Script Path** | Full path to `cron_update.php` (auto-detected) | Detected from server |
+| **Log File Path** | Where cron output is written (optional) | (empty — discard) |
+
+When **Attempt automatic install** is checked, the installer will:
+1. Read the current user's crontab.
+2. Remove any existing entry for `cron_update.php` (to avoid duplicates).
+3. Append the new cron line and write the updated crontab.
+
+> **Note:** Automatic install runs as the web server user (e.g. `www-data`). If you need the cron job installed for a different user, add the entry manually as shown below.
+
+Whether or not automatic install succeeded, the installer's success screen always displays the exact cron command so you can copy-paste it manually.
+
+### Setting Up the Cron Job Manually
+
+If you prefer manual setup (or the automatic install failed), add a line to your crontab by running `crontab -e` as the web server user:
 
 ```bash
 # Update wallboard cache every minute
 * * * * * /usr/bin/php /var/www/html/status/cron_update.php >> /var/log/wallboard_cron.log 2>&1
 ```
 
-Adjust the path to match your installation directory and PHP binary location.
+Adjust the paths to match your installation directory and PHP binary location.
 
 To find your PHP binary:
 ```bash
