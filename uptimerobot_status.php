@@ -349,10 +349,17 @@ $wallboardCacheDir  = __DIR__ . '/cache/wallboard';
 $wallboardCacheFile = $wallboardCacheDir . '/' . $wallboardCacheHash . '.json';
 
 // Maximum age (seconds) before falling back to a live API call.
+// Formula: clamp(refreshRate × multiplier, min, max)
+//   multiplier: allow the cache to be up to 3× the frontend refresh rate old
+//   min: never consider a cache older than 60 s stale (lower bound)
+//   max: always consider a cache older than 300 s stale (upper bound / 5 min)
 // With cron_update.php running every minute the cache will always be fresh.
 // Without cron, the first browser to hit the endpoint populates the cache
 // and subsequent browsers within this window read from it.
-$wallboardCacheMaxAge = min(max($CONFIG['refreshRate'] * 3, 60), 300);
+$wallboardCacheAgeMultiplier = 3;    // cache valid for up to 3× the refresh interval
+$wallboardCacheMinAge        = 60;   // minimum threshold: 60 seconds
+$wallboardCacheMaxAgeLimit   = 300;  // hard upper limit: 5 minutes
+$wallboardCacheMaxAge        = min(max($CONFIG['refreshRate'] * $wallboardCacheAgeMultiplier, $wallboardCacheMinAge), $wallboardCacheMaxAgeLimit);
 
 if (file_exists($wallboardCacheFile)) {
     $cacheFileAge = time() - filemtime($wallboardCacheFile);
@@ -636,9 +643,6 @@ $allMonitorsTransformed = array_map($transformMonitor, $allMonitors);
 // all clients reading from this file always see the same dataset.
 // Per-request filters (only_problems, showPausedDevices) are applied at serve
 // time (in the cache-check block above) and are NOT stored in the cache.
-if (!is_dir($wallboardCacheDir)) {
-    @mkdir($wallboardCacheDir, 0700, true);
-}
 $wallboardCachePayload = json_encode([
     'fetched_at_utc'           => $nowUtc,
     'all_monitors_transformed' => $allMonitorsTransformed,
@@ -646,7 +650,7 @@ $wallboardCachePayload = json_encode([
     'meta'                     => $data['meta'] ?? new stdClass(),
     'rateLimit'                => $rateLimit,
 ], JSON_UNESCAPED_SLASHES);
-if ($wallboardCachePayload !== false && is_dir($wallboardCacheDir) && is_writable($wallboardCacheDir)) {
+if ($wallboardCachePayload !== false && ensureCacheDir($wallboardCacheDir)) {
     // LOCK_EX prevents race conditions when cron and a browser request overlap
     @file_put_contents($wallboardCacheFile, $wallboardCachePayload, LOCK_EX);
 }

@@ -76,7 +76,8 @@ if ($configPath !== null) {
 }
 
 if (!$TOKEN) {
-    fwrite(STDERR, '[' . date('Y-m-d H:i:s') . "] ERROR: Missing UPTIMEROBOT_API_TOKEN in config.env\n");
+    $configFile = $configPath ?? 'config.env (not found in any parent directory)';
+    fwrite(STDERR, '[' . date('Y-m-d H:i:s') . "] ERROR: Missing UPTIMEROBOT_API_TOKEN in $configFile\n");
     exit(1);
 }
 
@@ -87,11 +88,9 @@ $cacheHash = hash('sha512', $TOKEN);
 $cacheDir  = __DIR__ . '/cache/wallboard';
 $cacheFile = $cacheDir . '/' . $cacheHash . '.json';
 
-if (!is_dir($cacheDir)) {
-    if (!mkdir($cacheDir, 0700, true) && !is_dir($cacheDir)) {
-        fwrite(STDERR, '[' . date('Y-m-d H:i:s') . "] ERROR: Failed to create cache directory: $cacheDir\n");
-        exit(1);
-    }
+if (!ensureCacheDir($cacheDir)) {
+    fwrite(STDERR, '[' . date('Y-m-d H:i:s') . "] ERROR: Failed to create or access cache directory: $cacheDir\n");
+    exit(1);
 }
 
 // --- API FETCH ---

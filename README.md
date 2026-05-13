@@ -259,6 +259,8 @@ The next cron run (or browser request) will create a fresh cache file for the ne
 - `cron_update.php` uses `LOCK_EX` when writing the cache file, ensuring atomic writes even if a browser request and a cron job run simultaneously
 - Updating one API key's cache never affects another key's cache file
 
+## 🔒 Security Best Practices
+
 ### Store Config Outside Webroot (Recommended)
 
 The most secure approach is to store `config.env` **outside** your web-accessible directory:

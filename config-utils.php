@@ -88,3 +88,17 @@ function parseEnvFile(string $filePath, array $keys = []): array {
     }
     return $result;
 }
+
+/**
+ * Ensure a directory exists and is writable, creating it if necessary.
+ *
+ * @param string $dir      Absolute path to the directory
+ * @param int    $mode     Directory permissions (default 0700)
+ * @return bool  True if the directory exists and is writable, false otherwise
+ */
+function ensureCacheDir(string $dir, int $mode = 0700): bool {
+    if (is_dir($dir)) {
+        return is_writable($dir);
+    }
+    return mkdir($dir, $mode, true) || is_dir($dir);
+}
