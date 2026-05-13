@@ -7,7 +7,8 @@ uptime_errors.log
 # Event logs (NDJSON)
 events.ndjson
 
-# Cache directory
+# Cache directory (response time graphs, wallboard status flat files)
+# cache/wallboard/ contains SHA512-hashed status files written by cron_update.php
 cache/
 
 # Demo files (for screenshots only)
