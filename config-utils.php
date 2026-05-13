@@ -100,5 +100,8 @@ function ensureCacheDir(string $dir, int $mode = 0700): bool {
     if (is_dir($dir)) {
         return is_writable($dir);
     }
+    // If mkdir() fails because another process created the directory concurrently
+    // (TOCTOU race), the trailing is_dir() check ensures we still return true
+    // rather than propagating a spurious failure.
     return mkdir($dir, $mode, true) || is_dir($dir);
 }

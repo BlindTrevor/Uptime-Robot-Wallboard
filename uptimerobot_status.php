@@ -353,9 +353,9 @@ $wallboardCacheFile = $wallboardCacheDir . '/' . $wallboardCacheHash . '.json';
 //   multiplier: allow the cache to be up to 3× the frontend refresh rate old
 //   min: never consider a cache older than 60 s stale (lower bound)
 //   max: always consider a cache older than 300 s stale (upper bound / 5 min)
-// With cron_update.php running every minute the cache will always be fresh.
-// Without cron, the first browser to hit the endpoint populates the cache
-// and subsequent browsers within this window read from it.
+// When cron_update.php runs at the recommended frequency, the cache will
+// always be fresh. Without cron, the first browser to hit the endpoint
+// populates the cache and subsequent browsers within this window read from it.
 $wallboardCacheAgeMultiplier = 3;    // cache valid for up to 3× the refresh interval
 $wallboardCacheMinAge        = 60;   // minimum threshold: 60 seconds
 $wallboardCacheMaxAgeLimit   = 300;  // hard upper limit: 5 minutes

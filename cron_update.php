@@ -76,7 +76,8 @@ if ($configPath !== null) {
 }
 
 if (!$TOKEN) {
-    $configFile = $configPath ?? 'config.env (not found in any parent directory)';
+    // $configPath is null when no config.env was found in the current or parent directories
+    $configFile = $configPath ?? 'config.env (searched current directory and up to 10 parent directories)';
     fwrite(STDERR, '[' . date('Y-m-d H:i:s') . "] ERROR: Missing UPTIMEROBOT_API_TOKEN in $configFile\n");
     exit(1);
 }
